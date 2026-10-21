@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TokenMerch – Solana Token Merch Customizer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #030712;
+      --bg-card: #0b1020;
+      --bg-card-soft: #0f172a;
+      --border-subtle: #1f2937;
+      --accent: #14f195;
+      --accent-soft: rgba(20, 241, 149, 0.12);
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --error: #f87171;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.6);
+      --transition-fast: 0.18s ease-out;
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: radial-gradient(circle at top, #111827 0, #020617 45%, #000 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    /* Top bar */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+      background: conic-gradient(from 210deg, #14f195, #22d3ee, #6366f1, #14f195);
+      box-shadow: 0 0 18px rgba(20, 241, 149, 0.7);
+    }
+
+    .top-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .top-link {
+      padding: 6px 0;
+      cursor: pointer;
+    }
+
+    .top-link-cta {
+      padding: 6px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      font-size: 0.8rem;
+    }
+
+    /* Main layout */
+    .main-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.25fr);
+      gap: 28px;
+      align-items: flex-start;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 880px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left column */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .hero-title {
+      font-size: clamp(1.9rem, 3vw, 2.4rem);
+      line-height: 1.1;
+      font-weight: 650;
+    }
+
+    .hero-title span {
+      color: var(--accent);
+    }
+
+    .hero-subtitle {
+      font-size: 0.98rem;
+      color: var(--text-muted);
+      max-width: 420px;
+    }
+
+    .token-input-card {
+      margin-top: 8px;
+      padding: 18px 18px 16px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.8));
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .field-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-muted);
+    }
+
+    .token-input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .token-input-row input {
+      flex: 1;
+      background: #020617;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 9px 12px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+    }
+
+    .token-input-row input::placeholder {
+      color: #4b5563;
+    }
+
+    .token-input-row input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(20, 241, 149, 0.5);
+      background: #020617;
+    }
+
+    .btn-primary {
+      border-radius: 999px;
+      border: none;
+      padding: 9px 18px;
+      background: linear-gradient(135deg, #22c55e, #14f195, #38bdf8);
+      color: #020617;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 0 16px rgba(20, 241, 149, 0.5);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 22px rgba(20, 241, 149, 0.8);
+      opacity: 0.96;
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 0 12px rgba(20, 241, 149, 0.5);
+    }
+
+    .token-status {
+      font-size: 0.8rem;
+      min-height: 1.2em;
+      color: var(--text-muted);
+    }
+
+    .token-status.error {
+      color: var(--error);
+    }
+
+    .token-status.success {
+      color: var(--accent);
+    }
+
+    .token-summary-card {
+      margin-top: 6px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      display: none; /* shown when token loaded */
+      align-items: center;
+      gap: 10px;
+      font-size: 0.82rem;
+    }
+
+    .token-summary-card.visible {
+      display: flex;
+    }
+
+    .token-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: #111827;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      object-fit: cover;
+    }
+
+    .token-summary-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .token-summary-name {
+      font-weight: 500;
+    }
+
+    .token-summary-symbol {
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    .token-summary-address {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .helper-note {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    /* Right column: configurator */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .config-card {
+      border-radius: 20px;
+      padding: 16px 16px 14px;
+      background: radial-gradient(circle at top left, rgba(20, 241, 149, 0.12), rgba(15, 23, 42, 0.96));
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .config-tabs {
+      display: inline-flex;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      padding: 3px;
+      gap: 3px;
+      align-self: flex-start;
+    }
+
+    .config-tab {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-muted);
+      transition: background var(--transition-fast), color var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .config-tab.active {
+      background: linear-gradient(135deg, #22c55e, #14f195, #38bdf8);
+      color: #020617;
+      font-weight: 600;
+    }
+
+    .config-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 960px) {
+      .config-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .preview-card {
+      border-radius: var(--radius-md);
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
+      border: 1px solid rgba(31, 41, 55, 0.95);
+      padding: 16px 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preview-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    .preview-frame {
+      position: relative;
+      border-radius: 18px;
+      background: linear-gradient(145deg, #020617, #020617 40%, #111827 100%);
+      min-height: 210px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .preview-base {
+      width: 75%;
+      max-width: 240px;
+      opacity: 0.9;
+      filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.7));
+    }
+
+    .preview-overlay {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transform: translateY(-10px);
+    }
+
+    .preview-logo {
+      width: 54px;
+      height: 54px;
+      border-radius: 999px;
+      border: 2px solid rgba(15, 23, 42, 0.9);
+      background: #020617;
+      object-fit: cover;
+      display: none; /* visible when token image loaded */
+    }
+
+    .preview-logo.fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .preview-ticker {
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .preview-footnote {
+      font-size: 0.76rem;
+      color: #6b7280;
+    }
+
+    .controls-card {
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(31, 41, 55, 0.95);
+      padding: 12px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.85rem;
+    }
+
+    .control-label {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    .size-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .size-button {
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.95);
+      background: #020617;
+      color: var(--text-main);
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      min-width: 34px;
+      text-align: center;
+      transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .size-button.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .swatches {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px transparent;
+      transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .swatch.active {
+      box-shadow: 0 0 0 2px var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .quantity-row {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.95);
+      background: #020617;
+      overflow: hidden;
+    }
+
+    .quantity-btn {
+      width: 28px;
+      border: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .quantity-input {
+      width: 34px;
+      border: none;
+      background: transparent;
+      text-align: center;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .mini-summary {
+      margin-top: 4px;
+      border-radius: 14px;
+      background: rgba(3, 7, 18, 0.9);
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      padding: 10px 10px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .mini-summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .mini-summary-lines {
+      font-size: 0.8rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      color: #d1d5db;
+    }
+
+    .mini-summary-line span:first-child {
+      color: #9ca3af;
+    }
+
+    .mini-summary-line span:last-child {
+      font-weight: 500;
+    }
+
+    .btn-full {
+      width: 100%;
+      margin-top: 4px;
+      padding-top: 9px;
+      padding-bottom: 9px;
+    }
+
+    @media (max-width: 880px) {
+      .page-wrap {
+        padding: 16px 14px 32px;
+      }
+
+      .top-links {
+        display: none;
+      }
+
+      .config-card {
+        margin-top: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+    <header class="top-bar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <span>TokenMerch</span>
+      </div>
+      <div class="top-links">
+        <span class="top-link">How it works</span>
+        <span class="top-link-cta">Built for Solana</span>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <!-- LEFT COLUMN -->
+      <section class="left-col">
+        <div>
+          <h1 class="hero-title">
+            Turn any <span>Solana token</span> into instant merch.
+          </h1>
+          <p class="hero-subtitle">
+            Paste a Solana token address. We’ll pull the logo and ticker so you can print it on hoodies, tees, and mugs in seconds.
+          </p>
+        </div>
+
+        <div class="token-input-card">
+          <div class="field-label">Solana token address</div>
+          <div class="token-input-row">
+            <input id="tokenAddress" type="text" placeholder="Paste token mint address" />
+            <button class="btn-primary" id="fetchTokenBtn" type="button">
+              Fetch token
+            </button>
+          </div>
+          <div id="tokenStatus" class="token-status">
+            Paste a token address to start.
+          </div>
+        </div>
+
+        <div id="tokenSummary" class="token-summary-card">
+          <img id="tokenLogo" class="token-logo" alt="Token logo" />
+          <div class="token-summary-main">
+            <span id="tokenName" class="token-summary-name">Token Name</span>
+            <span id="tokenSymbol" class="token-summary-symbol">$TKN</span>
+            <span id="tokenAddressShort" class="token-summary-address">xxxxxxxx</span>
+          </div>
+        </div>
+
+        <p class="helper-note">
+          In the real app, we’ll auto‑load logo and ticker from the Solana token metadata. For now this is a visual prototype.
+        </p>
+      </section>
+
+      <!-- RIGHT COLUMN -->
+      <section class="right-col">
+        <div class="config-card">
+          <div class="config-tabs">
+            <button class="config-tab active" data-product="hoodie">Hoodie</button>
+            <button class="config-tab" data-product="tshirt">T‑Shirt</button>
+            <button class="config-tab" data-product="mug">Mug</button>
+          </div>
+
+          <div class="config-layout">
+            <!-- Preview -->
+            <div class="preview-card">
+              <div class="preview-label">Live preview</div>
+              <div class="preview-frame">
+                <!-- Basic placeholder images. Replace with real assets later -->
+                <img src="https://dummyimage.com/400x500/111827/374151&text=Hoodie+Mockup" alt="Product mockup" id="previewBase" class="preview-base" />
+
+                <div class="preview-overlay">
+                  <img id="previewLogo" class="preview-logo fallback" alt="Token logo" />
+                  <span id="previewTicker" class="preview-ticker">$TKN</span>
+                </div>
+              </div>
+              <div class="preview-footnote">
+                Positioning is approximate. Final print will use high‑res assets and safe zones.
+              </div>
+            </div>
+
+            <!-- Controls + Mini Summary -->
+            <div class="controls-card">
+              <div class="control-group">
+                <div class="control-label">Size</div>
+                <div class="size-buttons" id="sizeButtons">
+                  <button class="size-button" data-size="S">S</button>
+                  <button class="size-button active" data-size="M">M</button>
+                  <button class="size-button" data-size="L">L</button>
+                  <button class="size-button" data-size="XL">XL</button>
+                  <button class="size-button" data-size="XXL">XXL</button>
+                </div>
+              </div>
+
+              <div class="control-group">
+                <div class="control-label">Product color</div>
+                <div class="swatches" id="productColorSwatches">
+                  <button class="swatch active" data-color="Black" style="background: #020617;"></button>
+                  <button class="swatch" data-color="White" style="background: #f9fafb;"></button>
+                  <button class="swatch" data-color="Heather Grey" style="background: linear-gradient(135deg,#9ca3af,#6b7280);"></button>
+                </div>
+              </div>
+
+              <div class="control-group">
+                <div class="control-label">Token name color</div>
+                <div class="swatches" id="nameColorSwatches">
+                  <button class="swatch active" data-color-name="White" data-color="#ffffff" style="background: #ffffff;"></button>
+                  <button class="swatch" data-color-name="Black" data-color="#000000" style="background: #000000;"></button>
+                  <button class="swatch" data-color-name="Accent" data-color="#14f195" style="background: #14f195;"></button>
+                </div>
+              </div>
+
+              <div class="control-group">
+                <div class="control-label">Quantity</div>
+                <div class="quantity-row">
+                  <button class="quantity-btn" id="qtyMinus" type="button">−</button>
+                  <input id="qtyInput" class="quantity-input" type="number" min="1" value="1" />
+                  <button class="quantity-btn" id="qtyPlus" type="button">+</button>
+                </div>
+              </div>
+
+              <div class="mini-summary">
+                <div class="mini-summary-header">
+                  <span>Your selection</span>
+                  <span id="miniProductLabel">Hoodie</span>
+                </div>
+                <div class="mini-summary-lines">
+                  <div class="mini-summary-line">
+                    <span>Token</span>
+                    <span id="miniTokenLabel">$TKN</span>
+                  </div>
+                  <div class="mini-summary-line">
+                    <span>Size</span>
+                    <span id="miniSizeLabel">M</span>
+                  </div>
+                  <div class="mini-summary-line">
+                    <span>Color</span>
+                    <span id="miniColorLabel">Black</span>
+                  </div>
+                  <div class="mini-summary-line">
+                    <span>Qty</span>
+                    <span id="miniQtyLabel">1</span>
+                  </div>
+                </div>
+                <button class="btn-primary btn-full" type="button" id="continueBtn">
+                  Continue to checkout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Tiny JS to make prototype interactive (no real Solana or Shopify yet)
+
+    // Fake token fetch: just fill summary and preview from address
+    const tokenAddressInput = document.getElementById('tokenAddress');
+    const fetchTokenBtn = document.getElementById('fetchTokenBtn');
+    const tokenStatus = document.getElementById('tokenStatus');
+    const tokenSummary = document.getElementById('tokenSummary');
+    const tokenNameEl = document.getElementById('tokenName');
+    const tokenSymbolEl = document.getElementById('tokenSymbol');
+    const tokenAddressShortEl = document.getElementById('tokenAddressShort');
+    const tokenLogoEl = document.getElementById('tokenLogo');
+    const previewTicker = document.getElementById('previewTicker');
+    const miniTokenLabel = document.getElementById('miniTokenLabel');
+
+    fetchTokenBtn.addEventListener('click', () => {
+      const addr = tokenAddressInput.value.trim();
+      if (!addr) {
+        tokenStatus.textContent = 'Paste a token address to start.';
+        tokenStatus.className = 'token-status error';
+        tokenSummary.classList.remove('visible');
+        return;
+      }
+
+      // For prototype: fake success. Later we’ll call Solana APIs here.
+      tokenStatus.textContent = 'Found token metadata (prototype).';
+      tokenStatus.className = 'token-status success';
+
+      // Fake name/symbol based on shortened address
+      const short = addr.slice(0, 4) + '...' + addr.slice(-4);
+      const fakeSymbol = '$' + (addr.slice(0, 3) || 'TKN').toUpperCase();
+      const fakeName = 'Custom Token';
+
+      tokenNameEl.textContent = fakeName;
+      tokenSymbolEl.textContent = fakeSymbol;
+      tokenAddressShortEl.textContent = short;
+
+      previewTicker.textContent = fakeSymbol;
+      miniTokenLabel.textContent = fakeSymbol;
+
+      // For now, use a generic placeholder for logo
+      tokenLogoEl.src = 'https://dummyimage.com/64x64/111827/4b5563&text=LOGO';
+      tokenLogoEl.style.display = 'block';
+
+      const previewLogo = document.getElementById('previewLogo');
+      previewLogo.src = tokenLogoEl.src;
+      previewLogo.style.display = 'block';
+      previewLogo.classList.remove('fallback');
+
+      tokenSummary.classList.add('visible');
+    });
+
+    // Tabs: hoodie / tshirt / mug
+    const tabs = document.querySelectorAll('.config-tab');
+    const previewBase = document.getElementById('previewBase');
+    const miniProductLabel = document.getElementById('miniProductLabel');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const product = tab.dataset.product;
+        if (product === 'hoodie') {
+          previewBase.src = 'https://dummyimage.com/400x500/111827/374151&text=Hoodie+Mockup';
+          miniProductLabel.textContent = 'Hoodie';
+        } else if (product === 'tshirt') {
+          previewBase.src = 'https://dummyimage.com/400x500/111827/374151&text=T-Shirt+Mockup';
+          miniProductLabel.textContent = 'T‑Shirt';
+        } else {
+          previewBase.src = 'https://dummyimage.com/400x360/111827/374151&text=Mug+Mockup';
+          miniProductLabel.textContent = 'Mug';
+        }
+      });
+    });
+
+    // Size buttons
+    const sizeButtons = document.querySelectorAll('.size-button');
+    const miniSizeLabel = document.getElementById('miniSizeLabel');
+    sizeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        sizeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        miniSizeLabel.textContent = btn.dataset.size;
+      });
+    });
+
+    // Product color swatches
+    const productColorSwatches = document.querySelectorAll('#productColorSwatches .swatch');
+    const miniColorLabel = document.getElementById('miniColorLabel');
+    productColorSwatches.forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        productColorSwatches.forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        miniColorLabel.textContent = swatch.dataset.color;
+      });
+    });
+
+    // Name color swatches – update ticker color
+    const nameColorSwatches = document.querySelectorAll('#nameColorSwatches .swatch');
+    nameColorSwatches.forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        nameColorSwatches.forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        const color = swatch.dataset.color;
+        previewTicker.style.color = color;
+      });
+    });
+
+    // Quantity controls
+    const qtyInput = document.getElementById('qtyInput');
+    const qtyMinus = document.getElementById('qtyMinus');
+    const qtyPlus = document.getElementById('qtyPlus');
+    const miniQtyLabel = document.getElementById('miniQtyLabel');
+
+    function updateQty(val) {
+      const n = Math.max(1, parseInt(val || '1', 10));
+      qtyInput.value = n;
+      miniQtyLabel.textContent = n;
+    }
+
+    qtyMinus.addEventListener('click', () => {
+      updateQty(qtyInput.value - 1);
+    });
+
+    qtyPlus.addEventListener('click', () => {
+      updateQty(Number(qtyInput.value) + 1);
+    });
+
+    qtyInput.addEventListener('change', () => {
+      updateQty(qtyInput.value);
+    });
+
+    // Continue button – for now just alert / later route to page 2 or Shopify
+    const continueBtn = document.getElementById('continueBtn');
+    continueBtn.addEventListener('click', () => {
+      alert('In the real app, this would take you to Page 2 or Shopify checkout. This is just the visual prototype.');
+    });
+  </script>
+</body>
+</html>
