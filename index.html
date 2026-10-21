@@ -1,861 +1,813 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8" />
-  <title>TokenMerch – Solana Token Merch Customizer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      --bg: #030712;
-      --bg-card: #0b1020;
-      --bg-card-soft: #0f172a;
-      --border-subtle: #1f2937;
-      --accent: #14f195;
-      --accent-soft: rgba(20, 241, 149, 0.12);
-      --text-main: #f9fafb;
-      --text-muted: #9ca3af;
-      --error: #f87171;
-      --radius-md: 10px;
-      --radius-lg: 16px;
-      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.6);
-      --transition-fast: 0.18s ease-out;
-      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: var(--font-main);
-      background: radial-gradient(circle at top, #111827 0, #020617 45%, #000 100%);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .page-wrap {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px 16px 64px;
-      width: 100%;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 32px;
-    }
-
-    /* Top bar */
-    .top-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-    }
-
-    .brand-mark {
-      width: 26px;
-      height: 26px;
-      border-radius: 9px;
-      background: conic-gradient(from 210deg, #14f195, #22d3ee, #6366f1, #14f195);
-      box-shadow: 0 0 18px rgba(20, 241, 149, 0.7);
-    }
-
-    .top-links {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-
-    .top-link {
-      padding: 6px 0;
-      cursor: pointer;
-    }
-
-    .top-link-cta {
-      padding: 6px 16px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      font-size: 0.8rem;
-    }
-
-    /* Main layout */
-    .main-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.25fr);
-      gap: 28px;
-      align-items: flex-start;
-      margin-top: 12px;
-    }
-
-    @media (max-width: 880px) {
-      .main-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Left column */
-    .left-col {
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-
-    .hero-title {
-      font-size: clamp(1.9rem, 3vw, 2.4rem);
-      line-height: 1.1;
-      font-weight: 650;
-    }
-
-    .hero-title span {
-      color: var(--accent);
-    }
-
-    .hero-subtitle {
-      font-size: 0.98rem;
-      color: var(--text-muted);
-      max-width: 420px;
-    }
-
-    .token-input-card {
-      margin-top: 8px;
-      padding: 18px 18px 16px;
-      border-radius: var(--radius-lg);
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.8));
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      box-shadow: var(--shadow-soft);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .field-label {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-      color: var(--text-muted);
-    }
-
-    .token-input-row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .token-input-row input {
-      flex: 1;
-      background: #020617;
-      border-radius: 999px;
-      border: 1px solid var(--border-subtle);
-      color: var(--text-main);
-      padding: 9px 12px;
-      font-size: 0.9rem;
-      outline: none;
-      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
-    }
-
-    .token-input-row input::placeholder {
-      color: #4b5563;
-    }
-
-    .token-input-row input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(20, 241, 149, 0.5);
-      background: #020617;
-    }
-
-    .btn-primary {
-      border-radius: 999px;
-      border: none;
-      padding: 9px 18px;
-      background: linear-gradient(135deg, #22c55e, #14f195, #38bdf8);
-      color: #020617;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      white-space: nowrap;
-      box-shadow: 0 0 16px rgba(20, 241, 149, 0.5);
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 0 22px rgba(20, 241, 149, 0.8);
-      opacity: 0.96;
-    }
-
-    .btn-primary:active {
-      transform: translateY(0);
-      box-shadow: 0 0 12px rgba(20, 241, 149, 0.5);
-    }
-
-    .token-status {
-      font-size: 0.8rem;
-      min-height: 1.2em;
-      color: var(--text-muted);
-    }
-
-    .token-status.error {
-      color: var(--error);
-    }
-
-    .token-status.success {
-      color: var(--accent);
-    }
-
-    .token-summary-card {
-      margin-top: 6px;
-      padding: 10px 12px;
-      border-radius: var(--radius-md);
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      display: none; /* shown when token loaded */
-      align-items: center;
-      gap: 10px;
-      font-size: 0.82rem;
-    }
-
-    .token-summary-card.visible {
-      display: flex;
-    }
-
-    .token-logo {
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      background: #111827;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      object-fit: cover;
-    }
-
-    .token-summary-main {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-
-    .token-summary-name {
-      font-weight: 500;
-    }
-
-    .token-summary-symbol {
-      color: var(--accent);
-      font-size: 0.8rem;
-    }
-
-    .token-summary-address {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
-
-    .helper-note {
-      font-size: 0.78rem;
-      color: #6b7280;
-      margin-top: 2px;
-    }
-
-    /* Right column: configurator */
-    .right-col {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .config-card {
-      border-radius: 20px;
-      padding: 16px 16px 14px;
-      background: radial-gradient(circle at top left, rgba(20, 241, 149, 0.12), rgba(15, 23, 42, 0.96));
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      box-shadow: var(--shadow-soft);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .config-tabs {
-      display: inline-flex;
-      background: rgba(15, 23, 42, 0.9);
-      border-radius: 999px;
-      border: 1px solid rgba(31, 41, 55, 0.9);
-      padding: 3px;
-      gap: 3px;
-      align-self: flex-start;
-    }
-
-    .config-tab {
-      border-radius: 999px;
-      border: none;
-      padding: 6px 14px;
-      font-size: 0.82rem;
-      cursor: pointer;
-      background: transparent;
-      color: var(--text-muted);
-      transition: background var(--transition-fast), color var(--transition-fast);
-      white-space: nowrap;
-    }
-
-    .config-tab.active {
-      background: linear-gradient(135deg, #22c55e, #14f195, #38bdf8);
-      color: #020617;
-      font-weight: 600;
-    }
-
-    .config-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-      gap: 14px;
-      align-items: stretch;
-    }
-
-    @media (max-width: 960px) {
-      .config-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .preview-card {
-      border-radius: var(--radius-md);
-      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
-      border: 1px solid rgba(31, 41, 55, 0.95);
-      padding: 16px 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .preview-label {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-    }
-
-    .preview-frame {
-      position: relative;
-      border-radius: 18px;
-      background: linear-gradient(145deg, #020617, #020617 40%, #111827 100%);
-      min-height: 210px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    .preview-base {
-      width: 75%;
-      max-width: 240px;
-      opacity: 0.9;
-      filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.7));
-    }
-
-    .preview-overlay {
-      position: absolute;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      transform: translateY(-10px);
-    }
-
-    .preview-logo {
-      width: 54px;
-      height: 54px;
-      border-radius: 999px;
-      border: 2px solid rgba(15, 23, 42, 0.9);
-      background: #020617;
-      object-fit: cover;
-      display: none; /* visible when token image loaded */
-    }
-
-    .preview-logo.fallback {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      color: #9ca3af;
-    }
-
-    .preview-ticker {
-      font-weight: 600;
-      font-size: 0.95rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-    }
-
-    .preview-footnote {
-      font-size: 0.76rem;
-      color: #6b7280;
-    }
-
-    .controls-card {
-      border-radius: var(--radius-md);
-      background: rgba(15, 23, 42, 0.95);
-      border: 1px solid rgba(31, 41, 55, 0.95);
-      padding: 12px 12px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      font-size: 0.85rem;
-    }
-
-    .control-label {
-      color: var(--text-muted);
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-    }
-
-    .size-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .size-button {
-      border-radius: 999px;
-      border: 1px solid rgba(55, 65, 81, 0.95);
-      background: #020617;
-      color: var(--text-main);
-      padding: 6px 10px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      min-width: 34px;
-      text-align: center;
-      transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
-    }
-
-    .size-button.active {
-      background: var(--accent-soft);
-      border-color: var(--accent);
-      transform: translateY(-1px);
-    }
-
-    .swatches {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .swatch {
-      width: 20px;
-      height: 20px;
-      border-radius: 999px;
-      border: 1px solid rgba(31, 41, 55, 0.9);
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 0 0 1px transparent;
-      transition: box-shadow var(--transition-fast), transform var(--transition-fast);
-    }
-
-    .swatch.active {
-      box-shadow: 0 0 0 2px var(--accent);
-      transform: translateY(-1px);
-    }
-
-    .quantity-row {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      border: 1px solid rgba(55, 65, 81, 0.95);
-      background: #020617;
-      overflow: hidden;
-    }
-
-    .quantity-btn {
-      width: 28px;
-      border: none;
-      background: transparent;
-      color: var(--text-main);
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-
-    .quantity-input {
-      width: 34px;
-      border: none;
-      background: transparent;
-      text-align: center;
-      color: var(--text-main);
-      font-size: 0.9rem;
-      outline: none;
-    }
-
-    .mini-summary {
-      margin-top: 4px;
-      border-radius: 14px;
-      background: rgba(3, 7, 18, 0.9);
-      border: 1px solid rgba(31, 41, 55, 0.9);
-      padding: 10px 10px 9px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .mini-summary-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 8px;
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
-
-    .mini-summary-lines {
-      font-size: 0.8rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 12px;
-      color: #d1d5db;
-    }
-
-    .mini-summary-line span:first-child {
-      color: #9ca3af;
-    }
-
-    .mini-summary-line span:last-child {
-      font-weight: 500;
-    }
-
-    .btn-full {
-      width: 100%;
-      margin-top: 4px;
-      padding-top: 9px;
-      padding-bottom: 9px;
-    }
-
-    @media (max-width: 880px) {
-      .page-wrap {
-        padding: 16px 14px 32px;
-      }
-
-      .top-links {
-        display: none;
-      }
-
-      .config-card {
-        margin-top: 4px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TokenMerch - Web3 Solana Token Merch Customizer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: '#0d0f17',
+                            card: '#161a26',
+                            cardHover: '#1f2434',
+                            accent: '#9945FF',
+                            solana: '#14F195',
+                            cyber: '#00F0FF',
+                            border: '#272d3f',
+                            borderLight: '#374151'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts & Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #0d0f17;
+            color: #E2E8F0;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(22, 26, 38, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-accent {
+            box-shadow: 0 0 25px -5px rgba(153, 69, 255, 0.35);
+        }
+        .glow-solana {
+            box-shadow: 0 0 20px -5px rgba(20, 241, 149, 0.25);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d0f17;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #272d3f;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9945FF;
+        }
+    </style>
 </head>
-<body>
-  <div class="page-wrap">
-    <header class="top-bar">
-      <div class="brand">
-        <div class="brand-mark"></div>
-        <span>TokenMerch</span>
-      </div>
-      <div class="top-links">
-        <span class="top-link">How it works</span>
-        <span class="top-link-cta">Built for Solana</span>
-      </div>
+<body class="min-h-screen flex flex-col justify-between selection:bg-brand-accent selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-brand-border/80 bg-brand-bg/90 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-accent to-brand-solana flex items-center justify-center shadow-lg shadow-brand-accent/20">
+                    <i class="fa-solid fa-shirt text-brand-bg text-xl font-black"></i>
+                </div>
+                <div>
+                    <span class="text-xl sm:text-2xl font-black tracking-wider bg-gradient-to-r from-white via-slate-100 to-brand-solana bg-clip-text text-transparent">
+                        TOKEN<span class="text-brand-accent">MERCH</span>
+                    </span>
+                    <span class="hidden sm:inline-block text-[10px] uppercase tracking-widest font-mono bg-brand-accent/20 text-brand-accent px-2 py-0.5 rounded border border-brand-accent/30 ml-2">Solana Engine</span>
+                </div>
+            </div>
+
+            <!-- Status Badges -->
+            <div class="flex items-center space-x-3 text-xs font-mono">
+                <div class="hidden md:flex items-center space-x-2 bg-brand-card px-3 py-1.5 rounded-lg border border-brand-border">
+                    <span class="w-2 h-2 rounded-full bg-brand-solana animate-pulse"></span>
+                    <span class="text-slate-400">Network:</span>
+                    <span class="text-brand-solana font-semibold">Solana Mainnet</span>
+                </div>
+                <button id="showArchBtn" class="bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-brand-border transition-all flex items-center space-x-1.5">
+                    <i class="fa-solid fa-network-wired text-brand-accent"></i>
+                    <span class="hidden sm:inline">System Architecture</span>
+                </button>
+            </div>
+        </div>
     </header>
 
-    <main class="main-layout">
-      <!-- LEFT COLUMN -->
-      <section class="left-col">
-        <div>
-          <h1 class="hero-title">
-            Turn any <span>Solana token</span> into instant merch.
-          </h1>
-          <p class="hero-subtitle">
-            Paste a Solana token address. We’ll pull the logo and ticker so you can print it on hoodies, tees, and mugs in seconds.
-          </p>
-        </div>
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow">
+        
+        <!-- Search & Contract Address Hero Bar -->
+        <section class="glass-panel rounded-2xl p-5 sm:p-6 mb-6 relative overflow-hidden">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-brand-accent/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-16 -bottom-16 w-64 h-64 bg-brand-solana/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div class="token-input-card">
-          <div class="field-label">Solana token address</div>
-          <div class="token-input-row">
-            <input id="tokenAddress" type="text" placeholder="Paste token mint address" />
-            <button class="btn-primary" id="fetchTokenBtn" type="button">
-              Fetch token
-            </button>
-          </div>
-          <div id="tokenStatus" class="token-status">
-            Paste a token address to start.
-          </div>
-        </div>
-
-        <div id="tokenSummary" class="token-summary-card">
-          <img id="tokenLogo" class="token-logo" alt="Token logo" />
-          <div class="token-summary-main">
-            <span id="tokenName" class="token-summary-name">Token Name</span>
-            <span id="tokenSymbol" class="token-summary-symbol">$TKN</span>
-            <span id="tokenAddressShort" class="token-summary-address">xxxxxxxx</span>
-          </div>
-        </div>
-
-        <p class="helper-note">
-          In the real app, we’ll auto‑load logo and ticker from the Solana token metadata. For now this is a visual prototype.
-        </p>
-      </section>
-
-      <!-- RIGHT COLUMN -->
-      <section class="right-col">
-        <div class="config-card">
-          <div class="config-tabs">
-            <button class="config-tab active" data-product="hoodie">Hoodie</button>
-            <button class="config-tab" data-product="tshirt">T‑Shirt</button>
-            <button class="config-tab" data-product="mug">Mug</button>
-          </div>
-
-          <div class="config-layout">
-            <!-- Preview -->
-            <div class="preview-card">
-              <div class="preview-label">Live preview</div>
-              <div class="preview-frame">
-                <!-- Basic placeholder images. Replace with real assets later -->
-                <img src="https://dummyimage.com/400x500/111827/374151&text=Hoodie+Mockup" alt="Product mockup" id="previewBase" class="preview-base" />
-
-                <div class="preview-overlay">
-                  <img id="previewLogo" class="preview-logo fallback" alt="Token logo" />
-                  <span id="previewTicker" class="preview-ticker">$TKN</span>
-                </div>
-              </div>
-              <div class="preview-footnote">
-                Positioning is approximate. Final print will use high‑res assets and safe zones.
-              </div>
+            <div class="max-w-3xl mx-auto text-center mb-4">
+                <h1 class="text-xl sm:text-3xl font-extrabold tracking-tight mb-1">
+                    Drop Solana CA <i class="fa-solid fa-arrow-right text-brand-accent text-lg"></i> <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-solana to-brand-cyber">Instant High-Res Merch</span>
+                </h1>
+                <p class="text-slate-400 text-xs sm:text-sm">Automated DexScreener asset retrieval, AI upscale pipeline, and print-on-demand mockup rendering.</p>
             </div>
 
-            <!-- Controls + Mini Summary -->
-            <div class="controls-card">
-              <div class="control-group">
-                <div class="control-label">Size</div>
-                <div class="size-buttons" id="sizeButtons">
-                  <button class="size-button" data-size="S">S</button>
-                  <button class="size-button active" data-size="M">M</button>
-                  <button class="size-button" data-size="L">L</button>
-                  <button class="size-button" data-size="XL">XL</button>
-                  <button class="size-button" data-size="XXL">XXL</button>
+            <!-- CA Input Form -->
+            <div class="max-w-3xl mx-auto">
+                <div class="relative flex flex-col sm:flex-row items-stretch gap-2 bg-brand-bg/90 p-2 rounded-xl border border-brand-border focus-within:border-brand-accent transition-all glow-accent">
+                    <div class="flex-grow flex items-center px-3 space-x-3">
+                        <i class="fa-solid fa-magnifying-glass text-slate-500"></i>
+                        <input id="caInput" type="text" 
+                            placeholder="Paste Solana Mint Contract Address (e.g., EKpQGS...)" 
+                            class="w-full bg-transparent text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none font-mono py-2">
+                        <button id="pasteBtn" title="Paste from Clipboard" class="text-slate-400 hover:text-brand-solana p-1.5 rounded transition-colors text-xs font-mono flex items-center gap-1">
+                            <i class="fa-regular fa-paste"></i>
+                            <span class="hidden sm:inline">Paste</span>
+                        </button>
+                    </div>
+                    <button id="fetchBtn" class="bg-gradient-to-r from-brand-accent to-purple-600 hover:opacity-90 text-white font-semibold px-6 py-2.5 rounded-lg flex items-center justify-center space-x-2 transition-all shadow-md text-sm">
+                        <span id="fetchBtnText">Fetch Token</span>
+                        <i id="fetchSpinner" class="fa-solid fa-spinner fa-spin hidden"></i>
+                    </button>
                 </div>
-              </div>
 
-              <div class="control-group">
-                <div class="control-label">Product color</div>
-                <div class="swatches" id="productColorSwatches">
-                  <button class="swatch active" data-color="Black" style="background: #020617;"></button>
-                  <button class="swatch" data-color="White" style="background: #f9fafb;"></button>
-                  <button class="swatch" data-color="Heather Grey" style="background: linear-gradient(135deg,#9ca3af,#6b7280);"></button>
+                <!-- Presets Bar -->
+                <div class="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
+                    <span class="text-slate-500 font-mono text-[11px]">Popular Solana Presets:</span>
+                    <button onclick="loadPreset('WIF')" class="bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-brand-solana px-3 py-1 rounded-full border border-brand-border transition-all font-mono font-medium">
+                        🐶 $WIF
+                    </button>
+                    <button onclick="loadPreset('BONK')" class="bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-brand-solana px-3 py-1 rounded-full border border-brand-border transition-all font-mono font-medium">
+                        🐕 $BONK
+                    </button>
+                    <button onclick="loadPreset('POPCAT')" class="bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-brand-solana px-3 py-1 rounded-full border border-brand-border transition-all font-mono font-medium">
+                        🐱 $POPCAT
+                    </button>
                 </div>
-              </div>
-
-              <div class="control-group">
-                <div class="control-label">Token name color</div>
-                <div class="swatches" id="nameColorSwatches">
-                  <button class="swatch active" data-color-name="White" data-color="#ffffff" style="background: #ffffff;"></button>
-                  <button class="swatch" data-color-name="Black" data-color="#000000" style="background: #000000;"></button>
-                  <button class="swatch" data-color-name="Accent" data-color="#14f195" style="background: #14f195;"></button>
-                </div>
-              </div>
-
-              <div class="control-group">
-                <div class="control-label">Quantity</div>
-                <div class="quantity-row">
-                  <button class="quantity-btn" id="qtyMinus" type="button">−</button>
-                  <input id="qtyInput" class="quantity-input" type="number" min="1" value="1" />
-                  <button class="quantity-btn" id="qtyPlus" type="button">+</button>
-                </div>
-              </div>
-
-              <div class="mini-summary">
-                <div class="mini-summary-header">
-                  <span>Your selection</span>
-                  <span id="miniProductLabel">Hoodie</span>
-                </div>
-                <div class="mini-summary-lines">
-                  <div class="mini-summary-line">
-                    <span>Token</span>
-                    <span id="miniTokenLabel">$TKN</span>
-                  </div>
-                  <div class="mini-summary-line">
-                    <span>Size</span>
-                    <span id="miniSizeLabel">M</span>
-                  </div>
-                  <div class="mini-summary-line">
-                    <span>Color</span>
-                    <span id="miniColorLabel">Black</span>
-                  </div>
-                  <div class="mini-summary-line">
-                    <span>Qty</span>
-                    <span id="miniQtyLabel">1</span>
-                  </div>
-                </div>
-                <button class="btn-primary btn-full" type="button" id="continueBtn">
-                  Continue to checkout
-                </button>
-              </div>
             </div>
-          </div>
+        </section>
+
+        <!-- Studio Customizer Workspace (2-Column Desktop Grid) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- LEFT SIDEBAR: Controls & Token Info (5 Columns) -->
+            <div class="lg:col-span-5 flex flex-col space-y-5">
+                
+                <!-- Token Info & Dex Data Card -->
+                <div class="glass-panel rounded-2xl p-5 relative">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="relative">
+                                <img id="tokenImgSidebar" src="https://dd.dexscreener.com/ds-data/tokens/solana/EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcJM.png" 
+                                    referrerpolicy="no-referrer"
+                                    alt="Token Icon" class="w-14 h-14 rounded-2xl ring-2 ring-brand-accent/50 shadow-md object-cover bg-brand-bg">
+                                <span id="proxyBadge" class="absolute -bottom-1 -right-1 bg-brand-solana text-brand-bg text-[9px] font-bold px-1 rounded-full" title="Image Proxy Active">✓ Proxy</span>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h2 id="tokenName" class="text-lg font-bold text-white flex items-center gap-2 truncate">
+                                    Dogwifhat
+                                    <span id="tokenTicker" class="text-xs font-mono bg-brand-border px-2 py-0.5 rounded text-brand-solana">$WIF</span>
+                                </h2>
+                                <p id="tokenCaDisplay" class="text-[11px] font-mono text-slate-400 mt-1 truncate max-w-[220px]">
+                                    EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcJM
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Market Stats -->
+                    <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-brand-border">
+                        <div class="bg-brand-bg/80 p-2.5 rounded-xl border border-brand-border">
+                            <span class="text-[10px] font-mono text-slate-400 uppercase block">Live Dex Price</span>
+                            <span id="tokenPrice" class="text-sm font-mono font-bold text-white mt-0.5">$2.45 USD</span>
+                        </div>
+                        <div class="bg-brand-bg/80 p-2.5 rounded-xl border border-brand-border">
+                            <span class="text-[10px] font-mono text-slate-400 uppercase block">24h Change</span>
+                            <span id="tokenChange" class="text-sm font-mono font-bold text-brand-solana mt-0.5">+14.2%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customizer Controls Card -->
+                <div class="glass-panel rounded-2xl p-5 space-y-4">
+                    <h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 flex items-center justify-between">
+                        <span><i class="fa-solid fa-sliders text-brand-accent mr-2"></i> Merch Customizer</span>
+                        <span class="text-[10px] text-brand-solana">Real-time Render</span>
+                    </h3>
+
+                    <!-- 1. Garment Type -->
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-2">1. PRODUCT SELECTION</label>
+                        <div class="grid grid-cols-3 gap-2 font-mono text-xs">
+                            <button onclick="setProduct('tshirt')" id="btn-tshirt" class="py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1">
+                                <i class="fa-solid fa-shirt"></i> <span>T-Shirt</span>
+                            </button>
+                            <button onclick="setProduct('hoodie')" id="btn-hoodie" class="py-2 px-3 rounded-lg border border-brand-accent bg-brand-accent/20 text-white font-bold transition-all text-center flex items-center justify-center space-x-1">
+                                <i class="fa-solid fa-shirt"></i> <span>Hoodie</span>
+                            </button>
+                            <button onclick="setProduct('mug')" id="btn-mug" class="py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1">
+                                <i class="fa-solid fa-mug-hot"></i> <span>Mug</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Garment Color Picker -->
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-2">2. GARMENT COLOR</label>
+                        <div class="flex items-center space-x-2.5 bg-brand-bg p-2.5 rounded-xl border border-brand-border">
+                            <button onclick="setGarmentColor('#121212')" title="Jet Black" class="color-dot w-7 h-7 rounded-full bg-[#121212] border-2 border-white focus:outline-none ring-2 ring-brand-accent"></button>
+                            <button onclick="setGarmentColor('#FFFFFF')" title="Pure White" class="color-dot w-7 h-7 rounded-full bg-[#FFFFFF] border border-slate-400 focus:outline-none"></button>
+                            <button onclick="setGarmentColor('#4B5563')" title="Heather Grey" class="color-dot w-7 h-7 rounded-full bg-[#4B5563] border border-white/20 focus:outline-none"></button>
+                            <button onclick="setGarmentColor('#1E293B')" title="Navy Blue" class="color-dot w-7 h-7 rounded-full bg-[#1E293B] border border-white/20 focus:outline-none"></button>
+                            <button onclick="setGarmentColor('#581C87')" title="Solana Purple" class="color-dot w-7 h-7 rounded-full bg-[#581C87] border border-white/20 focus:outline-none"></button>
+                            <button onclick="setGarmentColor('#F5F5DC')" title="Vintage Cream" class="color-dot w-7 h-7 rounded-full bg-[#F5F5DC] border border-white/20 focus:outline-none"></button>
+                        </div>
+                    </div>
+
+                    <!-- 3. Print Style Selector -->
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-2">3. GRAPHIC PRINT STYLE</label>
+                        <select id="printStyleSelect" onchange="setPrintStyle(this.value)" class="w-full bg-brand-bg text-slate-200 border border-brand-border rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-accent">
+                            <option value="minimal">Chest Badge (Left Pocket)</option>
+                            <option value="vintage">Centered Graphic Box</option>
+                            <option value="arch">Vintage Arch Streetwear (Token Logo + $TICKER)</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. Size Selector -->
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-2">4. SELECT SIZE</label>
+                        <div class="grid grid-cols-5 gap-1.5 font-mono text-xs">
+                            <button onclick="setSize('S')" class="size-btn py-2 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center">S</button>
+                            <button onclick="setSize('M')" class="size-btn py-2 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center">M</button>
+                            <button onclick="setSize('L')" class="size-btn py-2 rounded-lg border border-brand-accent bg-brand-accent/20 text-white font-bold transition-all text-center">L</button>
+                            <button onclick="setSize('XL')" class="size-btn py-2 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center">XL</button>
+                            <button onclick="setSize('2XL')" class="size-btn py-2 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center">2XL</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Upscale Engine Status Panel -->
+                <div class="glass-panel rounded-2xl p-4 border border-brand-solana/20 bg-brand-solana/5 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-mono">
+                        <span class="text-brand-solana font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> AI Print-Ready Pipeline
+                        </span>
+                        <span class="bg-brand-solana/20 text-brand-solana px-2 py-0.5 rounded text-[10px]">300 DPI Active</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-300 pt-1">
+                        <div>
+                            <span class="text-slate-500 block">Source Resolution:</span>
+                            <span id="sourceResText" class="font-bold">200 x 200 px</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">Print Vector Output:</span>
+                            <span id="upscaleResText" class="font-bold text-brand-solana">2400 x 2400 px</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-brand-bg rounded-full h-1.5 overflow-hidden mt-1">
+                        <div class="bg-gradient-to-r from-brand-accent to-brand-solana h-full w-full"></div>
+                    </div>
+                </div>
+
+                <!-- Price & Checkout Button -->
+                <div class="glass-panel rounded-2xl p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-mono block uppercase">Total Price</span>
+                            <span id="priceUsd" class="text-2xl font-black text-white font-mono">$68.00</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-400 font-mono block uppercase">Crypto Approx.</span>
+                            <span id="priceSol" class="text-xs font-mono text-brand-solana font-bold">~ 0.44 SOL</span>
+                        </div>
+                    </div>
+
+                    <button id="checkoutBtn" class="w-full bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber hover:opacity-95 text-slate-950 font-extrabold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 text-sm">
+                        <i class="fa-solid fa-cart-shopping text-base"></i>
+                        <span>ADD TO SHOPIFY CART (TEST PAYLOAD)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Live Product Canvas Preview (7 Columns) -->
+            <div class="lg:col-span-7 sticky top-24">
+                <div class="glass-panel rounded-2xl p-6 relative flex flex-col items-center justify-center min-h-[520px]">
+                    
+                    <!-- Canvas Header Toolbar -->
+                    <div class="w-full flex items-center justify-between mb-4 text-xs font-mono border-b border-brand-border pb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-brand-solana animate-ping"></span>
+                            <span class="text-slate-300 font-bold uppercase tracking-wider">Canvas Visualizer Engine</span>
+                        </div>
+                        <div class="text-slate-400">
+                            <span id="canvasStatusText" class="text-brand-solana"><i class="fa-solid fa-circle-check"></i> Image Rendered</span>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Wrapper -->
+                    <div class="relative w-full aspect-square max-w-[460px] mx-auto flex items-center justify-center bg-brand-bg/60 rounded-xl border border-brand-border/60 p-2 shadow-2xl">
+                        <canvas id="mockupCanvas" width="800" height="800" class="w-full h-full object-contain rounded-lg"></canvas>
+                    </div>
+
+                    <!-- Visualizer Footer info -->
+                    <div class="w-full mt-4 flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2">
+                        <span><i class="fa-solid fa-arrows-rotate text-brand-accent mr-1"></i> Interactive Preview</span>
+                        <span>Direct Canvas 2D Composite</span>
+                    </div>
+                </div>
+            </div>
         </div>
-      </section>
     </main>
-  </div>
 
-  <script>
-    // Tiny JS to make prototype interactive (no real Solana or Shopify yet)
+    <!-- Shopify Payload Modal -->
+    <div id="payloadModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-2xl w-full rounded-2xl p-6 space-y-4 max-h-[90vh] flex flex-col border border-brand-accent/40 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-brand-border pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 rounded-full bg-brand-solana"></div>
+                    <h3 class="text-base font-bold text-white font-mono">Shopify Storefront Cart Payload</h3>
+                </div>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-white p-1 text-xl">&times;</button>
+            </div>
 
-    // Fake token fetch: just fill summary and preview from address
-    const tokenAddressInput = document.getElementById('tokenAddress');
-    const fetchTokenBtn = document.getElementById('fetchTokenBtn');
-    const tokenStatus = document.getElementById('tokenStatus');
-    const tokenSummary = document.getElementById('tokenSummary');
-    const tokenNameEl = document.getElementById('tokenName');
-    const tokenSymbolEl = document.getElementById('tokenSymbol');
-    const tokenAddressShortEl = document.getElementById('tokenAddressShort');
-    const tokenLogoEl = document.getElementById('tokenLogo');
-    const previewTicker = document.getElementById('previewTicker');
-    const miniTokenLabel = document.getElementById('miniTokenLabel');
+            <p class="text-xs text-slate-300">
+                This JSON payload demonstrates how your custom Vercel backend worker securely formats the order, token CA metadata, AI print file link, and custom line-item properties for the <strong>Shopify Storefront API</strong> and <strong>Printful/Gelato Webhooks</strong>.
+            </p>
 
-    fetchTokenBtn.addEventListener('click', () => {
-      const addr = tokenAddressInput.value.trim();
-      if (!addr) {
-        tokenStatus.textContent = 'Paste a token address to start.';
-        tokenStatus.className = 'token-status error';
-        tokenSummary.classList.remove('visible');
-        return;
-      }
+            <div class="bg-brand-bg p-4 rounded-xl border border-brand-border overflow-x-auto font-mono text-xs text-emerald-400 flex-grow max-h-[340px]">
+                <pre id="jsonPayloadDisplay">Loading payload...</pre>
+            </div>
 
-      // For prototype: fake success. Later we’ll call Solana APIs here.
-      tokenStatus.textContent = 'Found token metadata (prototype).';
-      tokenStatus.className = 'token-status success';
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                <button id="copyJsonBtn" class="w-full sm:w-auto bg-brand-card hover:bg-brand-cardHover text-white text-xs font-mono py-2.5 px-4 rounded-lg border border-brand-border transition-all flex items-center justify-center space-x-2">
+                    <i class="fa-regular fa-copy"></i>
+                    <span>Copy Payload JSON</span>
+                </button>
+                <button id="closeModalBtn2" class="w-full sm:w-auto bg-brand-accent hover:opacity-90 text-white text-xs font-bold py-2.5 px-6 rounded-lg transition-all">
+                    Close Window
+                </button>
+            </div>
+        </div>
+    </div>
 
-      // Fake name/symbol based on shortened address
-      const short = addr.slice(0, 4) + '...' + addr.slice(-4);
-      const fakeSymbol = '$' + (addr.slice(0, 3) || 'TKN').toUpperCase();
-      const fakeName = 'Custom Token';
+    <!-- System Architecture Modal -->
+    <div id="archModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-3xl w-full rounded-2xl p-6 space-y-5 max-h-[90vh] overflow-y-auto border border-brand-border">
+            <div class="flex items-center justify-between border-b border-brand-border pb-3">
+                <h3 class="text-lg font-bold text-white font-mono flex items-center gap-2">
+                    <i class="fa-solid fa-network-wired text-brand-accent"></i>
+                    TokenMerch System Architecture
+                </h3>
+                <button id="closeArchBtn" class="text-slate-400 hover:text-white p-1 text-xl">&times;</button>
+            </div>
 
-      tokenNameEl.textContent = fakeName;
-      tokenSymbolEl.textContent = fakeSymbol;
-      tokenAddressShortEl.textContent = short;
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <div class="bg-brand-bg p-4 rounded-xl border border-brand-border space-y-2">
+                    <div class="text-brand-solana font-bold text-sm">1. DexScreener Proxy</div>
+                    <p class="text-slate-400">User inputs Solana CA. Backend fetches metadata & passes IPFS image through proxy (`wsrv.nl`) for clean HTML5 Canvas drawing.</p>
+                </div>
+                <div class="bg-brand-bg p-4 rounded-xl border border-brand-border space-y-2">
+                    <div class="text-brand-cyber font-bold text-sm">2. AI Upscale Worker</div>
+                    <p class="text-slate-400">Serverless worker scales small token icons (200px) up to 2400x2400px @ 300 DPI print files on the fly.</p>
+                </div>
+                <div class="bg-brand-bg p-4 rounded-xl border border-brand-border space-y-2">
+                    <div class="text-brand-accent font-bold text-sm">3. Shopify POD Auto-Sync</div>
+                    <p class="text-slate-400">Shopify Cart receives line items with high-res print URLs attached. Upon payment, Printful/Gelato prints and ships.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-      previewTicker.textContent = fakeSymbol;
-      miniTokenLabel.textContent = fakeSymbol;
+    <!-- Footer -->
+    <footer class="border-t border-brand-border py-4 text-center text-xs font-mono text-slate-500">
+        <p>TokenMerch Web3 Prototype • Powered by Solana Blockchain & Shopify Storefront API</p>
+    </footer>
 
-      // For now, use a generic placeholder for logo
-      tokenLogoEl.src = 'https://dummyimage.com/64x64/111827/4b5563&text=LOGO';
-      tokenLogoEl.style.display = 'block';
+    <!-- Interactive Script -->
+    <script>
+        // Verified Solana Token Presets
+        const PRESETS = {
+            'WIF': {
+                ca: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcJM',
+                name: 'Dogwifhat',
+                ticker: 'WIF',
+                price: '$2.45',
+                change: '+14.2%',
+                img: 'https://dd.dexscreener.com/ds-data/tokens/solana/EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcJM.png'
+            },
+            'BONK': {
+                ca: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+                name: 'Bonk',
+                ticker: 'BONK',
+                price: '$0.000022',
+                change: '+6.8%',
+                img: 'https://dd.dexscreener.com/ds-data/tokens/solana/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263.png'
+            },
+            'POPCAT': {
+                ca: '7GCihgR8a6ESR93gABfZPbhLW3HzmLWzbks44uhCpump',
+                name: 'Popcat',
+                ticker: 'POPCAT',
+                price: '$1.38',
+                change: '-2.1%',
+                img: 'https://dd.dexscreener.com/ds-data/tokens/solana/7GCihgR8a6ESR93gABfZPbhLW3HzmLWzbks44uhCpump.png'
+            }
+        };
 
-      const previewLogo = document.getElementById('previewLogo');
-      previewLogo.src = tokenLogoEl.src;
-      previewLogo.style.display = 'block';
-      previewLogo.classList.remove('fallback');
+        // State Variables
+        let currentToken = { ...PRESETS['WIF'] };
+        let currentProduct = 'hoodie'; // 'tshirt', 'hoodie', 'mug'
+        let currentGarmentColor = '#121212';
+        let currentStyle = 'vintage'; // 'minimal', 'vintage', 'arch'
+        let currentSize = 'L';
+        let prices = { tshirt: 38, hoodie: 68, mug: 24 };
 
-      tokenSummary.classList.add('visible');
-    });
+        // Canvas Setup
+        const canvas = document.getElementById('mockupCanvas');
+        const ctx = canvas.getContext('2d');
+        let loadedTokenImg = null;
+        let isImgLoaded = false;
 
-    // Tabs: hoodie / tshirt / mug
-    const tabs = document.querySelectorAll('.config-tab');
-    const previewBase = document.getElementById('previewBase');
-    const miniProductLabel = document.getElementById('miniProductLabel');
+        window.addEventListener('load', () => {
+            loadTokenImageWithProxy(currentToken.img);
+            updatePriceDisplay();
+        });
 
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
+        // Safe Image Loader with CORS Proxy Fallback
+        function loadTokenImageWithProxy(rawUrl) {
+            isImgLoaded = false;
+            document.getElementById('canvasStatusText').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-brand-accent"></i> Loading Image...`;
 
-        const product = tab.dataset.product;
-        if (product === 'hoodie') {
-          previewBase.src = 'https://dummyimage.com/400x500/111827/374151&text=Hoodie+Mockup';
-          miniProductLabel.textContent = 'Hoodie';
-        } else if (product === 'tshirt') {
-          previewBase.src = 'https://dummyimage.com/400x500/111827/374151&text=T-Shirt+Mockup';
-          miniProductLabel.textContent = 'T‑Shirt';
-        } else {
-          previewBase.src = 'https://dummyimage.com/400x360/111827/374151&text=Mug+Mockup';
-          miniProductLabel.textContent = 'Mug';
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+
+            // Proxy URL via wsrv.nl to guarantee CORS clearance on Canvas
+            const proxiedUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}&w=600&output=webp`;
+
+            img.onload = () => {
+                loadedTokenImg = img;
+                isImgLoaded = true;
+                document.getElementById('canvasStatusText').innerHTML = `<i class="fa-solid fa-circle-check text-brand-solana"></i> Image Rendered`;
+                
+                // Update source resolution displays
+                const w = img.naturalWidth || 200;
+                const h = img.naturalHeight || 200;
+                document.getElementById('sourceResText').innerText = `${w} x ${h} px`;
+                document.getElementById('upscaleResText').innerText = `${w * 12} x ${h * 12} px`;
+
+                renderMockup();
+            };
+
+            img.onerror = () => {
+                console.warn("Proxy failed, attempting raw direct load...");
+                const rawImg = new Image();
+                rawImg.crossOrigin = "anonymous";
+                rawImg.onload = () => {
+                    loadedTokenImg = rawImg;
+                    isImgLoaded = true;
+                    document.getElementById('canvasStatusText').innerHTML = `<i class="fa-solid fa-circle-check text-brand-solana"></i> Direct Image Rendered`;
+                    renderMockup();
+                };
+                rawImg.onerror = () => {
+                    console.error("All image load attempts failed. Fallback badge enabled.");
+                    loadedTokenImg = null;
+                    isImgLoaded = false;
+                    document.getElementById('canvasStatusText').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Fallback Badge Mode`;
+                    renderMockup();
+                };
+                rawImg.src = rawUrl;
+            };
+
+            img.src = proxiedUrl;
         }
-      });
-    });
 
-    // Size buttons
-    const sizeButtons = document.querySelectorAll('.size-button');
-    const miniSizeLabel = document.getElementById('miniSizeLabel');
-    sizeButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        sizeButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        miniSizeLabel.textContent = btn.dataset.size;
-      });
-    });
+        // Fetch Token Meta from DexScreener API
+        async function fetchTokenData(ca) {
+            const btnText = document.getElementById('fetchBtnText');
+            const spinner = document.getElementById('fetchSpinner');
+            btnText.innerText = "Fetching...";
+            spinner.classList.remove('hidden');
 
-    // Product color swatches
-    const productColorSwatches = document.querySelectorAll('#productColorSwatches .swatch');
-    const miniColorLabel = document.getElementById('miniColorLabel');
-    productColorSwatches.forEach(swatch => {
-      swatch.addEventListener('click', () => {
-        productColorSwatches.forEach(s => s.classList.remove('active'));
-        swatch.classList.add('active');
-        miniColorLabel.textContent = swatch.dataset.color;
-      });
-    });
+            try {
+                const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`);
+                const data = await response.json();
+                
+                if (data.pairs && data.pairs.length > 0) {
+                    const pair = data.pairs[0];
+                    const imgUrl = pair.info?.imageUrl || 'https://placehold.co/300x300/151922/14F195?text=SOL';
 
-    // Name color swatches – update ticker color
-    const nameColorSwatches = document.querySelectorAll('#nameColorSwatches .swatch');
-    nameColorSwatches.forEach(swatch => {
-      swatch.addEventListener('click', () => {
-        nameColorSwatches.forEach(s => s.classList.remove('active'));
-        swatch.classList.add('active');
-        const color = swatch.dataset.color;
-        previewTicker.style.color = color;
-      });
-    });
+                    currentToken = {
+                        ca: ca,
+                        name: pair.baseToken.name || 'Solana Token',
+                        ticker: pair.baseToken.symbol || 'TOKEN',
+                        price: pair.priceUsd ? `$${parseFloat(pair.priceUsd).toFixed(4)}` : '$0.00',
+                        change: pair.priceChange?.h24 ? `${pair.priceChange.h24 > 0 ? '+' : ''}${pair.priceChange.h24}%` : '0%',
+                        img: imgUrl
+                    };
+                    updateTokenUI();
+                } else {
+                    alert('Token CA found, but no active pairs on DexScreener. Using token address with generic avatar.');
+                    currentToken.ca = ca;
+                    currentToken.name = 'Custom Solana Token';
+                    currentToken.ticker = 'SOL';
+                    currentToken.img = 'https://placehold.co/300x300/151922/14F195?text=SOL';
+                    updateTokenUI();
+                }
+            } catch (err) {
+                console.error("DexScreener fetch error:", err);
+                alert('Could not fetch token data directly. Check the Contract Address.');
+            } finally {
+                btnText.innerText = "Fetch Token";
+                spinner.classList.add('hidden');
+            }
+        }
 
-    // Quantity controls
-    const qtyInput = document.getElementById('qtyInput');
-    const qtyMinus = document.getElementById('qtyMinus');
-    const qtyPlus = document.getElementById('qtyPlus');
-    const miniQtyLabel = document.getElementById('miniQtyLabel');
+        function updateTokenUI() {
+            document.getElementById('tokenName').childNodes[0].textContent = currentToken.name + ' ';
+            document.getElementById('tokenTicker').innerText = `$${currentToken.ticker}`;
+            document.getElementById('tokenCaDisplay').innerText = currentToken.ca;
+            document.getElementById('tokenPrice').innerText = currentToken.price;
+            document.getElementById('tokenChange').innerText = currentToken.change;
+            
+            const changeEl = document.getElementById('tokenChange');
+            if (currentToken.change.startsWith('-')) {
+                changeEl.className = "text-sm font-mono font-bold text-rose-400 mt-0.5";
+            } else {
+                changeEl.className = "text-sm font-mono font-bold text-brand-solana mt-0.5";
+            }
 
-    function updateQty(val) {
-      const n = Math.max(1, parseInt(val || '1', 10));
-      qtyInput.value = n;
-      miniQtyLabel.textContent = n;
-    }
+            document.getElementById('tokenImgSidebar').src = currentToken.img;
+            loadTokenImageWithProxy(currentToken.img);
+        }
 
-    qtyMinus.addEventListener('click', () => {
-      updateQty(qtyInput.value - 1);
-    });
+        function loadPreset(key) {
+            if (PRESETS[key]) {
+                currentToken = { ...PRESETS[key] };
+                document.getElementById('caInput').value = currentToken.ca;
+                updateTokenUI();
+            }
+        }
 
-    qtyPlus.addEventListener('click', () => {
-      updateQty(Number(qtyInput.value) + 1);
-    });
+        // Draw Canvas Mockup
+        function renderMockup() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    qtyInput.addEventListener('change', () => {
-      updateQty(qtyInput.value);
-    });
+            // Garment Color Fill
+            ctx.fillStyle = currentGarmentColor;
 
-    // Continue button – for now just alert / later route to page 2 or Shopify
-    const continueBtn = document.getElementById('continueBtn');
-    continueBtn.addEventListener('click', () => {
-      alert('In the real app, this would take you to Page 2 or Shopify checkout. This is just the visual prototype.');
-    });
-  </script>
+            if (currentProduct === 'hoodie' || currentProduct === 'tshirt') {
+                // Shoulders / Torso
+                ctx.beginPath();
+                ctx.roundRect(140, 140, 520, 620, 35);
+                ctx.fill();
+
+                // Left Sleeve
+                ctx.beginPath();
+                ctx.roundRect(60, 170, 130, 340, 30);
+                ctx.fill();
+
+                // Right Sleeve
+                ctx.beginPath();
+                ctx.roundRect(610, 170, 130, 340, 30);
+                ctx.fill();
+
+                // Collar Dark Shadow Cut
+                ctx.fillStyle = '#0a0c12';
+                ctx.beginPath();
+                ctx.arc(400, 140, 85, 0, Math.PI);
+                ctx.fill();
+
+                // Neck Tag Line
+                ctx.strokeStyle = '#272d3f';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(400, 140, 83, 0, Math.PI);
+                ctx.stroke();
+
+                if (currentProduct === 'hoodie') {
+                    // Hoodie Strings
+                    ctx.strokeStyle = '#e2e8f0';
+                    ctx.lineWidth = 5;
+                    ctx.beginPath();
+                    ctx.moveTo(365, 190); ctx.lineTo(365, 300);
+                    ctx.moveTo(435, 190); ctx.lineTo(435, 300);
+                    ctx.stroke();
+
+                    // Hoodie Pocket
+                    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.roundRect(240, 520, 320, 180, 20);
+                    ctx.stroke();
+                }
+            } else if (currentProduct === 'mug') {
+                // Mug Body
+                ctx.beginPath();
+                ctx.roundRect(240, 180, 320, 460, 35);
+                ctx.fill();
+
+                // Mug Handle
+                ctx.strokeStyle = currentGarmentColor;
+                ctx.lineWidth = 44;
+                ctx.beginPath();
+                ctx.arc(220, 410, 90, 0.5 * Math.PI, 1.5 * Math.PI);
+                ctx.stroke();
+
+                // Rim Highlight
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.ellipse(400, 180, 160, 20, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // ARTWORK COMPOSITING OVER GARMENT
+            if (isImgLoaded && loadedTokenImg) {
+                ctx.save();
+
+                if (currentStyle === 'minimal') {
+                    // Small Left Chest Pocket Badge
+                    const size = 100;
+                    const x = currentProduct === 'mug' ? 350 : 270;
+                    const y = currentProduct === 'mug' ? 360 : 280;
+
+                    ctx.beginPath();
+                    ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
+                    ctx.clip();
+                    ctx.drawImage(loadedTokenImg, x, y, size, size);
+
+                } else if (currentStyle === 'vintage') {
+                    // Centered Box Graphic
+                    const boxSize = 240;
+                    const x = 400 - boxSize/2;
+                    const y = currentProduct === 'mug' ? 290 : 270;
+
+                    // Frame
+                    ctx.fillStyle = '#0d0f17';
+                    ctx.fillRect(x - 12, y - 12, boxSize + 24, boxSize + 24);
+                    ctx.strokeStyle = '#9945FF';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(x - 12, y - 12, boxSize + 24, boxSize + 24);
+
+                    ctx.drawImage(loadedTokenImg, x, y, boxSize, boxSize);
+
+                } else if (currentStyle === 'arch') {
+                    // Vintage Arch Streetwear Style (Token Logo + Text)
+                    const size = 200;
+                    const x = 400 - size/2;
+                    const y = currentProduct === 'mug' ? 310 : 310;
+
+                    // Arch Text Header
+                    ctx.fillStyle = '#14F195';
+                    ctx.font = '900 36px "JetBrains Mono", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`$${currentToken.ticker}`, 400, y - 25);
+
+                    ctx.drawImage(loadedTokenImg, x, y, size, size);
+
+                    // Subtext
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '600 16px "Inter", sans-serif';
+                    ctx.fillText('SOLANA OFFICIAL MERCH', 400, y + size + 35);
+                }
+
+                ctx.restore();
+            } else {
+                // Fallback Token Badge if Image is Blocked
+                ctx.save();
+                const x = 400;
+                const y = 380;
+                
+                ctx.fillStyle = '#14F195';
+                ctx.beginPath();
+                ctx.arc(x, y, 90, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#0d0f17';
+                ctx.font = '900 32px "JetBrains Mono", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`$${currentToken.ticker}`, x, y + 10);
+                ctx.restore();
+            }
+        }
+
+        // Event Handlers
+        document.getElementById('fetchBtn').addEventListener('click', () => {
+            const inputCa = document.getElementById('caInput').value.trim();
+            if (inputCa) {
+                fetchTokenData(inputCa);
+            } else {
+                alert('Please enter a valid Solana Mint Contract Address.');
+            }
+        });
+
+        document.getElementById('pasteBtn').addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('caInput').value = text;
+            } catch (err) {
+                alert('Clipboard access blocked by browser.');
+            }
+        });
+
+        function setProduct(product) {
+            currentProduct = product;
+            ['tshirt', 'hoodie', 'mug'].forEach(p => {
+                const btn = document.getElementById(`btn-${p}`);
+                if (p === product) {
+                    btn.className = "py-2 px-3 rounded-lg border border-brand-accent bg-brand-accent/20 text-white font-bold transition-all text-center flex items-center justify-center space-x-1";
+                } else {
+                    btn.className = "py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1";
+                }
+            });
+
+            updatePriceDisplay();
+            renderMockup();
+        }
+
+        function setGarmentColor(color) {
+            currentGarmentColor = color;
+            renderMockup();
+        }
+
+        function setPrintStyle(style) {
+            currentStyle = style;
+            renderMockup();
+        }
+
+        function setSize(size) {
+            currentSize = size;
+            document.querySelectorAll('.size-btn').forEach(btn => {
+                btn.className = "size-btn py-2 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center";
+            });
+            event.target.className = "size-btn py-2 rounded-lg border border-brand-accent bg-brand-accent/20 text-white font-bold transition-all text-center";
+        }
+
+        function updatePriceDisplay() {
+            const basePrice = prices[currentProduct];
+            document.getElementById('priceUsd').innerText = `$${basePrice}.00`;
+            const solApprox = (basePrice / 155).toFixed(2);
+            document.getElementById('priceSol').innerText = `~ ${solApprox} SOL`;
+        }
+
+        // Modal Logic
+        document.getElementById('checkoutBtn').addEventListener('click', () => {
+            const payload = {
+                shop: "tokenmerch.myshopify.com",
+                action: "ADD_TO_CART_STOREFRONT_API",
+                cartItem: {
+                    productTitle: `TokenMerch Heavyweight ${currentProduct.toUpperCase()} ($${currentToken.ticker})`,
+                    variant: {
+                        size: currentSize,
+                        color: currentGarmentColor,
+                        style: currentStyle
+                    },
+                    priceUsd: prices[currentProduct],
+                    quantity: 1,
+                    customLineItemProperties: {
+                        _solanaTokenCA: currentToken.ca,
+                        _tokenSymbol: currentToken.ticker,
+                        _tokenName: currentToken.name,
+                        _highResVectorAssetUrl: `https://api.tokenmerch.io/v1/upscale?ca=${currentToken.ca}&dpi=300`,
+                        _printStyle: currentStyle
+                    }
+                },
+                podWebhookFulfillment: {
+                    supplier: "Printful / Gelato API",
+                    printFilePrepared: true,
+                    resolutionDpi: 300,
+                    vectorized: true
+                }
+            };
+
+            document.getElementById('jsonPayloadDisplay').textContent = JSON.stringify(payload, null, 2);
+            document.getElementById('payloadModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            document.getElementById('payloadModal').classList.add('hidden');
+        });
+        document.getElementById('closeModalBtn2').addEventListener('click', () => {
+            document.getElementById('payloadModal').classList.add('hidden');
+        });
+
+        document.getElementById('copyJsonBtn').addEventListener('click', () => {
+            const text = document.getElementById('jsonPayloadDisplay').textContent;
+            navigator.clipboard.writeText(text);
+            alert('Shopify Payload JSON copied to clipboard!');
+        });
+
+        document.getElementById('showArchBtn').addEventListener('click', () => {
+            document.getElementById('archModal').classList.remove('hidden');
+        });
+        document.getElementById('closeArchBtn').addEventListener('click', () => {
+            document.getElementById('archModal').classList.add('hidden');
+        });
+    </script>
 </body>
 </html>
