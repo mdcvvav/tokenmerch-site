@@ -52,7 +52,6 @@
         .glow-solana {
             box-shadow: 0 0 20px -5px rgba(20, 241, 149, 0.25);
         }
-        /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -74,7 +73,6 @@
     <!-- Header Navigation -->
     <header class="border-b border-brand-border/80 bg-brand-bg/90 sticky top-0 z-40 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
-            <!-- Brand Logo -->
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-accent to-brand-solana flex items-center justify-center shadow-lg shadow-brand-accent/20">
                     <i class="fa-solid fa-shirt text-brand-bg text-xl font-black"></i>
@@ -87,7 +85,6 @@
                 </div>
             </div>
 
-            <!-- Status Badges -->
             <div class="flex items-center space-x-3 text-xs font-mono">
                 <div class="hidden md:flex items-center space-x-2 bg-brand-card px-3 py-1.5 rounded-lg border border-brand-border">
                     <span class="w-2 h-2 rounded-full bg-brand-solana animate-pulse"></span>
@@ -117,7 +114,6 @@
                 <p class="text-slate-400 text-xs sm:text-sm">Automated DexScreener asset retrieval, AI upscale pipeline, and print-on-demand mockup rendering.</p>
             </div>
 
-            <!-- CA Input Form -->
             <div class="max-w-3xl mx-auto">
                 <div class="relative flex flex-col sm:flex-row items-stretch gap-2 bg-brand-bg/90 p-2 rounded-xl border border-brand-border focus-within:border-brand-accent transition-all glow-accent">
                     <div class="flex-grow flex items-center px-3 space-x-3">
@@ -136,7 +132,6 @@
                     </button>
                 </div>
 
-                <!-- Presets Bar -->
                 <div class="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
                     <span class="text-slate-500 font-mono text-[11px]">Popular Solana Presets:</span>
                     <button onclick="loadPreset('WIF')" class="bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-brand-solana px-3 py-1 rounded-full border border-brand-border transition-all font-mono font-medium">
@@ -152,13 +147,10 @@
             </div>
         </section>
 
-        <!-- Studio Customizer Workspace (2-Column Desktop Grid) -->
+        <!-- Studio Customizer Workspace -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            <!-- LEFT SIDEBAR: Controls & Token Info (5 Columns) -->
+            <!-- LEFT: Token info + controls -->
             <div class="lg:col-span-5 flex flex-col space-y-5">
-                
-                <!-- Token Info & Dex Data Card -->
                 <div class="glass-panel rounded-2xl p-5 relative">
                     <div class="flex items-start justify-between">
                         <div class="flex items-center space-x-4">
@@ -180,7 +172,6 @@
                         </div>
                     </div>
 
-                    <!-- Market Stats -->
                     <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-brand-border">
                         <div class="bg-brand-bg/80 p-2.5 rounded-xl border border-brand-border">
                             <span class="text-[10px] font-mono text-slate-400 uppercase block">Live Dex Price</span>
@@ -193,14 +184,12 @@
                     </div>
                 </div>
 
-                <!-- Customizer Controls Card -->
                 <div class="glass-panel rounded-2xl p-5 space-y-4">
                     <h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 flex items-center justify-between">
                         <span><i class="fa-solid fa-sliders text-brand-accent mr-2"></i> Merch Customizer</span>
                         <span class="text-[10px] text-brand-solana">Real-time Render</span>
                     </h3>
 
-                    <!-- 1. Garment Type -->
                     <div>
                         <label class="block text-xs font-mono text-slate-400 mb-2">1. PRODUCT SELECTION</label>
                         <div class="grid grid-cols-3 gap-2 font-mono text-xs">
@@ -216,7 +205,6 @@
                         </div>
                     </div>
 
-                    <!-- 2. Garment Color Picker -->
                     <div>
                         <label class="block text-xs font-mono text-slate-400 mb-2">2. GARMENT COLOR</label>
                         <div class="flex items-center space-x-2.5 bg-brand-bg p-2.5 rounded-xl border border-brand-border">
@@ -229,7 +217,6 @@
                         </div>
                     </div>
 
-                    <!-- 3. Print Style Selector -->
                     <div>
                         <label class="block text-xs font-mono text-slate-400 mb-2">3. GRAPHIC PRINT STYLE</label>
                         <select id="printStyleSelect" onchange="setPrintStyle(this.value)" class="w-full bg-brand-bg text-slate-200 border border-brand-border rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-accent">
@@ -239,7 +226,6 @@
                         </select>
                     </div>
 
-                    <!-- 4. Size Selector -->
                     <div>
                         <label class="block text-xs font-mono text-slate-400 mb-2">4. SELECT SIZE</label>
                         <div class="grid grid-cols-5 gap-1.5 font-mono text-xs">
@@ -252,7 +238,6 @@
                     </div>
                 </div>
 
-                <!-- AI Upscale Engine Status Panel -->
                 <div class="glass-panel rounded-2xl p-4 border border-brand-solana/20 bg-brand-solana/5 space-y-2">
                     <div class="flex items-center justify-between text-xs font-mono">
                         <span class="text-brand-solana font-bold flex items-center gap-1.5">
@@ -275,7 +260,6 @@
                     </div>
                 </div>
 
-                <!-- Price & Checkout Button -->
                 <div class="glass-panel rounded-2xl p-5 space-y-4">
                     <div class="flex items-center justify-between">
                         <div>
@@ -290,16 +274,14 @@
 
                     <button id="checkoutBtn" class="w-full bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber hover:opacity-95 text-slate-950 font-extrabold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 text-sm">
                         <i class="fa-solid fa-cart-shopping text-base"></i>
-                        <span>ADD TO SHOPIFY CART (TEST PAYLOAD)</span>
+                        <span>ADD TO SHOPIFY CART</span>
                     </button>
                 </div>
             </div>
 
-            <!-- RIGHT PANEL: Live Product Canvas Preview (7 Columns) -->
+            <!-- RIGHT: Canvas -->
             <div class="lg:col-span-7 sticky top-24">
                 <div class="glass-panel rounded-2xl p-6 relative flex flex-col items-center justify-center min-h-[520px]">
-                    
-                    <!-- Canvas Header Toolbar -->
                     <div class="w-full flex items-center justify-between mb-4 text-xs font-mono border-b border-brand-border pb-3">
                         <div class="flex items-center space-x-2">
                             <span class="w-2.5 h-2.5 rounded-full bg-brand-solana animate-ping"></span>
@@ -310,12 +292,10 @@
                         </div>
                     </div>
 
-                    <!-- Canvas Wrapper -->
                     <div class="relative w-full aspect-square max-w-[460px] mx-auto flex items-center justify-center bg-brand-bg/60 rounded-xl border border-brand-border/60 p-2 shadow-2xl">
                         <canvas id="mockupCanvas" width="800" height="800" class="w-full h-full object-contain rounded-lg"></canvas>
                     </div>
 
-                    <!-- Visualizer Footer info -->
                     <div class="w-full mt-4 flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2">
                         <span><i class="fa-solid fa-arrows-rotate text-brand-accent mr-1"></i> Interactive Preview</span>
                         <span>Direct Canvas 2D Composite</span>
@@ -325,7 +305,7 @@
         </div>
     </main>
 
-    <!-- Shopify Payload Modal -->
+    <!-- Shopify Payload Modal (still available if you want to demo JSON, but no longer used by button) -->
     <div id="payloadModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="glass-panel max-w-2xl w-full rounded-2xl p-6 space-y-4 max-h-[90vh] flex flex-col border border-brand-accent/40 shadow-2xl">
             <div class="flex items-center justify-between border-b border-brand-border pb-3">
@@ -384,14 +364,13 @@
         </div>
     </div>
 
-    <!-- Footer -->
     <footer class="border-t border-brand-border py-4 text-center text-xs font-mono text-slate-500">
         <p>TokenMerch Web3 Prototype • Powered by Solana Blockchain & Shopify Storefront API</p>
     </footer>
 
     <!-- Interactive Script -->
     <script>
-        // Verified Solana Token Presets
+        // ===== Token + canvas logic (unchanged) =====
         const PRESETS = {
             'WIF': {
                 ca: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcJM',
@@ -419,15 +398,13 @@
             }
         };
 
-        // State Variables
         let currentToken = { ...PRESETS['WIF'] };
-        let currentProduct = 'hoodie'; // 'tshirt', 'hoodie', 'mug'
+        let currentProduct = 'hoodie';
         let currentGarmentColor = '#121212';
-        let currentStyle = 'vintage'; // 'minimal', 'vintage', 'arch'
+        let currentStyle = 'vintage';
         let currentSize = 'L';
         let prices = { tshirt: 38, hoodie: 68, mug: 24 };
 
-        // Canvas Setup
         const canvas = document.getElementById('mockupCanvas');
         const ctx = canvas.getContext('2d');
         let loadedTokenImg = null;
@@ -438,28 +415,22 @@
             updatePriceDisplay();
         });
 
-        // Safe Image Loader with CORS Proxy Fallback
         function loadTokenImageWithProxy(rawUrl) {
             isImgLoaded = false;
             document.getElementById('canvasStatusText').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-brand-accent"></i> Loading Image...`;
 
             const img = new Image();
             img.crossOrigin = "anonymous";
-
-            // Proxy URL via wsrv.nl to guarantee CORS clearance on Canvas
             const proxiedUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}&w=600&output=webp`;
 
             img.onload = () => {
                 loadedTokenImg = img;
                 isImgLoaded = true;
                 document.getElementById('canvasStatusText').innerHTML = `<i class="fa-solid fa-circle-check text-brand-solana"></i> Image Rendered`;
-                
-                // Update source resolution displays
                 const w = img.naturalWidth || 200;
                 const h = img.naturalHeight || 200;
                 document.getElementById('sourceResText').innerText = `${w} x ${h} px`;
                 document.getElementById('upscaleResText').innerText = `${w * 12} x ${h * 12} px`;
-
                 renderMockup();
             };
 
@@ -486,7 +457,6 @@
             img.src = proxiedUrl;
         }
 
-        // Fetch Token Meta from DexScreener API
         async function fetchTokenData(ca) {
             const btnText = document.getElementById('fetchBtnText');
             const spinner = document.getElementById('fetchSpinner');
@@ -553,36 +523,28 @@
             }
         }
 
-        // Draw Canvas Mockup
         function renderMockup() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Garment Color Fill
             ctx.fillStyle = currentGarmentColor;
 
             if (currentProduct === 'hoodie' || currentProduct === 'tshirt') {
-                // Shoulders / Torso
                 ctx.beginPath();
                 ctx.roundRect(140, 140, 520, 620, 35);
                 ctx.fill();
 
-                // Left Sleeve
                 ctx.beginPath();
                 ctx.roundRect(60, 170, 130, 340, 30);
                 ctx.fill();
 
-                // Right Sleeve
                 ctx.beginPath();
                 ctx.roundRect(610, 170, 130, 340, 30);
                 ctx.fill();
 
-                // Collar Dark Shadow Cut
                 ctx.fillStyle = '#0a0c12';
                 ctx.beginPath();
                 ctx.arc(400, 140, 85, 0, Math.PI);
                 ctx.fill();
 
-                // Neck Tag Line
                 ctx.strokeStyle = '#272d3f';
                 ctx.lineWidth = 4;
                 ctx.beginPath();
@@ -590,7 +552,6 @@
                 ctx.stroke();
 
                 if (currentProduct === 'hoodie') {
-                    // Hoodie Strings
                     ctx.strokeStyle = '#e2e8f0';
                     ctx.lineWidth = 5;
                     ctx.beginPath();
@@ -598,7 +559,6 @@
                     ctx.moveTo(435, 190); ctx.lineTo(435, 300);
                     ctx.stroke();
 
-                    // Hoodie Pocket
                     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
                     ctx.lineWidth = 4;
                     ctx.beginPath();
@@ -606,19 +566,16 @@
                     ctx.stroke();
                 }
             } else if (currentProduct === 'mug') {
-                // Mug Body
                 ctx.beginPath();
                 ctx.roundRect(240, 180, 320, 460, 35);
                 ctx.fill();
 
-                // Mug Handle
                 ctx.strokeStyle = currentGarmentColor;
                 ctx.lineWidth = 44;
                 ctx.beginPath();
                 ctx.arc(220, 410, 90, 0.5 * Math.PI, 1.5 * Math.PI);
                 ctx.stroke();
 
-                // Rim Highlight
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)';
                 ctx.lineWidth = 6;
                 ctx.beginPath();
@@ -626,12 +583,10 @@
                 ctx.stroke();
             }
 
-            // ARTWORK COMPOSITING OVER GARMENT
             if (isImgLoaded && loadedTokenImg) {
                 ctx.save();
 
                 if (currentStyle === 'minimal') {
-                    // Small Left Chest Pocket Badge
                     const size = 100;
                     const x = currentProduct === 'mug' ? 350 : 270;
                     const y = currentProduct === 'mug' ? 360 : 280;
@@ -642,12 +597,10 @@
                     ctx.drawImage(loadedTokenImg, x, y, size, size);
 
                 } else if (currentStyle === 'vintage') {
-                    // Centered Box Graphic
                     const boxSize = 240;
                     const x = 400 - boxSize/2;
                     const y = currentProduct === 'mug' ? 290 : 270;
 
-                    // Frame
                     ctx.fillStyle = '#0d0f17';
                     ctx.fillRect(x - 12, y - 12, boxSize + 24, boxSize + 24);
                     ctx.strokeStyle = '#9945FF';
@@ -657,12 +610,10 @@
                     ctx.drawImage(loadedTokenImg, x, y, boxSize, boxSize);
 
                 } else if (currentStyle === 'arch') {
-                    // Vintage Arch Streetwear Style (Token Logo + Text)
                     const size = 200;
                     const x = 400 - size/2;
                     const y = currentProduct === 'mug' ? 310 : 310;
 
-                    // Arch Text Header
                     ctx.fillStyle = '#14F195';
                     ctx.font = '900 36px "JetBrains Mono", sans-serif';
                     ctx.textAlign = 'center';
@@ -670,7 +621,6 @@
 
                     ctx.drawImage(loadedTokenImg, x, y, size, size);
 
-                    // Subtext
                     ctx.fillStyle = '#FFFFFF';
                     ctx.font = '600 16px "Inter", sans-serif';
                     ctx.fillText('SOLANA OFFICIAL MERCH', 400, y + size + 35);
@@ -678,7 +628,6 @@
 
                 ctx.restore();
             } else {
-                // Fallback Token Badge if Image is Blocked
                 ctx.save();
                 const x = 400;
                 const y = 380;
@@ -696,7 +645,6 @@
             }
         }
 
-        // Event Handlers
         document.getElementById('fetchBtn').addEventListener('click', () => {
             const inputCa = document.getElementById('caInput').value.trim();
             if (inputCa) {
@@ -755,40 +703,6 @@
             document.getElementById('priceSol').innerText = `~ ${solApprox} SOL`;
         }
 
-        // Modal Logic
-        document.getElementById('checkoutBtn').addEventListener('click', () => {
-            const payload = {
-                shop: "tokenmerch.myshopify.com",
-                action: "ADD_TO_CART_STOREFRONT_API",
-                cartItem: {
-                    productTitle: `TokenMerch Heavyweight ${currentProduct.toUpperCase()} ($${currentToken.ticker})`,
-                    variant: {
-                        size: currentSize,
-                        color: currentGarmentColor,
-                        style: currentStyle
-                    },
-                    priceUsd: prices[currentProduct],
-                    quantity: 1,
-                    customLineItemProperties: {
-                        _solanaTokenCA: currentToken.ca,
-                        _tokenSymbol: currentToken.ticker,
-                        _tokenName: currentToken.name,
-                        _highResVectorAssetUrl: `https://api.tokenmerch.io/v1/upscale?ca=${currentToken.ca}&dpi=300`,
-                        _printStyle: currentStyle
-                    }
-                },
-                podWebhookFulfillment: {
-                    supplier: "Printful / Gelato API",
-                    printFilePrepared: true,
-                    resolutionDpi: 300,
-                    vectorized: true
-                }
-            };
-
-            document.getElementById('jsonPayloadDisplay').textContent = JSON.stringify(payload, null, 2);
-            document.getElementById('payloadModal').classList.remove('hidden');
-        });
-
         document.getElementById('closeModalBtn').addEventListener('click', () => {
             document.getElementById('payloadModal').classList.add('hidden');
         });
@@ -808,6 +722,108 @@
         document.getElementById('closeArchBtn').addEventListener('click', () => {
             document.getElementById('archModal').classList.add('hidden');
         });
+
+        // ===== SHOPIFY STOREFRONT API CONFIG (FILL PRIVATELY) =====
+        const SHOPIFY_DOMAIN = 'YOUR_STORE_DOMAIN.myshopify.com';      // e.g. tokenmerch.myshopify.com
+        const STOREFRONT_TOKEN = 'YOUR_STOREFRONT_ACCESS_TOKEN_HERE';  // Storefront API token
+
+        // For now: ONE variant per product type (test).
+        const VARIANTS = {
+            hoodie: 'gid://shopify/ProductVariant/REPLACE_HOODIE_VARIANT_ID',
+            tshirt: 'gid://shopify/ProductVariant/REPLACE_TSHIRT_VARIANT_ID',
+            mug: 'gid://shopify/ProductVariant/REPLACE_MUG_VARIANT_ID'
+        };
+
+        async function shopifyStorefront(query, variables = {}) {
+            const res = await fetch(`https://${SHOPIFY_DOMAIN}/api/2024-04/graphql.json`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Shopify-Storefront-Access-Token': STOREFRONT_TOKEN
+                },
+                body: JSON.stringify({ query, variables })
+            });
+            const json = await res.json();
+            if (json.errors) {
+                console.error('Shopify Storefront errors:', json.errors);
+                throw new Error('Shopify Storefront API error');
+            }
+            return json.data;
+        }
+
+        async function createCheckoutAndRedirect() {
+            const variantId = VARIANTS[currentProduct];
+            if (!variantId) {
+                alert('No Shopify variant configured yet for this product.');
+                return;
+            }
+
+            const quantity = 1;
+
+            const customAttributes = [
+                { key: '_solanaTokenCA', value: currentToken.ca || '' },
+                { key: '_tokenSymbol', value: currentToken.ticker || '' },
+                { key: '_tokenName', value: currentToken.name || '' },
+                { key: '_printStyle', value: currentStyle || '' },
+                {
+                    key: '_highResVectorAssetUrl',
+                    value: `https://api.tokenmerch.io/v1/upscale?ca=${currentToken.ca || ''}&dpi=300`
+                },
+                { key: '_garmentColorHex', value: currentGarmentColor || '' },
+                { key: '_productType', value: currentProduct },
+                { key: '_size', value: currentSize }
+            ];
+
+            const mutation = `
+                mutation checkoutCreate($input: CheckoutCreateInput!) {
+                    checkoutCreate(input: $input) {
+                        checkout {
+                            webUrl
+                        }
+                        userErrors {
+                            field
+                            message
+                        }
+                    }
+                }
+            `;
+
+            const variables = {
+                input: {
+                    lineItems: [
+                        {
+                            variantId,
+                            quantity,
+                            customAttributes
+                        }
+                    ]
+                }
+            };
+
+            try {
+                const data = await shopifyStorefront(mutation, variables);
+                const result = data.checkoutCreate;
+                if (result.userErrors && result.userErrors.length) {
+                    console.error('Checkout userErrors:', result.userErrors);
+                    alert('Error creating Shopify checkout. See console (F12).');
+                    return;
+                }
+                const url = result.checkout.webUrl;
+                if (url) {
+                    window.location.href = url;
+                } else {
+                    alert('No checkout URL returned from Shopify.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to connect to Shopify Storefront API. See console (F12).');
+            }
+        }
+
+        document.getElementById('checkoutBtn').addEventListener('click', () => {
+            createCheckoutAndRedirect();
+        });
     </script>
 </body>
 </html>
+
