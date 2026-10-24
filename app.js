@@ -124,7 +124,7 @@ var MARKUP = [
 '<span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Price chart</span>',
 '<div id="tmRanges" class="flex items-center gap-1"></div>',
 '</div>',
-'<div class="relative bg-brand-bg/80 rounded-xl border border-brand-border overflow-hidden" style="height:96px">',
+'<div class="relative bg-brand-bg/80 rounded-xl border border-brand-border overflow-hidden h-24 lg:h-[200px]">',
 '<canvas id="tmChart" width="1600" height="384" class="w-full h-full block"></canvas>',
 '<div id="tmChartMsg" class="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-slate-500 pointer-events-none"></div>',
 '</div></div></div>',
@@ -188,8 +188,8 @@ var MARKUP = [
 '<div class="flex items-center space-x-2"><span class="w-2.5 h-2.5 rounded-full bg-brand-solana animate-ping"></span><span class="text-slate-300 font-bold uppercase tracking-wider">Preview</span></div>',
 '<div class="text-slate-400"><span id="canvasStatusText" class="text-brand-solana"><i class="fa-solid fa-circle-check"></i> Ready</span></div>',
 '</div>',
-'<div class="relative w-full aspect-square max-w-[460px] mx-auto flex items-center justify-center bg-brand-bg/60 rounded-xl border border-brand-border/60 p-2 shadow-2xl">',
-'<canvas id="mockupCanvas" width="1000" height="1000" class="w-full h-full object-contain rounded-lg"></canvas>',
+'<div class="relative w-full aspect-square max-w-[620px] mx-auto flex items-center justify-center bg-brand-bg/60 rounded-xl border border-brand-border/60 p-2 shadow-2xl">',
+'<canvas id="mockupCanvas" width="1200" height="1200" class="w-full h-full object-contain rounded-lg"></canvas>',
 '<button id="tmZoomBtn" title="Zoom to the print" class="absolute top-3 right-3 bg-brand-card/90 hover:bg-brand-cardHover text-slate-200 border border-brand-border rounded-lg px-3 py-1.5 text-[11px] font-mono flex items-center gap-1.5 transition-all backdrop-blur"><i class="fa-solid fa-magnifying-glass-plus"></i><span id="tmZoomLabel">Zoom print</span></button>',
 '</div>',
 '<div class="w-full mt-4 flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2">',
@@ -230,7 +230,7 @@ var COLORS = [
 var SIZES = ['S', 'M', 'L', 'XL', '2XL'];
 
 var chartRange = 'h1', chartShown = null, chartData = null, chartTimer = null;
-var chartCache = {}, chartPending = {};
+var chartCache = {}, chartPending = {}, chartHoverX = -1;
 var CHART_TTL = 30000;   /* GeckoTerminal edge-caches on-chain data for 30 s */
 
 var canvas, ctx, logoImg = null, logoReady = false;
@@ -709,6 +709,21 @@ function buildControls() {
   });
   paintRangeButtons();
 
+  var cnv = document.getElementById('tmChart');
+  if (cnv) {
+    cnv.addEventListener('mousemove', function (e) {
+      var b = cnv.getBoundingClientRect();
+      chartHoverX = (e.clientX - b.left) / b.width;
+      drawChart();
+    });
+    cnv.addEventListener('mouseleave', function () { chartHoverX = -1; drawChart(); });
+  }
+  var rsz = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(rsz);
+    rsz = setTimeout(drawChart, 150);
+  });
+
   document.getElementById('tmZoomBtn').addEventListener('click', function () {
     zoom = !zoom; updateZoomUI(); render();
   });
@@ -783,38 +798,80 @@ function paintRangeButtons() {
   }).join('');
 }
 
+/* The canvas bitmap is sized from its box every draw, so the chart can
+   change height (96 px on phones, 200 px from large up) without the
+   picture stretching, and stays sharp on high-density screens. */
+function fitCanvas(c) {
+  var box = c.parentElement.getBoundingClientRect();
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  var w = Math.max(240, Math.round(box.width * dpr));
+  var h = Math.max(80, Math.round(box.height * dpr));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  return dpr;
+}
+
 function drawChart() {
   var c = document.getElementById('tmChart');
   if (!c) return;
+  var S = fitCanvas(c);                 /* S: CSS px -> canvas px */
   var g = c.getContext('2d');
-  var W = c.width, H = c.height, S = W / 800;   /* S: scale for a crisper canvas */
+  var W = c.width, H = c.height, i;
   g.clearRect(0, 0, W, H);
   var rows = chartData;
   if (!rows || !rows.length) return;
 
-  var padT = 14 * S, padB = 14 * S, padL = 6 * S, i;
-  var lo = Infinity, hi = -Infinity;
+  var last = rows[rows.length - 1];
+  var lo = Infinity, hi = -Infinity, vmax = 0;
   for (i = 0; i < rows.length; i++) {
     if (rows[i].l < lo) lo = rows[i].l;
     if (rows[i].h > hi) hi = rows[i].h;
+    if (rows[i].v > vmax) vmax = rows[i].v;
   }
   var flat = (hi === lo);
   if (flat) { hi = lo * 1.0005 || 1; lo = lo * 0.9995; }
 
-  /* reserve exactly as much room as the price labels need: a sub-cent
-     memecoin writes out far more digits than a dollar token */
-  g.font = '500 ' + (20 * S) + 'px "JetBrains Mono", monospace';
-  var padR = Math.max(90 * S, 18 * S + Math.max(
+  /* the price axis is only as wide as the digits need: a sub-cent
+     memecoin writes out far more of them than a dollar token */
+  g.font = '500 ' + (11 * S) + 'px "JetBrains Mono", monospace';
+  var padT = 10 * S, padB = 10 * S, padL = 4 * S;
+  var padR = 20 * S + Math.max(
     g.measureText(fmtPrice(hi)).width,
     g.measureText(fmtPrice(lo)).width,
-    g.measureText(fmtPrice(rows[rows.length - 1].c)).width));
-  var plotW = W - padL - padR, plotH = H - padT - padB;
+    g.measureText(fmtPrice(last.c)).width);
+  var plotW = W - padL - padR;
+  var volH = (H >= 150 * S) ? (H - padT - padB) * 0.22 : 0;   /* volume needs room */
+  var gap = volH ? 6 * S : 0;
+  var plotH = H - padT - padB - volH - gap;
+  var volBase = padT + plotH + gap + volH;
   var Y = function (v) { return padT + plotH * (1 - (v - lo) / (hi - lo)); };
 
-  /* candles */
   var cw = plotW / rows.length;
-  var bodyW = Math.max(1.5 * S, Math.min(cw * 0.64, 22 * S));
-  var wick = Math.max(1, Math.min(cw * 0.12, 3 * S));
+  var bodyW = Math.max(1 * S, Math.min(cw * 0.66, 12 * S));
+  var wick = Math.max(1, Math.min(cw * 0.14, 1.6 * S));
+
+  var hoverI = -1;
+  if (chartHoverX >= 0) {
+    var hx = chartHoverX * W;
+    if (hx >= padL && hx <= padL + plotW) {
+      hoverI = Math.floor((hx - padL) / cw);
+      if (hoverI < 0) hoverI = 0;
+      if (hoverI > rows.length - 1) hoverI = rows.length - 1;
+    }
+  }
+
+  /* volume */
+  if (volH && vmax > 0) {
+    g.globalAlpha = 0.3;
+    for (i = 0; i < rows.length; i++) {
+      var rv = rows[i];
+      g.fillStyle = (rv.c >= rv.o) ? '#14F195' : '#FB7185';
+      var vh = Math.max(1, (rv.v / vmax) * volH);
+      g.fillRect(padL + cw * (i + 0.5) - bodyW / 2, volBase - vh, bodyW, vh);
+    }
+    g.globalAlpha = 1;
+  }
+
+  /* candles */
   for (i = 0; i < rows.length; i++) {
     var r = rows[i];
     var x = padL + cw * (i + 0.5);
@@ -827,27 +884,82 @@ function drawChart() {
     g.lineTo(x, Y(r.l));
     g.stroke();
     var yo = Y(r.o), yc = Y(r.c);
-    g.fillRect(x - bodyW / 2, Math.min(yo, yc), bodyW, Math.max(Math.abs(yc - yo), 1.5 * S));
+    g.fillRect(x - bodyW / 2, Math.min(yo, yc), bodyW, Math.max(Math.abs(yc - yo), 1 * S));
   }
 
-  /* faint high and low on the right edge, the chart's scale */
-  g.fillStyle = 'rgba(148,163,184,0.75)';
-  g.textAlign = 'right';
-  if (flat) {
-    /* a pool minutes old can have a single flat candle: one price, no range */
-    g.textBaseline = 'middle';
-    g.fillText(fmtPrice(rows[rows.length - 1].c), W - 8 * S, H / 2);
-  } else {
+  /* last price: a dashed line across and a tag on the axis */
+  var lastCol = (last.c >= last.o) ? '#14F195' : '#FB7185';
+  var ly = Y(last.c);
+  g.save();
+  g.strokeStyle = lastCol;
+  g.globalAlpha = 0.4;
+  g.lineWidth = 1 * S;
+  g.setLineDash([4 * S, 4 * S]);
+  g.beginPath();
+  g.moveTo(padL, ly);
+  g.lineTo(padL + plotW, ly);
+  g.stroke();
+  g.restore();
+
+  var tagTxt = fmtPrice(last.c);
+  var tagW = g.measureText(tagTxt).width + 10 * S, tagH = 15 * S;
+  var tagY = Math.max(tagH / 2 + 1, Math.min(H - tagH / 2 - 1, ly));
+  g.fillStyle = lastCol;
+  g.beginPath();
+  g.roundRect(W - tagW - 2 * S, tagY - tagH / 2, tagW, tagH, 3 * S);
+  g.fill();
+  g.fillStyle = '#0d0f17';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(tagTxt, W - tagW / 2 - 2 * S, tagY);
+
+  /* the day's extremes, dropped when the tag would sit on top of them */
+  if (!flat) {
+    g.fillStyle = 'rgba(148,163,184,0.7)';
+    g.textAlign = 'right';
+    if (tagY - padT > tagH) { g.textBaseline = 'top'; g.fillText(fmtPrice(hi), W - 4 * S, 2 * S); }
+    if (H - padB - tagY > tagH) { g.textBaseline = 'bottom'; g.fillText(fmtPrice(lo), W - 4 * S, H - 2 * S); }
+  }
+
+  /* crosshair and the hovered candle's numbers */
+  if (hoverI >= 0) {
+    var hr = rows[hoverI];
+    var hxp = padL + cw * (hoverI + 0.5);
+    g.save();
+    g.strokeStyle = 'rgba(226,232,240,0.3)';
+    g.lineWidth = 1 * S;
+    g.setLineDash([3 * S, 3 * S]);
+    g.beginPath();
+    g.moveTo(hxp, padT);
+    g.lineTo(hxp, volBase);
+    g.stroke();
+    g.restore();
+
+    var lines = ['O ' + fmtPrice(hr.o), 'H ' + fmtPrice(hr.h), 'L ' + fmtPrice(hr.l), 'C ' + fmtPrice(hr.c)];
+    var bw = 0;
+    for (i = 0; i < lines.length; i++) bw = Math.max(bw, g.measureText(lines[i]).width);
+    bw += 12 * S;
+    var lh = 13 * S, bh = lines.length * lh + 8 * S;
+    var bx = (hxp > W / 2) ? hxp - bw - 8 * S : hxp + 8 * S;
+    bx = Math.max(2 * S, Math.min(W - bw - 2 * S, bx));
+    var by = Math.min(padT + 2 * S, H - bh - 2 * S);
+    g.fillStyle = 'rgba(13,15,23,0.92)';
+    g.strokeStyle = 'rgba(148,163,184,0.25)';
+    g.lineWidth = 1 * S;
+    g.beginPath();
+    g.roundRect(bx, by, bw, bh, 4 * S);
+    g.fill();
+    g.stroke();
+    g.fillStyle = '#E2E8F0';
+    g.textAlign = 'left';
     g.textBaseline = 'top';
-    g.fillText(fmtPrice(hi), W - 8 * S, 4 * S);
-    g.textBaseline = 'bottom';
-    g.fillText(fmtPrice(lo), W - 8 * S, H - 4 * S);
+    for (i = 0; i < lines.length; i++) g.fillText(lines[i], bx + 6 * S, by + 4 * S + i * lh);
   }
 }
 
 function toCandles(list) {
   return list.slice().reverse().map(function (row) {
-    return { o: row[1], h: row[2], l: row[3], c: row[4] };
+    return { o: row[1], h: row[2], l: row[3], c: row[4], v: row[5] };
   });
 }
 
