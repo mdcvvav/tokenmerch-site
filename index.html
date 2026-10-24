@@ -1172,6 +1172,58 @@ img.src = t.image_url;
 } catch (e) { console.warn('Realistic hoodie unavailable, using drawing:', e.message); }
 })();
 </script>
+
+<script>
+/* ===== TokenMerch: no border around the logo, logo enlarged to fill the old frame (Oct 24) ===== */
+function tmDrawPrint(p, W) {
+const s = W / 480, X = x => (x - 160) * s, Y = y => (y - 200) * s;
+const cap = (cx, w, top) => {
+if (!tmShowCA && !tmShowTicker) return top;
+p.save(); p.fillStyle = tmTextColor; p.textAlign = 'center'; p.textBaseline = 'top';
+let y = top + Math.max(5, w * 0.05);
+if (tmShowCA && currentToken.ca) {
+const fam = '"JetBrains Mono", monospace';
+p.font = '500 100px ' + fam;
+const fs = Math.min(w * 0.09, 100 * w / (p.measureText(currentToken.ca).width || 1));
+p.font = '500 ' + fs + 'px ' + fam; p.fillText(currentToken.ca, cx, y); y += fs * 1.6;
+}
+if (tmShowTicker && currentToken.ticker) {
+const t = '$' + currentToken.ticker, fam = '"Inter", sans-serif';
+p.font = '900 100px ' + fam;
+const fs = Math.min(w * 0.22, 100 * w / (p.measureText(t).width || 1));
+p.font = '900 ' + fs + 'px ' + fam; p.fillText(t, cx, y); y += fs * 1.1;
+}
+p.restore(); return y;
+};
+if (isImgLoaded && loadedTokenImg) {
+if (currentStyle === 'minimal') {
+const size = 100 * s, x = X(270), y = Y(260);
+p.save(); p.beginPath(); p.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2); p.clip();
+p.drawImage(loadedTokenImg, x, y, size, size); p.restore();
+cap(x + size / 2, size, y + size);
+} else if (currentStyle === 'arch') {
+const size = 200 * s, x = X(300), y = Y(290);
+p.fillStyle = '#14F195'; p.font = '900 ' + 36 * s + 'px "JetBrains Mono", sans-serif'; p.textAlign = 'center'; p.textBaseline = 'alphabetic';
+p.fillText('$' + currentToken.ticker, W / 2, y - 25 * s);
+p.drawImage(loadedTokenImg, x, y, size, size);
+const bottom = cap(W / 2, size, y + size);
+p.fillStyle = '#FFFFFF'; p.font = '600 ' + 16 * s + 'px "Inter", sans-serif'; p.textBaseline = 'alphabetic';
+p.fillText('SOLANA OFFICIAL MERCH', W / 2, bottom + 30 * s);
+} else {
+const box = 264 * s, x = X(268), y = Y(238);
+p.drawImage(loadedTokenImg, x, y, box, box);
+cap(W / 2, box, y + box);
+}
+} else {
+const r = 90 * s, cx = W / 2, cy = Y(360);
+p.fillStyle = '#14F195'; p.beginPath(); p.arc(cx, cy, r, 0, Math.PI * 2); p.fill();
+p.fillStyle = '#0d0f17'; p.font = '900 ' + 32 * s + 'px "JetBrains Mono", sans-serif'; p.textAlign = 'center'; p.textBaseline = 'middle';
+p.fillText('$' + currentToken.ticker, cx, cy);
+cap(cx, 180 * s, cy + r);
+}
+}
+renderMockup();
+</script>
 </body>
 </html>
 
