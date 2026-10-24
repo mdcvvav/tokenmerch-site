@@ -119,15 +119,10 @@ var MARKUP = [
 '<h2 class="text-lg font-bold text-white flex items-center gap-2 truncate"><span id="tokenName">&nbsp;</span><span id="tokenTicker" class="text-xs font-mono bg-brand-border px-2 py-0.5 rounded text-brand-solana"></span></h2>',
 '<p id="tokenCaDisplay" class="text-[11px] font-mono text-slate-400 mt-1 truncate max-w-[220px]"></p>',
 '</div></div>',
-'<div class="mt-4 pt-4 border-t border-brand-border">',
-'<div class="flex items-center justify-between mb-2">',
-'<span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Price chart</span>',
-'<div class="flex items-center gap-1"><button data-range="day" class="tm-range"></button><button data-range="week" class="tm-range"></button></div>',
-'</div>',
-'<div class="relative bg-brand-bg/80 rounded-xl border border-brand-border overflow-hidden" style="height:96px">',
-'<canvas id="tmChart" width="800" height="192" class="w-full h-full block"></canvas>',
-'<div id="tmChartMsg" class="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-slate-500 pointer-events-none"></div>',
-'</div></div></div>',
+'<div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-brand-border">',
+'<div class="bg-brand-bg/80 p-2.5 rounded-xl border border-brand-border"><span class="text-[10px] font-mono text-slate-400 uppercase block">Live Dex Price</span><span id="tokenPrice" class="text-sm font-mono font-bold text-white mt-0.5">-</span></div>',
+'<div class="bg-brand-bg/80 p-2.5 rounded-xl border border-brand-border"><span class="text-[10px] font-mono text-slate-400 uppercase block">24h Change</span><span id="tokenChange" class="text-sm font-mono font-bold text-brand-solana mt-0.5">-</span></div>',
+'</div></div>',
 
 '<div class="glass-panel rounded-2xl p-5 space-y-4">',
 '<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 flex items-center justify-between"><span><i class="fa-solid fa-sliders text-brand-accent mr-2"></i> Merch Customizer</span><span class="text-[10px] text-brand-solana">Real-time Render</span></h3>',
@@ -215,7 +210,7 @@ var MARKUP = [
 
 /* ---------------- state ---------------- */
 
-var token = { ca: '', name: '', ticker: 'TOKEN', price: '-', change: '-', img: '', pair: '' };
+var token = { ca: '', name: '', ticker: 'TOKEN', price: '-', change: '-', img: '' };
 var product = 'hoodie';
 var garment = '#121212';
 var style = 'centered';
@@ -228,8 +223,6 @@ var COLORS = [
   ['#1E293B', 'Navy'], ['#581C87', 'Purple'], ['#F5F5DC', 'Cream']
 ];
 var SIZES = ['S', 'M', 'L', 'XL', '2XL'];
-
-var chartRange = 'day', chartData = null, chartTimer = null;
 
 var canvas, ctx, logoImg = null, logoReady = false;
 var tpl = null, tplImg = null;
@@ -272,8 +265,7 @@ function fromPairs(pairs, mint) {
     ticker: cleanTicker(t.symbol),
     price: isQuote ? 'n/a' : fmtPrice(p.priceUsd),
     change: isQuote ? '0%' : fmtChange(p.priceChange && p.priceChange.h24),
-    img: (!isQuote && p.info && p.info.imageUrl) || '',
-    pair: p.pairAddress || ''
+    img: (!isQuote && p.info && p.info.imageUrl) || ''
   };
 }
 function fromJupiter(mint) {
@@ -283,7 +275,7 @@ function fromJupiter(mint) {
     return {
       ca: t.id, name: t.name || 'Solana Token', ticker: cleanTicker(t.symbol),
       price: fmtPrice(t.usdPrice), change: fmtChange(t.stats24h && t.stats24h.priceChange),
-      img: t.icon || '', pair: ''
+      img: t.icon || ''
     };
   });
 }
@@ -338,8 +330,12 @@ function updateTokenUI() {
   document.getElementById('tokenName').innerText = token.name;
   document.getElementById('tokenTicker').innerText = '$' + token.ticker;
   document.getElementById('tokenCaDisplay').innerText = token.ca;
+  document.getElementById('tokenPrice').innerText = token.price;
+  var ch = document.getElementById('tokenChange');
+  ch.innerText = token.change;
+  ch.className = 'text-sm font-mono font-bold mt-0.5 ' +
+    (String(token.change).charAt(0) === '-' ? 'text-rose-400' : 'text-brand-solana');
   document.getElementById('tokenImgSidebar').src = token.img;
-  loadChart();
   loadLogo(token.img);
 }
 
@@ -695,14 +691,6 @@ function buildControls() {
   });
   textUpdate();
 
-  [].forEach.call(document.querySelectorAll('.tm-range'), function (b) {
-    b.addEventListener('click', function () {
-      chartRange = b.getAttribute('data-range');
-      loadChart();
-    });
-  });
-  paintRangeButtons();
-
   document.getElementById('tmZoomBtn').addEventListener('click', function () {
     zoom = !zoom; updateZoomUI(); render();
   });
@@ -736,118 +724,6 @@ function buildControls() {
   });
 }
 
-/* ---------------- price chart ----------------
-   Candles come from GeckoTerminal's public API: no key, no account and
-   no cost. The pool address is the one DexScreener already gave us, so
-   finding the pool costs no extra request. One ~3 KB JSON per refresh. */
-
-var RANGES = {
-  day: { label: '24H', path: 'hour', aggregate: 1, limit: 24 },
-  week: { label: '7D', path: 'hour', aggregate: 4, limit: 42 }
-};
-
-function chartMsg(text) {
-  var el = document.getElementById('tmChartMsg');
-  if (el) el.innerText = text || '';
-}
-
-function paintRangeButtons() {
-  [].forEach.call(document.querySelectorAll('.tm-range'), function (b) {
-    var on = b.getAttribute('data-range') === chartRange;
-    b.innerText = RANGES[b.getAttribute('data-range')].label;
-    b.className = 'tm-range text-[10px] font-mono px-2 py-0.5 rounded border transition-all ' +
-      (on ? 'border-brand-accent bg-brand-accent/20 text-white'
-          : 'border-brand-border text-slate-400 hover:text-white');
-  });
-}
-
-function drawChart() {
-  var c = document.getElementById('tmChart');
-  if (!c) return;
-  var g = c.getContext('2d');
-  var W = c.width, H = c.height;
-  g.clearRect(0, 0, W, H);
-  var pts = chartData;
-  if (!pts || pts.length < 2) return;
-
-  var padT = 14, padB = 14, padR = 92, padL = 6;
-  var lo = Math.min.apply(null, pts), hi = Math.max.apply(null, pts);
-  if (hi === lo) { hi = lo * 1.0005 || 1; lo = lo * 0.9995; }
-  var plotW = W - padL - padR, plotH = H - padT - padB;
-  var X = function (i) { return padL + (plotW * i) / (pts.length - 1); };
-  var Y = function (v) { return padT + plotH * (1 - (v - lo) / (hi - lo)); };
-
-  var up = pts[pts.length - 1] >= pts[0];
-  var line = up ? '#14F195' : '#FB7185';
-
-  /* soft fill under the line */
-  var grad = g.createLinearGradient(0, padT, 0, padT + plotH);
-  grad.addColorStop(0, up ? 'rgba(20,241,149,0.28)' : 'rgba(251,113,133,0.28)');
-  grad.addColorStop(1, 'rgba(20,241,149,0)');
-  g.beginPath();
-  g.moveTo(X(0), Y(pts[0]));
-  for (var i = 1; i < pts.length; i++) g.lineTo(X(i), Y(pts[i]));
-  g.lineTo(X(pts.length - 1), padT + plotH);
-  g.lineTo(X(0), padT + plotH);
-  g.closePath();
-  g.fillStyle = grad;
-  g.fill();
-
-  g.beginPath();
-  g.moveTo(X(0), Y(pts[0]));
-  for (i = 1; i < pts.length; i++) g.lineTo(X(i), Y(pts[i]));
-  g.strokeStyle = line;
-  g.lineWidth = 3;
-  g.lineJoin = 'round';
-  g.lineCap = 'round';
-  g.stroke();
-
-  /* dot on the newest candle */
-  g.beginPath();
-  g.arc(X(pts.length - 1), Y(pts[pts.length - 1]), 5, 0, Math.PI * 2);
-  g.fillStyle = line;
-  g.fill();
-
-  /* faint high and low on the right edge, part of the chart's scale */
-  g.font = '500 20px "JetBrains Mono", monospace';
-  g.textAlign = 'right';
-  g.fillStyle = 'rgba(148,163,184,0.75)';
-  g.textBaseline = 'top';
-  g.fillText(fmtPrice(hi), W - 8, 4);
-  g.textBaseline = 'bottom';
-  g.fillText(fmtPrice(lo), W - 8, H - 4);
-}
-
-function loadChart() {
-  chartData = null;
-  drawChart();
-  paintRangeButtons();
-  if (!token.pair) { chartMsg('No pool for this token yet'); return; }
-  chartMsg('Loading chart...');
-  var r = RANGES[chartRange];
-  var url = 'https://api.geckoterminal.com/api/v2/networks/solana/pools/' + token.pair +
-    '/ohlcv/' + r.path + '?aggregate=' + r.aggregate + '&limit=' + r.limit + '&currency=usd';
-  var want = token.pair + '|' + chartRange;
-  getJson(url).then(function (d) {
-    if (want !== token.pair + '|' + chartRange) return;   /* a newer request won */
-    var list = (d && d.data && d.data.attributes && d.data.attributes.ohlcv_list) || [];
-    if (list.length < 2) { chartMsg('Not enough trading history yet'); return; }
-    chartData = list.slice().reverse().map(function (row) { return row[4]; });  /* close */
-    chartMsg('');
-    drawChart();
-  }).catch(function (e) {
-    console.warn('Chart unavailable:', e.message);
-    chartMsg('Chart unavailable');
-  });
-}
-
-function startChartPolling() {
-  if (chartTimer) clearInterval(chartTimer);
-  chartTimer = setInterval(function () {
-    if (!document.hidden && token.pair) loadChart();
-  }, 60000);
-}
-
 /* ---------------- Printful garment template ---------------- */
 
 function loadTemplate() {
@@ -878,7 +754,6 @@ function start() {
   buildControls();
   loadTemplate();
   fetchToken(PRESET_CAS.WIF);
-  startChartPolling();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 }
 
