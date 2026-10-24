@@ -1224,6 +1224,31 @@ cap(cx, 180 * s, cy + r);
 }
 renderMockup();
 </script>
+
+<script>
+/* TokenMerch: legible CA + single spectrum colour slider (Oct 24) */
+function tmSpec(p){if(p<=.06)return'#FFFFFF';if(p>=.94)return'#000000';var h=(p-.06)/.88*360,c=255,x=Math.round(255*(1-Math.abs(h/60%2-1))),r,g,b;
+if(h<60){r=c;g=x;b=0}else if(h<120){r=x;g=c;b=0}else if(h<180){r=0;g=c;b=x}else if(h<240){r=0;g=x;b=c}else if(h<300){r=x;g=0;b=c}else{r=c;g=0;b=x}
+return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase()}
+function tmCap(p,cx,lw,cw,top){if(!tmShowCA&&!tmShowTicker)return top;p.save();p.fillStyle=tmTextColor;p.textAlign='center';p.textBaseline='top';
+var y=top+Math.max(5,lw*.05),f,s;
+if(tmShowCA&&currentToken.ca){f='"JetBrains Mono", monospace';p.font='600 100px '+f;s=Math.min(cw*.075,100*cw/(p.measureText(currentToken.ca).width||1));p.font='600 '+s+'px '+f;p.fillText(currentToken.ca,cx,y);y+=s*1.5}
+if(tmShowTicker&&currentToken.ticker){var t='$'+currentToken.ticker;f='"Inter", sans-serif';p.font='900 100px '+f;s=Math.min(lw*.22,100*lw/(p.measureText(t).width||1));p.font='900 '+s+'px '+f;p.fillText(t,cx,y);y+=s*1.1}
+p.restore();return y}
+tmDrawCaption=function(cx,w,top){return tmCap(ctx,cx,w,Math.min(w*1.4,canvas.width*.9),top)};
+function tmDrawPrint(p,W){var s=W/480,X=x=>(x-160)*s,Y=y=>(y-200)*s,z,x,y;
+if(isImgLoaded&&loadedTokenImg){
+if(currentStyle==='minimal'){z=100*s;x=X(270);y=Y(260);p.save();p.beginPath();p.arc(x+z/2,y+z/2,z/2,0,Math.PI*2);p.clip();p.drawImage(loadedTokenImg,x,y,z,z);p.restore();tmCap(p,x+z/2,z,Math.min(z*2.2,W*.5),y+z)}
+else if(currentStyle==='arch'){z=200*s;x=X(300);y=Y(290);p.fillStyle=tmTextColor;p.font='900 '+36*s+'px "JetBrains Mono", sans-serif';p.textAlign='center';p.textBaseline='alphabetic';p.fillText('$'+currentToken.ticker,W/2,y-25*s);p.drawImage(loadedTokenImg,x,y,z,z);var b=tmCap(p,W/2,z,Math.min(z*1.4,W*.96),y+z);p.fillStyle=tmTextColor;p.font='600 '+16*s+'px "Inter", sans-serif';p.textAlign='center';p.textBaseline='alphabetic';p.fillText('SOLANA OFFICIAL MERCH',W/2,b+30*s)}
+else{z=264*s;x=X(268);y=Y(238);p.drawImage(loadedTokenImg,x,y,z,z);tmCap(p,W/2,z,Math.min(z*1.4,W*.96),y+z)}
+}else{var r=90*s,cx=W/2,cy=Y(360);p.fillStyle='#14F195';p.beginPath();p.arc(cx,cy,r,0,Math.PI*2);p.fill();p.fillStyle='#0d0f17';p.font='900 '+32*s+'px "JetBrains Mono", sans-serif';p.textAlign='center';p.textBaseline='middle';p.fillText('$'+currentToken.ticker,cx,cy);tmCap(p,cx,180*s,W*.8,cy+r)}}
+(function(){var b=document.getElementById('tmTextControls');if(!b)return;var a=tmShowCA,t=tmShowTicker;
+b.innerHTML='<label class="block text-xs font-mono text-slate-400 mb-2">TEXT UNDER LOGO</label><div class="space-y-3 bg-brand-bg p-3 rounded-xl border border-brand-border text-xs font-mono"><label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">Contract address <span class="text-slate-500">(small)</span></span><input id="tmShowCA" type="checkbox" class="w-4 h-4 accent-purple-500"></label><label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">$TICKER <span class="text-slate-500">(large)</span></span><input id="tmShowTicker" type="checkbox" class="w-4 h-4 accent-purple-500"></label><div id="tmColorRow" class="pt-3 border-t border-brand-border space-y-2"><div class="flex items-center justify-between"><span class="text-slate-400">Text colour <span class="text-slate-500">(both lines)</span></span><span class="flex items-center gap-2"><span id="tmColorHex" class="text-slate-300">#FFFFFF</span><span id="tmColorSwatch" class="inline-block w-6 h-6 rounded border border-white/30" style="background:#FFFFFF"></span></span></div><input id="tmHue" type="range" min="0" max="1000" value="0" style="-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:9999px;outline:none;border:1px solid rgba(255,255,255,.25);cursor:pointer;background:linear-gradient(to right,#FFF 0%,#FFF 6%,#F00 6%,#FF0 20.7%,#0F0 35.3%,#0FF 50%,#00F 64.7%,#F0F 79.3%,#F00 94%,#000 94%,#000 100%)"></div></div>';
+if(!document.getElementById('tmHueCss')){var st=document.createElement('style');st.id='tmHueCss';st.textContent='#tmHue::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.6);cursor:pointer}';document.head.appendChild(st)}
+document.getElementById('tmShowCA').checked=a;document.getElementById('tmShowTicker').checked=t;
+var u=function(){tmShowCA=document.getElementById('tmShowCA').checked;tmShowTicker=document.getElementById('tmShowTicker').checked;tmTextColor=tmSpec(+document.getElementById('tmHue').value/1000);document.getElementById('tmColorHex').innerText=tmTextColor;document.getElementById('tmColorSwatch').style.background=tmTextColor;document.getElementById('tmColorRow').style.opacity=(tmShowCA||tmShowTicker)?'1':'.4';renderMockup()};
+b.querySelectorAll('input').forEach(function(i){i.addEventListener('input',u);i.addEventListener('change',u)});u()})();
+</script>
 </body>
 </html>
 
