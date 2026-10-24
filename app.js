@@ -125,7 +125,7 @@ var MARKUP = [
 '<div id="tmRanges" class="flex items-center gap-1"></div>',
 '</div>',
 '<div class="relative bg-brand-bg/80 rounded-xl border border-brand-border overflow-hidden" style="height:96px">',
-'<canvas id="tmChart" width="800" height="192" class="w-full h-full block"></canvas>',
+'<canvas id="tmChart" width="1600" height="384" class="w-full h-full block"></canvas>',
 '<div id="tmChartMsg" class="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-slate-500 pointer-events-none"></div>',
 '</div></div></div>',
 
@@ -230,6 +230,8 @@ var COLORS = [
 var SIZES = ['S', 'M', 'L', 'XL', '2XL'];
 
 var chartRange = 'h1', chartShown = null, chartData = null, chartTimer = null;
+var chartCache = {}, chartPending = {};
+var CHART_TTL = 30000;   /* GeckoTerminal edge-caches on-chain data for 30 s */
 
 var canvas, ctx, logoImg = null, logoReady = false;
 var tpl = null, tplImg = null;
@@ -785,71 +787,76 @@ function drawChart() {
   var c = document.getElementById('tmChart');
   if (!c) return;
   var g = c.getContext('2d');
-  var W = c.width, H = c.height;
+  var W = c.width, H = c.height, S = W / 800;   /* S: scale for a crisper canvas */
   g.clearRect(0, 0, W, H);
-  var pts = chartData;
-  if (!pts || pts.length < 2) return;
+  var rows = chartData;
+  if (!rows || !rows.length) return;
 
-  var padT = 14, padB = 14, padL = 6;
-  var lo = Math.min.apply(null, pts), hi = Math.max.apply(null, pts);
+  var padT = 14 * S, padB = 14 * S, padL = 6 * S, i;
+  var lo = Infinity, hi = -Infinity;
+  for (i = 0; i < rows.length; i++) {
+    if (rows[i].l < lo) lo = rows[i].l;
+    if (rows[i].h > hi) hi = rows[i].h;
+  }
   var flat = (hi === lo);
   if (flat) { hi = lo * 1.0005 || 1; lo = lo * 0.9995; }
+
   /* reserve exactly as much room as the price labels need: a sub-cent
      memecoin writes out far more digits than a dollar token */
-  g.font = '500 20px "JetBrains Mono", monospace';
-  var padR = Math.max(90, 18 + Math.max(
+  g.font = '500 ' + (20 * S) + 'px "JetBrains Mono", monospace';
+  var padR = Math.max(90 * S, 18 * S + Math.max(
     g.measureText(fmtPrice(hi)).width,
     g.measureText(fmtPrice(lo)).width,
-    g.measureText(fmtPrice(pts[0])).width));
+    g.measureText(fmtPrice(rows[rows.length - 1].c)).width));
   var plotW = W - padL - padR, plotH = H - padT - padB;
-  var X = function (i) { return padL + (plotW * i) / (pts.length - 1); };
   var Y = function (v) { return padT + plotH * (1 - (v - lo) / (hi - lo)); };
 
-  var up = pts[pts.length - 1] >= pts[0];
-  var line = up ? '#14F195' : '#FB7185';
+  /* candles */
+  var cw = plotW / rows.length;
+  var bodyW = Math.max(1.5 * S, Math.min(cw * 0.64, 22 * S));
+  var wick = Math.max(1, Math.min(cw * 0.12, 3 * S));
+  for (i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var x = padL + cw * (i + 0.5);
+    var col = (r.c >= r.o) ? '#14F195' : '#FB7185';
+    g.strokeStyle = col;
+    g.fillStyle = col;
+    g.lineWidth = wick;
+    g.beginPath();
+    g.moveTo(x, Y(r.h));
+    g.lineTo(x, Y(r.l));
+    g.stroke();
+    var yo = Y(r.o), yc = Y(r.c);
+    g.fillRect(x - bodyW / 2, Math.min(yo, yc), bodyW, Math.max(Math.abs(yc - yo), 1.5 * S));
+  }
 
-  /* soft fill under the line */
-  var grad = g.createLinearGradient(0, padT, 0, padT + plotH);
-  grad.addColorStop(0, up ? 'rgba(20,241,149,0.28)' : 'rgba(251,113,133,0.28)');
-  grad.addColorStop(1, 'rgba(20,241,149,0)');
-  g.beginPath();
-  g.moveTo(X(0), Y(pts[0]));
-  for (var i = 1; i < pts.length; i++) g.lineTo(X(i), Y(pts[i]));
-  g.lineTo(X(pts.length - 1), padT + plotH);
-  g.lineTo(X(0), padT + plotH);
-  g.closePath();
-  g.fillStyle = grad;
-  g.fill();
-
-  g.beginPath();
-  g.moveTo(X(0), Y(pts[0]));
-  for (i = 1; i < pts.length; i++) g.lineTo(X(i), Y(pts[i]));
-  g.strokeStyle = line;
-  g.lineWidth = 3;
-  g.lineJoin = 'round';
-  g.lineCap = 'round';
-  g.stroke();
-
-  /* dot on the newest candle */
-  g.beginPath();
-  g.arc(X(pts.length - 1), Y(pts[pts.length - 1]), 5, 0, Math.PI * 2);
-  g.fillStyle = line;
-  g.fill();
-
-  /* faint high and low on the right edge, part of the chart's scale */
-  g.font = '500 20px "JetBrains Mono", monospace';
-  g.textAlign = 'right';
+  /* faint high and low on the right edge, the chart's scale */
   g.fillStyle = 'rgba(148,163,184,0.75)';
+  g.textAlign = 'right';
   if (flat) {
-    /* a pool minutes old can have a single candle: one price, no range */
+    /* a pool minutes old can have a single flat candle: one price, no range */
     g.textBaseline = 'middle';
-    g.fillText(fmtPrice(pts[0]), W - 8, H / 2);
+    g.fillText(fmtPrice(rows[rows.length - 1].c), W - 8 * S, H / 2);
   } else {
     g.textBaseline = 'top';
-    g.fillText(fmtPrice(hi), W - 8, 4);
+    g.fillText(fmtPrice(hi), W - 8 * S, 4 * S);
     g.textBaseline = 'bottom';
-    g.fillText(fmtPrice(lo), W - 8, H - 4);
+    g.fillText(fmtPrice(lo), W - 8 * S, H - 4 * S);
   }
+}
+
+function toCandles(list) {
+  return list.slice().reverse().map(function (row) {
+    return { o: row[1], h: row[2], l: row[3], c: row[4] };
+  });
+}
+
+function showCandles(key, rows) {
+  chartShown = key;
+  chartData = rows;
+  chartMsg('');
+  paintRangeButtons();
+  drawChart();
 }
 
 function loadChart(stepKey) {
@@ -864,33 +871,39 @@ function loadChart(stepKey) {
   }
   if (!token.pair) return;
   var r = RANGES[rangeIndex(key)];
+  var ck = token.pair + '|' + r.key;
+
+  /* GeckoTerminal edge-caches these for 30 s, so re-asking inside that
+     window only spends rate limit. Toggling between sizes is free. */
+  var hit = chartCache[ck];
+  if (hit && Date.now() - hit.t < CHART_TTL) { showCandles(r.key, hit.rows); return; }
+  if (chartPending[ck]) return;                 /* already asking for this one */
+  chartPending[ck] = true;
+
   var url = 'https://api.geckoterminal.com/api/v2/networks/solana/pools/' + token.pair +
     '/ohlcv/' + r.path + '?aggregate=' + r.aggregate + '&limit=' + r.limit + '&currency=usd';
   var want = token.pair + '|' + chartRange;
   getJson(url).then(function (d) {
+    delete chartPending[ck];
     if (want !== token.pair + '|' + chartRange) return;   /* a newer request won */
     var list = (d && d.data && d.data.attributes && d.data.attributes.ohlcv_list) || [];
     if (list.length < 2) {
       var i = rangeIndex(key);
       if (i > 0) { loadChart(RANGES[i - 1].key); return; }  /* step to a finer candle */
-      if (list.length === 1) {
-        /* brand-new pool with one candle: draw it flat rather than nothing */
-        chartShown = r.key;
-        chartData = [list[0][4], list[0][4]];
-        chartMsg('');
-        paintRangeButtons();
-        drawChart();
-        return;
-      }
+      if (list.length === 1) { showCandles(r.key, toCandles(list)); return; }
       chartMsg('No trades yet');
       return;
     }
-    chartShown = r.key;
-    chartData = list.slice().reverse().map(function (row) { return row[4]; });  /* close */
-    chartMsg('');
-    paintRangeButtons();
-    drawChart();
+    var rows = toCandles(list);
+    chartCache[ck] = { t: Date.now(), rows: rows };
+    showCandles(r.key, rows);
   }).catch(function (e) {
+    delete chartPending[ck];
+    if (/429/.test(e.message)) {
+      /* rate limited: stepping finer would only spend another call */
+      if (!chartData) chartMsg('Chart busy, one moment');
+      return;
+    }
     var i = rangeIndex(key);
     if (i > 0) { loadChart(RANGES[i - 1].key); return; }   /* a hiccup: try a finer one */
     console.warn('Chart unavailable:', e.message);
