@@ -790,10 +790,17 @@ function drawChart() {
   var pts = chartData;
   if (!pts || pts.length < 2) return;
 
-  var padT = 14, padB = 14, padR = 110, padL = 6;
+  var padT = 14, padB = 14, padL = 6;
   var lo = Math.min.apply(null, pts), hi = Math.max.apply(null, pts);
   var flat = (hi === lo);
   if (flat) { hi = lo * 1.0005 || 1; lo = lo * 0.9995; }
+  /* reserve exactly as much room as the price labels need: a sub-cent
+     memecoin writes out far more digits than a dollar token */
+  g.font = '500 20px "JetBrains Mono", monospace';
+  var padR = Math.max(90, 18 + Math.max(
+    g.measureText(fmtPrice(hi)).width,
+    g.measureText(fmtPrice(lo)).width,
+    g.measureText(fmtPrice(pts[0])).width));
   var plotW = W - padL - padR, plotH = H - padT - padB;
   var X = function (i) { return padL + (plotW * i) / (pts.length - 1); };
   var Y = function (v) { return padT + plotH * (1 - (v - lo) / (hi - lo)); };
