@@ -1,4 +1,5 @@
-// GET /api/print?ca=<address>&style=vintage&showCA=1&showTicker=1&color=FFFFFF&w=1800&h=2400
+// GET /api/print?ca=<address>&style=centered|centered-small|badge-left|badge-right
+//                 &showCA=1&showTicker=1&color=FFFFFF&w=1800&h=1800
 // Returns the print file as a transparent PNG.
 import { lookupToken } from '../lib/token.js';
 import { renderPrint, parseOptions } from '../lib/render.js';
