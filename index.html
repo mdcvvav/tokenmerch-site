@@ -1091,6 +1091,87 @@ return y;
 }
 renderMockup();
 </script>
+
+<script>
+/* ===== TokenMerch: realistic hoodie preview (Printful template, added Oct 24) ===== */
+const TM_API = 'https://tokenmerch-site.vercel.app';
+let tmTpl = null, tmTplImg = null;
+const tmCartoonRender = renderMockup;
+function tmDrawPrint(p, W) {
+const s = W / 480, X = x => (x - 160) * s, Y = y => (y - 200) * s;
+const cap = (cx, w, top) => {
+if (!tmShowCA && !tmShowTicker) return top;
+p.save(); p.fillStyle = tmTextColor; p.textAlign = 'center'; p.textBaseline = 'top';
+let y = top + Math.max(5, w * 0.05);
+if (tmShowCA && currentToken.ca) {
+const fam = '"JetBrains Mono", monospace';
+p.font = '500 100px ' + fam;
+const fs = Math.min(w * 0.09, 100 * w / (p.measureText(currentToken.ca).width || 1));
+p.font = '500 ' + fs + 'px ' + fam; p.fillText(currentToken.ca, cx, y); y += fs * 1.6;
+}
+if (tmShowTicker && currentToken.ticker) {
+const t = '$' + currentToken.ticker, fam = '"Inter", sans-serif';
+p.font = '900 100px ' + fam;
+const fs = Math.min(w * 0.22, 100 * w / (p.measureText(t).width || 1));
+p.font = '900 ' + fs + 'px ' + fam; p.fillText(t, cx, y); y += fs * 1.1;
+}
+p.restore(); return y;
+};
+if (isImgLoaded && loadedTokenImg) {
+if (currentStyle === 'minimal') {
+const size = 100 * s, x = X(270), y = Y(260);
+p.save(); p.beginPath(); p.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2); p.clip();
+p.drawImage(loadedTokenImg, x, y, size, size); p.restore();
+cap(x + size / 2, size, y + size);
+} else if (currentStyle === 'arch') {
+const size = 200 * s, x = X(300), y = Y(290);
+p.fillStyle = '#14F195'; p.font = '900 ' + 36 * s + 'px "JetBrains Mono", sans-serif'; p.textAlign = 'center'; p.textBaseline = 'alphabetic';
+p.fillText('$' + currentToken.ticker, W / 2, y - 25 * s);
+p.drawImage(loadedTokenImg, x, y, size, size);
+const bottom = cap(W / 2, size, y + size);
+p.fillStyle = '#FFFFFF'; p.font = '600 ' + 16 * s + 'px "Inter", sans-serif'; p.textBaseline = 'alphabetic';
+p.fillText('SOLANA OFFICIAL MERCH', W / 2, bottom + 30 * s);
+} else {
+const box = 240 * s, pad = 12 * s, x = X(280), y = Y(250);
+p.fillStyle = '#0d0f17'; p.fillRect(x - pad, y - pad, box + pad * 2, box + pad * 2);
+p.strokeStyle = '#9945FF'; p.lineWidth = 4 * s; p.strokeRect(x - pad, y - pad, box + pad * 2, box + pad * 2);
+p.drawImage(loadedTokenImg, x, y, box, box);
+cap(W / 2, box + pad * 2, y + box + pad);
+}
+} else {
+const r = 90 * s, cx = W / 2, cy = Y(360);
+p.fillStyle = '#14F195'; p.beginPath(); p.arc(cx, cy, r, 0, Math.PI * 2); p.fill();
+p.fillStyle = '#0d0f17'; p.font = '900 ' + 32 * s + 'px "JetBrains Mono", sans-serif'; p.textAlign = 'center'; p.textBaseline = 'middle';
+p.fillText('$' + currentToken.ticker, cx, cy);
+cap(cx, 180 * s, cy + r);
+}
+}
+renderMockup = function () {
+if (currentProduct !== 'hoodie' || !tmTpl || !tmTplImg) { tmCartoonRender(); return; }
+const C = canvas.width, k = C / tmTpl.template_width;
+ctx.save();
+ctx.globalCompositeOperation = 'source-over';
+ctx.globalAlpha = 1;
+ctx.fillStyle = currentGarmentColor || tmTpl.background_color || '#0c0c0c';
+ctx.fillRect(0, 0, C, C);
+const pa = { x: tmTpl.print_area_left * k, y: tmTpl.print_area_top * k, w: tmTpl.print_area_width * k, h: tmTpl.print_area_height * k };
+const P = 1200, pc = document.createElement('canvas'); pc.width = P; pc.height = Math.round(P * pa.h / pa.w);
+tmDrawPrint(pc.getContext('2d'), P);
+ctx.drawImage(pc, pa.x, pa.y, pa.w, pa.h);
+ctx.drawImage(tmTplImg, 0, 0, C, C);
+ctx.restore();
+};
+(async function tmLoadTemplate() {
+try {
+const t = await fetch(TM_API + '/api/template?variant=9229').then(r => r.json());
+if (!t || !t.image_url) throw new Error((t && t.error) || 'no template');
+const img = new Image();
+img.onload = () => { tmTpl = t; tmTplImg = img; renderMockup(); };
+img.onerror = () => console.warn('Template image failed to load');
+img.src = t.image_url;
+} catch (e) { console.warn('Realistic hoodie unavailable, using drawing:', e.message); }
+})();
+</script>
 </body>
 </html>
 
