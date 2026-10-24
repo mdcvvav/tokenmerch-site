@@ -250,7 +250,10 @@ function fmtPrice(p) {
   if (!isFinite(p)) return 'n/a';
   if (p >= 1) return '$' + p.toFixed(2);
   if (p >= 0.01) return '$' + p.toFixed(4);
-  return '$' + p.toPrecision(3);
+  if (p <= 0) return '$0';
+  /* most memecoins are sub-cent: spell the number out to 3 significant
+     digits instead of letting toPrecision turn it into 2.82e-7 */
+  return '$' + p.toFixed(Math.min(12, 2 - Math.floor(Math.log10(p))));
 }
 function fmtChange(c) {
   c = parseFloat(c);
