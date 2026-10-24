@@ -824,6 +824,273 @@
             createCheckoutAndRedirect();
         });
     </script>
+
+    <!-- ===== Upgrades added Oct 23-24 (same as the live Shopify version) ===== -->
+<script>
+/* ===== TokenMerch upgrade: live token lookup (added Oct 23) ===== */
+const TM_PRESET_CAS = {
+  WIF: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
+  BONK: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+  POPCAT: '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr'
+};
+const TM_ADDR = /[1-9A-HJ-NP-Za-km-z]{32,44}/;
+async function tmJson(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' from ' + new URL(url).host);
+  return r.json();
+}
+function tmTicker(s) { return String(s || 'TOKEN').replace(/^\$+/, ''); }
+function tmPrice(p) {
+  p = parseFloat(p);
+  if (!isFinite(p)) return 'n/a';
+  if (p >= 1) return '$' + p.toFixed(2);
+  if (p >= 0.01) return '$' + p.toFixed(4);
+  return '$' + p.toPrecision(3);
+}
+function tmChange(c) {
+  c = parseFloat(c);
+  if (!isFinite(c)) return '0%';
+  return (c > 0 ? '+' : '') + c.toFixed(2) + '%';
+}
+function tmFromPairs(pairs, mint) {
+  pairs = (pairs || []).filter(p => p && p.chainId === 'solana');
+  if (!pairs.length) return null;
+  pairs.sort((a, b) => ((b.liquidity && b.liquidity.usd) || 0) - ((a.liquidity && a.liquidity.usd) || 0));
+  const p = pairs[0];
+  const isQuote = !!(mint && p.quoteToken && p.quoteToken.address === mint);
+  const tok = isQuote ? p.quoteToken : p.baseToken;
+  return {
+    ca: tok.address,
+    name: tok.name || 'Solana Token',
+    ticker: tmTicker(tok.symbol),
+    price: isQuote ? 'n/a' : tmPrice(p.priceUsd),
+    change: isQuote ? '0%' : tmChange(p.priceChange && p.priceChange.h24),
+    img: (!isQuote && p.info && p.info.imageUrl) || ''
+  };
+}
+async function tmJupiter(mint) {
+  const d = await tmJson('https://lite-api.jup.ag/tokens/v2/search?query=' + mint);
+  const t = (d || []).find(x => x.id === mint);
+  if (!t) return null;
+  return { ca: t.id, name: t.name || 'Solana Token', ticker: tmTicker(t.symbol), price: tmPrice(t.usdPrice), change: tmChange(t.stats24h && t.stats24h.priceChange), img: t.icon || '' };
+}
+async function tmLookup(raw) {
+  raw = (raw || '').trim();
+  const m = raw.match(TM_ADDR);
+  if (!m) throw new Error('No Solana address found in what you pasted.');
+  const addr = m[0];
+  let t = null;
+  if (!/dexscreener\.com/i.test(raw)) {
+    t = tmFromPairs(await tmJson('https://api.dexscreener.com/tokens/v1/solana/' + addr), addr);
+  }
+  if (!t) {
+    const d = await tmJson('https://api.dexscreener.com/latest/dex/pairs/solana/' + addr).catch(() => ({}));
+    t = tmFromPairs(d.pairs || (d.pair ? [d.pair] : []));
+  }
+  if (!t || !t.img) {
+    const jup = await tmJupiter(t ? t.ca : addr).catch(() => null);
+    if (!t) t = jup;
+    else if (jup && jup.img) t.img = jup.img;
+  }
+  if (t && !t.img) t.img = 'https://placehold.co/300x300/151922/14F195?text=' + encodeURIComponent(t.ticker);
+  return t;
+}
+async function fetchTokenData(raw) {
+  const btnText = document.getElementById('fetchBtnText');
+  const spinner = document.getElementById('fetchSpinner');
+  btnText.innerText = 'Fetching...';
+  spinner.classList.remove('hidden');
+  try {
+    const t = await tmLookup(raw);
+    if (!t) { alert('Could not find that token on DexScreener or Jupiter. Double-check the contract address.'); return; }
+    currentToken = t;
+    document.getElementById('caInput').value = t.ca;
+    updateTokenUI();
+  } catch (err) {
+    console.error('Token lookup error:', err);
+    alert('Token lookup failed: ' + err.message);
+  } finally {
+    btnText.innerText = 'Fetch Token';
+    spinner.classList.add('hidden');
+  }
+}
+function loadPreset(key) { if (TM_PRESET_CAS[key]) fetchTokenData(TM_PRESET_CAS[key]); }
+document.getElementById('caInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('fetchBtn').click(); });
+function tmStart() { updatePriceDisplay(); fetchTokenData(TM_PRESET_CAS.WIF); }
+if (document.readyState === 'complete') tmStart(); else window.addEventListener('load', tmStart);
+window.tmLookup = tmLookup;
+</script>
+<script>
+/* ===== TokenMerch: CA + ticker text under logo (added Oct 24) ===== */
+let tmShowCA = false, tmShowTicker = false, tmTextColor = '#FFFFFF';
+function tmFitFont(text, weight, family, maxW, maxSize) {
+ctx.font = weight + ' 100px ' + family;
+const w = ctx.measureText(text).width || 1;
+return Math.min(maxSize, 100 * maxW / w);
+}
+function tmSplitCA(ca) { const h = Math.ceil(ca.length / 2); return [ca.slice(0, h), ca.slice(h)]; }
+function tmDrawCaption(cx, w, top) {
+if (!tmShowCA && !tmShowTicker) return top;
+ctx.save();
+ctx.fillStyle = tmTextColor;
+ctx.textAlign = 'center';
+ctx.textBaseline = 'top';
+let y = top + Math.max(6, w * 0.06);
+if (tmShowCA && currentToken.ca) {
+const lines = tmSplitCA(currentToken.ca);
+const fam = '"JetBrains Mono", monospace';
+const longest = lines[0].length >= lines[1].length ? lines[0] : lines[1];
+const fs = tmFitFont(longest, 600, fam, w, w * 0.09);
+ctx.font = '600 ' + fs + 'px ' + fam;
+lines.forEach(l => { ctx.fillText(l, cx, y); y += fs * 1.25; });
+y += fs * 0.35;
+}
+if (tmShowTicker && currentToken.ticker) {
+const t = '$' + currentToken.ticker;
+const fam = '"Inter", sans-serif';
+const fs = tmFitFont(t, 900, fam, w, w * 0.22);
+ctx.font = '900 ' + fs + 'px ' + fam;
+ctx.fillText(t, cx, y);
+y += fs * 1.1;
+}
+ctx.restore();
+return y;
+}
+function renderMockup() {
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+ctx.textBaseline = 'alphabetic';
+ctx.fillStyle = currentGarmentColor;
+const isMug = currentProduct === 'mug';
+if (!isMug) {
+ctx.beginPath(); ctx.roundRect(140, 140, 520, 620, 35); ctx.fill();
+ctx.beginPath(); ctx.roundRect(60, 170, 130, 340, 30); ctx.fill();
+ctx.beginPath(); ctx.roundRect(610, 170, 130, 340, 30); ctx.fill();
+ctx.fillStyle = '#0a0c12';
+ctx.beginPath(); ctx.arc(400, 140, 85, 0, Math.PI); ctx.fill();
+ctx.strokeStyle = '#272d3f'; ctx.lineWidth = 4;
+ctx.beginPath(); ctx.arc(400, 140, 83, 0, Math.PI); ctx.stroke();
+if (currentProduct === 'hoodie') {
+ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 5;
+ctx.beginPath(); ctx.moveTo(365, 190); ctx.lineTo(365, 300); ctx.moveTo(435, 190); ctx.lineTo(435, 300); ctx.stroke();
+ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 4;
+ctx.beginPath(); ctx.roundRect(240, 520, 320, 180, 20); ctx.stroke();
+}
+} else {
+ctx.beginPath(); ctx.roundRect(240, 180, 320, 460, 35); ctx.fill();
+ctx.strokeStyle = currentGarmentColor; ctx.lineWidth = 44;
+ctx.beginPath(); ctx.arc(220, 410, 90, 0.5 * Math.PI, 1.5 * Math.PI); ctx.stroke();
+ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 6;
+ctx.beginPath(); ctx.ellipse(400, 180, 160, 20, 0, 0, Math.PI * 2); ctx.stroke();
+}
+if (isImgLoaded && loadedTokenImg) {
+if (currentStyle === 'minimal') {
+const size = 100;
+const x = isMug ? 350 : 270;
+const y = isMug ? 340 : 260;
+ctx.save();
+ctx.beginPath(); ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2); ctx.clip();
+ctx.drawImage(loadedTokenImg, x, y, size, size);
+ctx.restore();
+tmDrawCaption(x + size / 2, size, y + size);
+} else if (currentStyle === 'vintage') {
+const hasText = tmShowCA || tmShowTicker;
+const boxSize = isMug && hasText ? 200 : 240;
+const x = 400 - boxSize / 2;
+const y = isMug ? (hasText ? 230 : 290) : 250;
+ctx.fillStyle = '#0d0f17';
+ctx.fillRect(x - 12, y - 12, boxSize + 24, boxSize + 24);
+ctx.strokeStyle = '#9945FF'; ctx.lineWidth = 4;
+ctx.strokeRect(x - 12, y - 12, boxSize + 24, boxSize + 24);
+ctx.drawImage(loadedTokenImg, x, y, boxSize, boxSize);
+tmDrawCaption(400, boxSize + 24, y + boxSize + 12);
+} else if (currentStyle === 'arch') {
+const size = 200;
+const x = 400 - size / 2;
+const y = isMug ? 270 : 290;
+ctx.fillStyle = '#14F195';
+ctx.font = '900 36px "JetBrains Mono", sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('$' + currentToken.ticker, 400, y - 25);
+ctx.drawImage(loadedTokenImg, x, y, size, size);
+const bottom = tmDrawCaption(400, size, y + size);
+ctx.fillStyle = '#FFFFFF';
+ctx.font = '600 16px "Inter", sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('SOLANA OFFICIAL MERCH', 400, bottom + 30);
+}
+} else {
+ctx.save();
+ctx.fillStyle = '#14F195';
+ctx.beginPath(); ctx.arc(400, 360, 90, 0, Math.PI * 2); ctx.fill();
+ctx.fillStyle = '#0d0f17';
+ctx.font = '900 32px "JetBrains Mono", sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('$' + currentToken.ticker, 400, 370);
+ctx.restore();
+tmDrawCaption(400, 180, 450);
+}
+}
+(function tmBuildTextControls() {
+const ci = document.getElementById('caInput');
+if (ci) ci.style.cssText += ';background:transparent !important;color:#fff !important;border:0 !important;box-shadow:none !important;';
+const sel = document.getElementById('printStyleSelect');
+if (!sel || document.getElementById('tmTextControls')) return;
+sel.value = currentStyle;
+const slider = (id, label, accent) => '<div class="flex items-center gap-2"><span class="w-4 text-slate-400">' + label + '</span><input id="' + id + '" type="range" min="0" max="255" value="255" class="flex-grow accent-' + accent + '"><span id="' + id + 'v" class="w-8 text-right text-slate-300">255</span></div>';
+const box = document.createElement('div');
+box.id = 'tmTextControls';
+box.innerHTML = '<label class="block text-xs font-mono text-slate-400 mb-2">TEXT UNDER LOGO</label>'
++ '<div class="space-y-3 bg-brand-bg p-3 rounded-xl border border-brand-border text-xs font-mono">'
++ '<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">Contract address <span class="text-slate-500">(small)</span></span><input id="tmShowCA" type="checkbox" class="w-4 h-4 accent-purple-500"></label>'
++ '<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">$TICKER <span class="text-slate-500">(large)</span></span><input id="tmShowTicker" type="checkbox" class="w-4 h-4 accent-purple-500"></label>'
++ '<div id="tmColorRow" class="pt-3 border-t border-brand-border space-y-2">'
++ '<div class="flex items-center justify-between"><span class="text-slate-400">Text color</span><span class="flex items-center gap-2"><span id="tmColorHex" class="text-slate-300">#FFFFFF</span><span id="tmColorSwatch" class="inline-block w-6 h-6 rounded border border-white/30" style="background:#FFFFFF"></span></span></div>'
++ slider('tmR', 'R', 'red-500') + slider('tmG', 'G', 'green-500') + slider('tmB', 'B', 'blue-500')
++ '</div></div>';
+sel.parentElement.insertAdjacentElement('afterend', box);
+const upd = () => {
+tmShowCA = document.getElementById('tmShowCA').checked;
+tmShowTicker = document.getElementById('tmShowTicker').checked;
+const rgb = ['tmR', 'tmG', 'tmB'].map(id => { const v = +document.getElementById(id).value; document.getElementById(id + 'v').innerText = v; return v; });
+tmTextColor = '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+document.getElementById('tmColorHex').innerText = tmTextColor;
+document.getElementById('tmColorSwatch').style.background = tmTextColor;
+document.getElementById('tmColorRow').style.opacity = (tmShowCA || tmShowTicker) ? '1' : '0.4';
+renderMockup();
+};
+box.querySelectorAll('input').forEach(i => { i.addEventListener('input', upd); i.addEventListener('change', upd); });
+upd();
+})();
+</script>
+<script>
+/* ===== TokenMerch: CA on ONE line under logo (Oct 24, replaces two-line version) ===== */
+function tmDrawCaption(cx, w, top) {
+if (!tmShowCA && !tmShowTicker) return top;
+ctx.save();
+ctx.fillStyle = tmTextColor;
+ctx.textAlign = 'center';
+ctx.textBaseline = 'top';
+let y = top + Math.max(5, w * 0.05);
+if (tmShowCA && currentToken.ca) {
+const fam = '"JetBrains Mono", monospace';
+const fs = tmFitFont(currentToken.ca, 500, fam, w, w * 0.09);
+ctx.font = '500 ' + fs + 'px ' + fam;
+ctx.fillText(currentToken.ca, cx, y);
+y += fs * 1.6;
+}
+if (tmShowTicker && currentToken.ticker) {
+const t = '$' + currentToken.ticker;
+const fam = '"Inter", sans-serif';
+const fs = tmFitFont(t, 900, fam, w, w * 0.22);
+ctx.font = '900 ' + fs + 'px ' + fam;
+ctx.fillText(t, cx, y);
+y += fs * 1.1;
+}
+ctx.restore();
+return y;
+}
+renderMockup();
+</script>
 </body>
 </html>
 
