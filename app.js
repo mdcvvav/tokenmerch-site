@@ -139,9 +139,10 @@ var MARKUP = [
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">3. GRAPHIC PRINT STYLE</label>',
 '<select id="printStyleSelect" class="w-full bg-brand-bg text-slate-200 border border-brand-border rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-accent">',
-'<option value="minimal">Chest Badge (Left Pocket)</option>',
-'<option value="vintage">Centered Graphic Box</option>',
-'<option value="arch">Vintage Arch Streetwear (Token Logo + $TICKER)</option>',
+'<option value="centered">Centered graphic image</option>',
+'<option value="centered-small">Centered graphic image small</option>',
+'<option value="badge-left">Image badge left</option>',
+'<option value="badge-right">Image badge right</option>',
 '</select></div>',
 
 /* text under logo */
@@ -212,7 +213,7 @@ var MARKUP = [
 var token = { ca: '', name: '', ticker: 'TOKEN', price: '-', change: '-', img: '' };
 var product = 'hoodie';
 var garment = '#121212';
-var style = 'vintage';
+var style = 'centered';
 var size = 'L';
 var zoom = false;
 var showCA = false, showTicker = false, textColor = '#FFFFFF';
@@ -387,15 +388,17 @@ function fitFont(p, text, weight, family, maxW, cap) {
 var MONO = '"JetBrains Mono", monospace';
 var SANS = '"Inter", sans-serif';
 
-/* contract address on one line, a little wider than the logo so it
-   stays readable, then the big $TICKER under it */
-function drawCaption(p, cx, logoW, caW, top) {
+/* contract address on one line, then the big $TICKER under it.
+   caW is how wide the address line is allowed to run; tickerW sizes
+   the $TICKER. Both use the website's own fonts: JetBrains Mono for
+   the address, Inter for the ticker. */
+function drawCaption(p, cx, tickerW, caW, top) {
   if (!showCA && !showTicker) return top;
   p.save();
   p.fillStyle = textColor;
   p.textAlign = 'center';
   p.textBaseline = 'top';
-  var y = top + logoW * 0.05;
+  var y = top + tickerW * 0.05;
   if (showCA && token.ca) {
     var fs = fitFont(p, token.ca, 600, MONO, caW, caW * 0.075);
     p.font = '600 ' + fs + 'px ' + MONO;
@@ -404,7 +407,7 @@ function drawCaption(p, cx, logoW, caW, top) {
   }
   if (showTicker && token.ticker) {
     var t = '$' + token.ticker;
-    var fs2 = fitFont(p, t, 900, SANS, logoW, logoW * 0.22);
+    var fs2 = fitFont(p, t, 900, SANS, tickerW, tickerW * 0.22);
     p.font = '900 ' + fs2 + 'px ' + SANS;
     p.fillText(t, cx, y);
     y += fs2 * 1.1;
@@ -413,36 +416,84 @@ function drawCaption(p, cx, logoW, caW, top) {
   return y;
 }
 
+/* contract address curved along the bottom of a round badge.
+   Returns the y of the lowest point the text reaches. */
+function drawArcCA(p, cx, cy, r, W) {
+  var text = token.ca;
+  if (!text) return cy + r;
+  var gap = r * 0.16;
+  var span = 2.97;                                  /* ~170 deg of wrap */
+  p.font = '600 100px ' + MONO;
+  var adv = p.measureText(text).width / 100;        /* advance per 1px of font */
+  var denom = adv - span * 0.45;
+  var fs = denom > 0 ? Math.min(span * (r + gap) / denom, W * 0.05) : r * 0.2;
+  p.save();
+  p.font = '600 ' + fs + 'px ' + MONO;
+  p.fillStyle = textColor;
+  p.textAlign = 'center';
+  p.textBaseline = 'middle';
+  var rMid = r + gap + fs * 0.45;
+  var widths = [], total = 0, i;
+  for (i = 0; i < text.length; i++) {
+    var w = p.measureText(text.charAt(i)).width;
+    widths.push(w);
+    total += w;
+  }
+  /* y grows downward, so a larger angle is further left: start at the
+     left end of the arc and walk right, each glyph turned to sit on the
+     curve with its top facing the badge */
+  var a = Math.PI / 2 + (total / rMid) / 2;
+  for (i = 0; i < text.length; i++) {
+    var th = a - (widths[i] / 2) / rMid;
+    p.save();
+    p.translate(cx + rMid * Math.cos(th), cy + rMid * Math.sin(th));
+    p.rotate(th - Math.PI / 2);
+    p.fillText(text.charAt(i), 0, 0);
+    p.restore();
+    a -= widths[i] / rMid;
+  }
+  p.restore();
+  return cy + rMid + fs * 0.6;
+}
+
 /* draws the artwork + text into a square print area of width W */
 function drawDesign(p, W) {
   if (logoReady && logoImg) {
-    if (style === 'minimal') {
-      var s1 = 0.2083 * W, x1 = 0.229 * W, y1 = 0.125 * W;
+    if (style === 'badge-left' || style === 'badge-right') {
+      /* badge-left prints on the wearer's left chest, which is the
+         right-hand side of a front view; badge-right is its mirror */
+      var s1 = 0.2083 * W, y1 = 0.125 * W;
+      var x1 = (style === 'badge-left') ? W - 0.229 * W - s1 : 0.229 * W;
+      var bcx = x1 + s1 / 2, bcy = y1 + s1 / 2;
       p.save();
       p.beginPath();
-      p.arc(x1 + s1 / 2, y1 + s1 / 2, s1 / 2, 0, Math.PI * 2);
+      p.arc(bcx, bcy, s1 / 2, 0, Math.PI * 2);
       p.clip();
       p.drawImage(logoImg, x1, y1, s1, s1);
       p.restore();
-      drawCaption(p, x1 + s1 / 2, s1, Math.min(s1 * 2.2, W * 0.5), y1 + s1);
-    } else if (style === 'arch') {
+      var below = y1 + s1;
+      if (showCA && token.ca) below = drawArcCA(p, bcx, bcy, s1 / 2, W);
+      if (showTicker && token.ticker) {
+        var tb = '$' + token.ticker;
+        var fsb = fitFont(p, tb, 900, SANS, s1 * 1.2, s1 * 0.26);
+        p.save();
+        p.fillStyle = textColor;
+        p.textAlign = 'center';
+        p.textBaseline = 'top';
+        p.font = '900 ' + fsb + 'px ' + SANS;
+        p.fillText(tb, bcx, below + s1 * 0.06);
+        p.restore();
+      }
+    } else if (style === 'centered-small') {
+      /* small graphic: the address may run wider than the image */
       var s2 = 0.4167 * W, x2 = 0.2917 * W, y2 = 0.1875 * W;
-      p.fillStyle = textColor;
-      p.font = '900 ' + 0.075 * W + 'px ' + MONO;
-      p.textAlign = 'center';
-      p.textBaseline = 'alphabetic';
-      p.fillText('$' + token.ticker, W / 2, y2 - 0.052 * W);
       p.drawImage(logoImg, x2, y2, s2, s2);
-      var bottom = drawCaption(p, W / 2, s2, Math.min(s2 * 1.4, W * 0.96), y2 + s2);
-      p.fillStyle = textColor;
-      p.font = '600 ' + 0.0333 * W + 'px ' + SANS;
-      p.textAlign = 'center';
-      p.textBaseline = 'alphabetic';
-      p.fillText('SOLANA OFFICIAL MERCH', W / 2, bottom + 0.0625 * W);
+      drawCaption(p, W / 2, s2, Math.min(s2 * 2, W * 0.92), y2 + s2);
     } else {
+      /* big centred graphic: the address stays inside the image's width */
       var s3 = 0.55 * W, x3 = 0.225 * W, y3 = 0.0792 * W;
       p.drawImage(logoImg, x3, y3, s3, s3);
-      drawCaption(p, W / 2, s3, Math.min(s3 * 1.4, W * 0.96), y3 + s3);
+      drawCaption(p, W / 2, s3, s3, y3 + s3);
     }
   } else {
     var r = 0.1875 * W, cx = W / 2, cy = 0.3333 * W;
