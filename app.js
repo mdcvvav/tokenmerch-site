@@ -122,7 +122,7 @@ var MARKUP = [
 '<div class="mt-4 pt-4 border-t border-brand-border">',
 '<div class="flex items-center justify-between mb-2">',
 '<span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Price chart</span>',
-'<div class="flex items-center gap-1"><button data-range="day" class="tm-range"></button><button data-range="week" class="tm-range"></button></div>',
+'<div id="tmRanges" class="flex items-center gap-1"></div>',
 '</div>',
 '<div class="relative bg-brand-bg/80 rounded-xl border border-brand-border overflow-hidden" style="height:96px">',
 '<canvas id="tmChart" width="800" height="192" class="w-full h-full block"></canvas>',
@@ -229,7 +229,7 @@ var COLORS = [
 ];
 var SIZES = ['S', 'M', 'L', 'XL', '2XL'];
 
-var chartRange = 'day', chartData = null, chartTimer = null;
+var chartRange = 'h1', chartShown = null, chartData = null, chartTimer = null;
 
 var canvas, ctx, logoImg = null, logoReady = false;
 var tpl = null, tplImg = null;
@@ -695,11 +695,12 @@ function buildControls() {
   });
   textUpdate();
 
-  [].forEach.call(document.querySelectorAll('.tm-range'), function (b) {
-    b.addEventListener('click', function () {
-      chartRange = b.getAttribute('data-range');
-      loadChart();
-    });
+  var rw = document.getElementById('tmRanges');
+  if (rw) rw.addEventListener('click', function (e) {
+    var b = e.target.closest('.tm-range');
+    if (!b) return;
+    chartRange = b.getAttribute('data-range');
+    loadChart();
   });
   paintRangeButtons();
 
@@ -739,12 +740,25 @@ function buildControls() {
 /* ---------------- price chart ----------------
    Candles come from GeckoTerminal's public API: no key, no account and
    no cost. The pool address is the one DexScreener already gave us, so
-   finding the pool costs no extra request. One ~3 KB JSON per refresh. */
+   finding the pool costs no extra request. One ~3 KB JSON per refresh.
 
-var RANGES = {
-  day: { label: '24H', path: 'hour', aggregate: 1, limit: 24 },
-  week: { label: '7D', path: 'hour', aggregate: 4, limit: 42 }
-};
+   The buttons are candle sizes, finest first, the way DexScreener's are.
+   24 hours is the longest view, so 1-hour candles across a day IS the
+   24H view. If the chosen size has no history yet, which is normal for a
+   token minted minutes ago, loadChart steps down to the next finer size
+   until something draws, so the chart always populates. */
+
+var RANGES = [
+  { key: 'm1', label: '1M', path: 'minute', aggregate: 1, limit: 60 },
+  { key: 'm5', label: '5M', path: 'minute', aggregate: 5, limit: 60 },
+  { key: 'm15', label: '15M', path: 'minute', aggregate: 15, limit: 60 },
+  { key: 'h1', label: '24H', path: 'hour', aggregate: 1, limit: 24 }
+];
+
+function rangeIndex(key) {
+  for (var i = 0; i < RANGES.length; i++) if (RANGES[i].key === key) return i;
+  return RANGES.length - 1;
+}
 
 function chartMsg(text) {
   var el = document.getElementById('tmChartMsg');
@@ -752,13 +766,16 @@ function chartMsg(text) {
 }
 
 function paintRangeButtons() {
-  [].forEach.call(document.querySelectorAll('.tm-range'), function (b) {
-    var on = b.getAttribute('data-range') === chartRange;
-    b.innerText = RANGES[b.getAttribute('data-range')].label;
-    b.className = 'tm-range text-[10px] font-mono px-2 py-0.5 rounded border transition-all ' +
+  var wrap = document.getElementById('tmRanges');
+  if (!wrap) return;
+  var active = chartShown || chartRange;
+  wrap.innerHTML = RANGES.map(function (r) {
+    var on = r.key === active;
+    return '<button data-range="' + r.key + '" class="tm-range text-[10px] font-mono px-1.5 py-0.5 rounded border transition-all ' +
       (on ? 'border-brand-accent bg-brand-accent/20 text-white'
-          : 'border-brand-border text-slate-400 hover:text-white');
-  });
+          : 'border-brand-border text-slate-400 hover:text-white') +
+      '">' + r.label + '</button>';
+  }).join('');
 }
 
 function drawChart() {
@@ -818,22 +835,34 @@ function drawChart() {
   g.fillText(fmtPrice(lo), W - 8, H - 4);
 }
 
-function loadChart() {
-  chartData = null;
-  drawChart();
-  paintRangeButtons();
-  if (!token.pair) { chartMsg('No pool for this token yet'); return; }
-  chartMsg('Loading chart...');
-  var r = RANGES[chartRange];
+function loadChart(stepKey) {
+  var key = stepKey || chartRange;
+  if (!stepKey) {
+    chartData = null;
+    chartShown = null;
+    drawChart();
+    paintRangeButtons();
+    if (!token.pair) { chartMsg('No pool for this token yet'); return; }
+    chartMsg('Loading chart...');
+  }
+  if (!token.pair) return;
+  var r = RANGES[rangeIndex(key)];
   var url = 'https://api.geckoterminal.com/api/v2/networks/solana/pools/' + token.pair +
     '/ohlcv/' + r.path + '?aggregate=' + r.aggregate + '&limit=' + r.limit + '&currency=usd';
   var want = token.pair + '|' + chartRange;
   getJson(url).then(function (d) {
     if (want !== token.pair + '|' + chartRange) return;   /* a newer request won */
     var list = (d && d.data && d.data.attributes && d.data.attributes.ohlcv_list) || [];
-    if (list.length < 2) { chartMsg('Not enough trading history yet'); return; }
+    if (list.length < 2) {
+      var i = rangeIndex(key);
+      if (i > 0) { loadChart(RANGES[i - 1].key); return; }  /* step to a finer candle */
+      chartMsg('Not enough trading history yet');
+      return;
+    }
+    chartShown = r.key;
     chartData = list.slice().reverse().map(function (row) { return row[4]; });  /* close */
     chartMsg('');
+    paintRangeButtons();
     drawChart();
   }).catch(function (e) {
     console.warn('Chart unavailable:', e.message);
