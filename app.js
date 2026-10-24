@@ -789,7 +789,8 @@ function drawChart() {
 
   var padT = 14, padB = 14, padR = 110, padL = 6;
   var lo = Math.min.apply(null, pts), hi = Math.max.apply(null, pts);
-  if (hi === lo) { hi = lo * 1.0005 || 1; lo = lo * 0.9995; }
+  var flat = (hi === lo);
+  if (flat) { hi = lo * 1.0005 || 1; lo = lo * 0.9995; }
   var plotW = W - padL - padR, plotH = H - padT - padB;
   var X = function (i) { return padL + (plotW * i) / (pts.length - 1); };
   var Y = function (v) { return padT + plotH * (1 - (v - lo) / (hi - lo)); };
@@ -829,10 +830,16 @@ function drawChart() {
   g.font = '500 20px "JetBrains Mono", monospace';
   g.textAlign = 'right';
   g.fillStyle = 'rgba(148,163,184,0.75)';
-  g.textBaseline = 'top';
-  g.fillText(fmtPrice(hi), W - 8, 4);
-  g.textBaseline = 'bottom';
-  g.fillText(fmtPrice(lo), W - 8, H - 4);
+  if (flat) {
+    /* a pool minutes old can have a single candle: one price, no range */
+    g.textBaseline = 'middle';
+    g.fillText(fmtPrice(pts[0]), W - 8, H / 2);
+  } else {
+    g.textBaseline = 'top';
+    g.fillText(fmtPrice(hi), W - 8, 4);
+    g.textBaseline = 'bottom';
+    g.fillText(fmtPrice(lo), W - 8, H - 4);
+  }
 }
 
 function loadChart(stepKey) {
@@ -856,7 +863,16 @@ function loadChart(stepKey) {
     if (list.length < 2) {
       var i = rangeIndex(key);
       if (i > 0) { loadChart(RANGES[i - 1].key); return; }  /* step to a finer candle */
-      chartMsg('Not enough trading history yet');
+      if (list.length === 1) {
+        /* brand-new pool with one candle: draw it flat rather than nothing */
+        chartShown = r.key;
+        chartData = [list[0][4], list[0][4]];
+        chartMsg('');
+        paintRangeButtons();
+        drawChart();
+        return;
+      }
+      chartMsg('No trades yet');
       return;
     }
     chartShown = r.key;
@@ -865,6 +881,8 @@ function loadChart(stepKey) {
     paintRangeButtons();
     drawChart();
   }).catch(function (e) {
+    var i = rangeIndex(key);
+    if (i > 0) { loadChart(RANGES[i - 1].key); return; }   /* a hiccup: try a finer one */
     console.warn('Chart unavailable:', e.message);
     chartMsg('Chart unavailable');
   });
