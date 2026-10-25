@@ -59,7 +59,7 @@ function addHead() {
     l.rel = 'stylesheet'; l.href = href; head.appendChild(l);
   }
   link('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Archivo+Black&family=Orbitron:wght@700;900&display=swap');
-  link('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+  link('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css');
   var st = document.createElement('style');
   st.id = 'tm-style'; st.textContent = CSS; head.appendChild(st);
 }
@@ -77,11 +77,12 @@ function addTailwind(done) {
 
 var MARKUP = [
 '<header class="border-b border-brand-border/80 bg-brand-bg/90 sticky top-0 z-40 backdrop-blur-md">',
-'<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center gap-3 sm:gap-4">',
+'<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center gap-3 sm:gap-4 relative">',
 /* logo square, left */
 '<a href="/" class="shrink-0 block w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-brand-card border border-brand-border/70 shadow-lg shadow-brand-accent/10"><img src="' + LOGO_SRC + '" alt="TokenMerch" width="64" height="64" class="w-full h-full object-cover"></a>',
 /* wordmark, centered */
-'<div class="flex-1 min-w-0 text-center"><a href="/" class="tm-wordmark inline-block text-base sm:text-2xl lg:text-3xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
+'<div class="flex-1"></div>',
+'<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><a href="/" class="tm-wordmark pointer-events-auto text-base sm:text-2xl lg:text-3xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
 /* links, right */
 '<div class="shrink-0 flex items-center gap-1.5 sm:gap-2">',
 '<a id="tmXLink" href="#" target="_blank" rel="noopener" title="TokenMerch on X" aria-label="TokenMerch on X" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all"><i class="fa-brands fa-x-twitter"></i></a>',
