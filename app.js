@@ -164,7 +164,7 @@ var MARKUP = [
 '<div class="flex items-center justify-between"><span class="text-slate-400">Text colour <span class="text-slate-500">(both lines)</span></span><span class="flex items-center gap-2"><span id="tmColorHex" class="text-slate-300">#FFFFFF</span><span id="tmColorSwatch" class="inline-block w-6 h-6 rounded border border-white/30" style="background:#FFFFFF"></span></span></div>',
 '<input id="tmHue" type="range" min="0" max="1000" value="0">',
 '<div class="flex items-center justify-between pt-2"><span class="text-slate-400">Font weight</span><span id="tmWeightVal" class="text-slate-300">700</span></div>',
-'<input id="tmWeight" type="range" min="300" max="700" step="100" value="700">',
+'<input id="tmWeight" type="range" min="400" max="900" step="100" value="700">',
 '</div></div></div>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">4. SELECT SIZE</label>',
@@ -406,11 +406,11 @@ function fitFont(p, text, weight, family, maxW, cap) {
    the first time it is picked, not up front, so choosing a font costs one
    request and the page starts with only the default. */
 var FONTS = [
-  { id: 'grotesk', label: 'SPACE GROTESK', css: '"Space Grotesk", sans-serif', google: 'Space+Grotesk', weights: [300, 400, 500, 600, 700] },
+  { id: 'grotesk', label: 'SPACE GROTESK', css: '"Space Grotesk", sans-serif', google: 'Space+Grotesk', weights: [400, 500, 600, 700] },
   { id: 'mono', label: 'SPACE MONO', css: '"Space Mono", monospace', google: 'Space+Mono', weights: [400, 700] },
-  { id: 'chakra', label: 'CHAKRA PETCH', css: '"Chakra Petch", sans-serif', google: 'Chakra+Petch', weights: [300, 400, 500, 600, 700] },
+  { id: 'chakra', label: 'CHAKRA PETCH', css: '"Chakra Petch", sans-serif', google: 'Chakra+Petch', weights: [400, 500, 600, 700] },
   { id: 'archivo', label: 'ARCHIVO BLACK', css: '"Archivo Black", sans-serif', google: 'Archivo+Black', weights: [400] },
-  { id: 'inter', label: 'INTER', css: '"Inter", sans-serif', google: 'Inter', weights: [300, 400, 500, 600, 700, 800, 900] }
+  { id: 'inter', label: 'INTER', css: '"Inter", sans-serif', google: 'Inter', weights: [400, 500, 600, 700, 800, 900] }
 ];
 
 function fontById(id) {
@@ -745,11 +745,14 @@ function buildControls() {
     showTicker = document.getElementById('tmShowTicker').checked;
     textColor = spectrumHex(+document.getElementById('tmHue').value / 1000);
     textWeight = +document.getElementById('tmWeight').value;
-    document.getElementById('tmWeightVal').innerText = textWeight;
     caFont = document.getElementById('tmCaFont').value;
     tickerFont = document.getElementById('tmTkFont').value;
     ensureFont(fontById(caFont));
     ensureFont(fontById(tickerFont));
+    var we1 = nearestWeight(fontById(caFont), textWeight);
+    var we2 = nearestWeight(fontById(tickerFont), textWeight);
+    document.getElementById('tmWeightVal').innerText =
+      (we1 === we2) ? String(we1) : ('CA ' + we1 + ' / $ ' + we2);
     document.getElementById('tmColorHex').innerText = textColor;
     document.getElementById('tmColorSwatch').style.background = textColor;
     document.getElementById('tmColorRow').style.opacity = (showCA || showTicker) ? '1' : '0.4';
