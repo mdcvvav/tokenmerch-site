@@ -406,15 +406,19 @@ function fitFont(p, text, weight, family, maxW, cap) {
    the first time it is picked, not up front, so choosing a font costs one
    request and the page starts with only the default. */
 var FONTS = [
-  { id: 'grotesk', label: 'SPACE GROTESK', css: '"Space Grotesk", sans-serif', google: 'Space+Grotesk', weights: [400, 500, 600, 700] },
-  { id: 'mono', label: 'SPACE MONO', css: '"Space Mono", monospace', google: 'Space+Mono', weights: [400, 700] },
-  { id: 'chakra', label: 'CHAKRA PETCH', css: '"Chakra Petch", sans-serif', google: 'Chakra+Petch', weights: [400, 500, 600, 700] },
   { id: 'archivo', label: 'ARCHIVO BLACK', css: '"Archivo Black", sans-serif', google: 'Archivo+Black', weights: [400] },
-  { id: 'inter', label: 'INTER', css: '"Inter", sans-serif', google: 'Inter', weights: [400, 500, 600, 700, 800, 900] }
+  { id: 'chakra', label: 'CHAKRA PETCH', css: '"Chakra Petch", sans-serif', google: 'Chakra+Petch', weights: [400, 500, 600, 700] },
+  { id: 'inter', label: 'INTER', css: '"Inter", sans-serif', google: 'Inter', weights: [400, 500, 600, 700, 800, 900] },
+  { id: 'grotesk', label: 'SPACE GROTESK', css: '"Space Grotesk", sans-serif', google: 'Space+Grotesk', weights: [400, 500, 600, 700] },
+  { id: 'mono', label: 'SPACE MONO', css: '"Space Mono", monospace', google: 'Space+Mono', weights: [400, 700] }
 ];
 
+var DEFAULT_FONT = 'grotesk';
+
 function fontById(id) {
-  for (var i = 0; i < FONTS.length; i++) if (FONTS[i].id === id) return FONTS[i];
+  var i;
+  for (i = 0; i < FONTS.length; i++) if (FONTS[i].id === id) return FONTS[i];
+  for (i = 0; i < FONTS.length; i++) if (FONTS[i].id === DEFAULT_FONT) return FONTS[i];
   return FONTS[0];
 }
 
