@@ -77,17 +77,16 @@ function addTailwind(done) {
 
 var MARKUP = [
 '<header class="border-b border-brand-border/80 bg-brand-bg/90 sticky top-0 z-40 backdrop-blur-md">',
-'<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center gap-3 sm:gap-4 relative">',
+'<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 sm:h-24 flex items-center gap-3 sm:gap-4 relative">',
 /* logo square, left */
-'<a href="/" class="shrink-0 block w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-brand-card border border-brand-border/70 shadow-lg shadow-brand-accent/10"><img src="' + LOGO_SRC + '" alt="TokenMerch" width="64" height="64" class="w-full h-full object-cover"></a>',
+'<a href="/" class="shrink-0 block w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-brand-card border border-brand-border/70 shadow-lg shadow-brand-accent/10"><img src="' + LOGO_SRC + '" alt="TokenMerch" width="64" height="64" class="w-full h-full object-cover"></a>',
 /* wordmark, centered */
 '<div class="flex-1"></div>',
-'<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><a href="/" class="tm-wordmark pointer-events-auto text-base sm:text-2xl lg:text-3xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
+'<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><a href="/" class="tm-wordmark pointer-events-auto text-lg sm:text-3xl lg:text-4xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
 /* links, right */
 '<div class="shrink-0 flex items-center gap-1.5 sm:gap-2">',
-'<a id="tmXLink" href="#" target="_blank" rel="noopener" title="TokenMerch on X" aria-label="TokenMerch on X" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all"><i class="fa-brands fa-x-twitter"></i></a>',
-'<a id="tmMailLink" href="#" title="Email TokenMerch" aria-label="Email TokenMerch" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all"><i class="fa-solid fa-envelope"></i></a>',
-'<button id="showArchBtn" title="How TokenMerch works" aria-label="How TokenMerch works" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-400 hover:text-white border border-brand-border transition-all"><i class="fa-solid fa-network-wired text-brand-accent"></i></button>',
+'<a id="tmXLink" href="#" target="_blank" rel="noopener" title="TokenMerch on X" aria-label="TokenMerch on X" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-brands fa-x-twitter"></i></a>',
+'<a id="tmMailLink" href="#" title="Email TokenMerch" aria-label="Email TokenMerch" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-solid fa-envelope"></i></a>',
 '</div>',
 '</div></header>',
 
@@ -821,8 +820,11 @@ function buildControls() {
     }).catch(function () { alert('Your browser blocked clipboard access. Paste with Ctrl+V instead.'); });
   });
 
+  /* the architecture modal has no trigger in the header any more; the markup and
+     these handlers stay so it can be opened from anywhere later */
   var arch = document.getElementById('archModal');
-  document.getElementById('showArchBtn').addEventListener('click', function () {
+  var archBtn = document.getElementById('showArchBtn');
+  if (archBtn) archBtn.addEventListener('click', function () {
     arch.classList.remove('hidden'); arch.classList.add('flex');
   });
   document.getElementById('closeArchBtn').addEventListener('click', function () {
