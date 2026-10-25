@@ -11,11 +11,8 @@
 
 var API = 'https://tokenmerch-site.vercel.app';
 var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
-var PRESET_CAS = {
-  WIF: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
-  BONK: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
-  POPCAT: '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr'
-};
+/* shown on first load so the preview is never empty */
+var DEMO_CA = 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm';
 
 /* ---------------- head assets ---------------- */
 
@@ -93,8 +90,7 @@ var MARKUP = [
 '<div class="absolute -right-16 -top-16 w-64 h-64 bg-brand-accent/10 rounded-full blur-3xl pointer-events-none"></div>',
 '<div class="absolute -left-16 -bottom-16 w-64 h-64 bg-brand-solana/10 rounded-full blur-3xl pointer-events-none"></div>',
 '<div class="max-w-3xl mx-auto text-center mb-4">',
-'<h1 class="text-xl sm:text-3xl font-extrabold tracking-tight mb-1">Drop Solana CA <i class="fa-solid fa-arrow-right text-brand-accent text-lg"></i> <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-solana to-brand-cyber">Instant High-Res Merch</span></h1>',
-'<p class="text-slate-400 text-xs sm:text-sm">Paste any Solana contract address. We pull the token artwork and print it on demand.</p>',
+'<h1 class="text-xl sm:text-3xl font-extrabold tracking-tight">Drop the CA <i class="fa-solid fa-arrow-right text-brand-accent text-lg"></i> <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-solana to-brand-cyber">Get the Merch</span></h1>',
 '</div>',
 '<div class="max-w-3xl mx-auto">',
 '<div class="relative flex flex-col sm:flex-row items-stretch gap-2 bg-brand-bg/90 p-2 rounded-xl border border-brand-border focus-within:border-brand-accent transition-all glow-accent">',
@@ -105,12 +101,7 @@ var MARKUP = [
 '</div>',
 '<button id="fetchBtn" class="bg-gradient-to-r from-brand-accent to-purple-600 hover:opacity-90 text-white font-semibold px-6 py-2.5 rounded-lg flex items-center justify-center space-x-2 transition-all shadow-md text-sm"><span id="fetchBtnText">Fetch Token</span><i id="fetchSpinner" class="fa-solid fa-spinner fa-spin hidden"></i></button>',
 '</div>',
-'<div class="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">',
-'<span class="text-slate-500 font-mono text-[11px]">Popular Solana Presets:</span>',
-'<button data-preset="WIF" class="tm-preset bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-brand-solana px-3 py-1 rounded-full border border-brand-border transition-all font-mono font-medium">$WIF</button>',
-'<button data-preset="BONK" class="tm-preset bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-brand-solana px-3 py-1 rounded-full border border-brand-border transition-all font-mono font-medium">$BONK</button>',
-'<button data-preset="POPCAT" class="tm-preset bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-brand-solana px-3 py-1 rounded-full border border-brand-border transition-all font-mono font-medium">$POPCAT</button>',
-'</div></div></section>',
+'</div></section>',
 
 /* workspace */
 '<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">',
@@ -821,9 +812,6 @@ function buildControls() {
       document.getElementById('caInput').value = t;
     }).catch(function () { alert('Your browser blocked clipboard access. Paste with Ctrl+V instead.'); });
   });
-  [].forEach.call(document.querySelectorAll('.tm-preset'), function (b) {
-    b.addEventListener('click', function () { fetchToken(PRESET_CAS[b.getAttribute('data-preset')]); });
-  });
 
   var arch = document.getElementById('archModal');
   document.getElementById('showArchBtn').addEventListener('click', function () {
@@ -1219,7 +1207,7 @@ function start() {
   ctx = canvas.getContext('2d');
   buildControls();
   loadTemplate();
-  fetchToken(PRESET_CAS.WIF);
+  fetchToken(DEMO_CA);
   startChartPolling();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 }
