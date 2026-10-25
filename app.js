@@ -30,6 +30,8 @@ var CSS = [
 '#tmWeight{-webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:9999px;outline:none;cursor:pointer;border:1px solid rgba(255,255,255,.2);background:linear-gradient(to right,#4b5563,#e2e8f0)}',
 '#tmWeight::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
 '#tmWeight::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
+'#tmWeight:disabled{cursor:not-allowed}',
+'#tmWeightRow{transition:opacity .15s ease}',
 '#tokenmerch-root ::-webkit-scrollbar{width:6px;height:6px}',
 '#tokenmerch-root ::-webkit-scrollbar-track{background:#0d0f17}',
 '#tokenmerch-root ::-webkit-scrollbar-thumb{background:#272d3f;border-radius:3px}'
@@ -54,7 +56,7 @@ function addHead() {
     var l = document.createElement('link');
     l.rel = 'stylesheet'; l.href = href; head.appendChild(l);
   }
-  link('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+  link('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Archivo+Black&display=swap');
   link('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
   var st = document.createElement('style');
   st.id = 'tm-style'; st.textContent = CSS; head.appendChild(st);
@@ -163,8 +165,10 @@ var MARKUP = [
 '<div class="flex items-center justify-between gap-2"><span class="text-slate-400 shrink-0">Ticker font</span><select id="tmTkFont" class="bg-brand-card text-slate-200 border border-brand-border rounded-lg px-2 py-1 text-[11px] font-mono focus:outline-none focus:border-brand-accent"></select></div>',
 '<div class="flex items-center justify-between"><span class="text-slate-400">Text colour <span class="text-slate-500">(both lines)</span></span><span class="flex items-center gap-2"><span id="tmColorHex" class="text-slate-300">#FFFFFF</span><span id="tmColorSwatch" class="inline-block w-6 h-6 rounded border border-white/30" style="background:#FFFFFF"></span></span></div>',
 '<input id="tmHue" type="range" min="0" max="1000" value="0">',
-'<div class="flex items-center justify-between pt-2"><span class="text-slate-400">Font weight</span><span id="tmWeightVal" class="text-slate-300">700</span></div>',
+'<div id="tmWeightRow" class="pt-2 space-y-2">',
+'<div class="flex items-center justify-between"><span class="text-slate-400">Font weight</span><span id="tmWeightVal" class="text-slate-300">700</span></div>',
 '<input id="tmWeight" type="range" min="400" max="900" step="100" value="700">',
+'</div>',
 '</div></div></div>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">4. SELECT SIZE</label>',
@@ -229,7 +233,7 @@ var style = 'centered';
 var size = 'L';
 var zoom = false;
 var showCA = false, showTicker = false, textColor = '#FFFFFF', textWeight = 700;
-var caFont = 'grotesk', tickerFont = 'grotesk';
+var caFont = 'archivo', tickerFont = 'archivo';
 var PRICES = { tshirt: 38, hoodie: 68, mug: 24 };
 var COLORS = [
   ['#121212', 'Jet Black'], ['#FFFFFF', 'White'], ['#4B5563', 'Heather Grey'],
@@ -413,7 +417,7 @@ var FONTS = [
   { id: 'mono', label: 'SPACE MONO', css: '"Space Mono", monospace', google: 'Space+Mono', weights: [400, 700] }
 ];
 
-var DEFAULT_FONT = 'grotesk';
+var DEFAULT_FONT = 'archivo';
 
 function fontById(id) {
   var i;
@@ -431,7 +435,7 @@ function nearestWeight(f, w) {
   return best;
 }
 
-var fontAsked = { grotesk: true };
+var fontAsked = { archivo: true };
 function ensureFont(f) {
   if (fontAsked[f.id]) return;
   fontAsked[f.id] = true;
@@ -753,10 +757,15 @@ function buildControls() {
     tickerFont = document.getElementById('tmTkFont').value;
     ensureFont(fontById(caFont));
     ensureFont(fontById(tickerFont));
-    var we1 = nearestWeight(fontById(caFont), textWeight);
-    var we2 = nearestWeight(fontById(tickerFont), textWeight);
+    var f1 = fontById(caFont), f2 = fontById(tickerFont);
+    var we1 = nearestWeight(f1, textWeight), we2 = nearestWeight(f2, textWeight);
     document.getElementById('tmWeightVal').innerText =
       (we1 === we2) ? String(we1) : ('CA ' + we1 + ' / $ ' + we2);
+    /* a single-weight font cannot answer the slider, so say so rather than
+       leaving a control that looks live and does nothing */
+    var live = f1.weights.length > 1 || f2.weights.length > 1;
+    document.getElementById('tmWeightRow').style.opacity = live ? '1' : '0.4';
+    document.getElementById('tmWeight').disabled = !live;
     document.getElementById('tmColorHex').innerText = textColor;
     document.getElementById('tmColorSwatch').style.background = textColor;
     document.getElementById('tmColorRow').style.opacity = (showCA || showTicker) ? '1' : '0.4';
