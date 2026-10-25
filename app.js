@@ -135,17 +135,10 @@ var MARKUP = [
 '<div class="glass-panel rounded-2xl p-5 space-y-4 uppercase">',
 '<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 flex items-center justify-between"><span><i class="fa-solid fa-sliders text-brand-accent mr-2"></i> Merch Customizer</span><span class="text-[10px] text-brand-solana">Real-time Render</span></h3>',
 
-'<div><label class="block text-xs font-mono text-slate-400 mb-2">1. PRODUCT SELECTION</label>',
-'<div class="grid grid-cols-3 gap-2 font-mono text-xs">',
-'<button data-product="tshirt" class="tm-product py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1"><i class="fa-solid fa-shirt"></i> <span>T-SHIRT</span></button>',
-'<button data-product="hoodie" class="tm-product py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1"><i class="fa-solid fa-shirt"></i> <span>HOODIE</span></button>',
-'<button data-product="mug" class="tm-product py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1"><i class="fa-solid fa-mug-hot"></i> <span>MUG</span></button>',
-'</div></div>',
-
-'<div><label class="block text-xs font-mono text-slate-400 mb-2">2. GARMENT COLOR</label>',
+'<div><label class="block text-xs font-mono text-slate-400 mb-2">1. GARMENT COLOR</label>',
 '<div id="tmColors" class="flex items-center space-x-2.5 bg-brand-bg p-2.5 rounded-xl border border-brand-border"></div></div>',
 
-'<div><label class="block text-xs font-mono text-slate-400 mb-2">3. GRAPHIC PRINT STYLE</label>',
+'<div><label class="block text-xs font-mono text-slate-400 mb-2">2. GRAPHIC PRINT STYLE</label>',
 '<select id="printStyleSelect" class="w-full bg-brand-bg text-slate-200 border border-brand-border rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-accent">',
 '<option value="centered">CENTERED GRAPHIC IMAGE</option>',
 '<option value="centered-small">CENTERED GRAPHIC IMAGE SMALL</option>',
@@ -169,7 +162,7 @@ var MARKUP = [
 '</div>',
 '</div></div></div>',
 
-'<div><label class="block text-xs font-mono text-slate-400 mb-2">4. SELECT SIZE</label>',
+'<div><label class="block text-xs font-mono text-slate-400 mb-2">3. SELECT SIZE</label>',
 '<div id="tmSizes" class="grid grid-cols-5 gap-1.5 font-mono text-xs"></div></div>',
 '</div>',
 
@@ -184,6 +177,14 @@ var MARKUP = [
 
 /* right column: preview */
 '<div class="lg:col-span-7 lg:sticky lg:top-24">',
+
+/* product slots, above the preview */
+'<div class="glass-panel rounded-2xl p-5 mb-6">',
+'<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 mb-4 flex items-center justify-between"><span><i class="fa-solid fa-shirt text-brand-accent mr-2"></i> Product</span><span class="text-[10px] text-slate-500">9 SLOTS</span></h3>',
+'<div id="tmProductGrid" class="grid grid-cols-3 gap-3">',
+new Array(9).fill('<button class="tm-slot h-20 lg:h-24 rounded-xl border border-dashed border-brand-border/80 bg-brand-bg/50 hover:border-brand-accent hover:bg-brand-cardHover/40 transition-all" aria-label="Empty product slot"></button>').join(''),
+'</div></div>',
+
 '<div class="glass-panel rounded-2xl p-6 relative flex flex-col items-center justify-center min-h-[520px]">',
 '<div class="w-full flex items-center justify-between mb-4 text-xs font-mono border-b border-brand-border pb-3">',
 '<div class="flex items-center space-x-2"><span class="w-2.5 h-2.5 rounded-full bg-brand-solana animate-ping"></span><span class="text-slate-300 font-bold uppercase tracking-wider">Preview</span></div>',
