@@ -159,6 +159,8 @@ var MARKUP = [
 '<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">Contract address</span><input id="tmShowCA" type="checkbox" class="w-4 h-4 accent-purple-500"></label>',
 '<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">$TICKER</span><input id="tmShowTicker" type="checkbox" class="w-4 h-4 accent-purple-500"></label>',
 '<div id="tmColorRow" class="pt-3 border-t border-brand-border space-y-2">',
+'<div class="flex items-center justify-between gap-2"><span class="text-slate-400 shrink-0">Address font</span><select id="tmCaFont" class="bg-brand-card text-slate-200 border border-brand-border rounded-lg px-2 py-1 text-[11px] font-mono focus:outline-none focus:border-brand-accent"></select></div>',
+'<div class="flex items-center justify-between gap-2"><span class="text-slate-400 shrink-0">Ticker font</span><select id="tmTkFont" class="bg-brand-card text-slate-200 border border-brand-border rounded-lg px-2 py-1 text-[11px] font-mono focus:outline-none focus:border-brand-accent"></select></div>',
 '<div class="flex items-center justify-between"><span class="text-slate-400">Text colour <span class="text-slate-500">(both lines)</span></span><span class="flex items-center gap-2"><span id="tmColorHex" class="text-slate-300">#FFFFFF</span><span id="tmColorSwatch" class="inline-block w-6 h-6 rounded border border-white/30" style="background:#FFFFFF"></span></span></div>',
 '<input id="tmHue" type="range" min="0" max="1000" value="0">',
 '<div class="flex items-center justify-between pt-2"><span class="text-slate-400">Font weight</span><span id="tmWeightVal" class="text-slate-300">700</span></div>',
@@ -227,6 +229,7 @@ var style = 'centered';
 var size = 'L';
 var zoom = false;
 var showCA = false, showTicker = false, textColor = '#FFFFFF', textWeight = 700;
+var caFont = 'grotesk', tickerFont = 'grotesk';
 var PRICES = { tshirt: 38, hoodie: 68, mug: 24 };
 var COLORS = [
   ['#121212', 'Jet Black'], ['#FFFFFF', 'White'], ['#4B5563', 'Heather Grey'],
@@ -399,9 +402,51 @@ function fitFont(p, text, weight, family, maxW, cap) {
   return Math.min(cap, 100 * maxW / w);
 }
 
-/* everything that gets printed is set in Space Grotesk, at the weight
-   chosen by the slider (300-700, which is all the family ships) */
-var PRINT_FONT = '"Space Grotesk", sans-serif';
+/* The printed text can use any of these. Each is pulled from Google Fonts
+   the first time it is picked, not up front, so choosing a font costs one
+   request and the page starts with only the default. */
+var FONTS = [
+  { id: 'grotesk', label: 'SPACE GROTESK', css: '"Space Grotesk", sans-serif', google: 'Space+Grotesk', weights: [300, 400, 500, 600, 700] },
+  { id: 'mono', label: 'SPACE MONO', css: '"Space Mono", monospace', google: 'Space+Mono', weights: [400, 700] },
+  { id: 'chakra', label: 'CHAKRA PETCH', css: '"Chakra Petch", sans-serif', google: 'Chakra+Petch', weights: [300, 400, 500, 600, 700] },
+  { id: 'archivo', label: 'ARCHIVO BLACK', css: '"Archivo Black", sans-serif', google: 'Archivo+Black', weights: [400] },
+  { id: 'inter', label: 'INTER', css: '"Inter", sans-serif', google: 'Inter', weights: [300, 400, 500, 600, 700, 800, 900] }
+];
+
+function fontById(id) {
+  for (var i = 0; i < FONTS.length; i++) if (FONTS[i].id === id) return FONTS[i];
+  return FONTS[0];
+}
+
+/* a font may not ship the weight the slider is on, so snap to its nearest */
+function nearestWeight(f, w) {
+  var best = f.weights[0];
+  for (var i = 0; i < f.weights.length; i++) {
+    if (Math.abs(f.weights[i] - w) < Math.abs(best - w)) best = f.weights[i];
+  }
+  return best;
+}
+
+var fontAsked = { grotesk: true };
+function ensureFont(f) {
+  if (fontAsked[f.id]) return;
+  fontAsked[f.id] = true;
+  var href = 'https://fonts.googleapis.com/css2?family=' + f.google +
+    (f.weights.length > 1 ? ':wght@' + f.weights.join(';') : '') + '&display=swap';
+  var l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = href;
+  l.onload = function () {
+    if (document.fonts && document.fonts.load) {
+      Promise.all(f.weights.map(function (w) {
+        return document.fonts.load(w + ' 16px ' + f.css);
+      })).then(render, render);
+    } else {
+      render();
+    }
+  };
+  document.head.appendChild(l);
+}
 
 /* contract address on one line, then the big $TICKER under it.
    caW is how wide the address line is allowed to run; tickerW sizes
@@ -415,15 +460,17 @@ function drawCaption(p, cx, tickerW, caW, top) {
   p.textBaseline = 'top';
   var y = top + tickerW * 0.05;
   if (showCA && token.ca) {
-    var fs = fitFont(p, token.ca, textWeight, PRINT_FONT, caW, caW * 0.075);
-    p.font = textWeight + ' ' + fs + 'px ' + PRINT_FONT;
+    var cf = fontById(caFont), cwt = nearestWeight(cf, textWeight);
+    var fs = fitFont(p, token.ca, cwt, cf.css, caW, caW * 0.075);
+    p.font = cwt + ' ' + fs + 'px ' + cf.css;
     p.fillText(token.ca, cx, y);
     y += fs * 1.5;
   }
   if (showTicker && token.ticker) {
     var t = '$' + token.ticker;
-    var fs2 = fitFont(p, t, textWeight, PRINT_FONT, tickerW, tickerW * 0.22);
-    p.font = textWeight + ' ' + fs2 + 'px ' + PRINT_FONT;
+    var tf = fontById(tickerFont), twt = nearestWeight(tf, textWeight);
+    var fs2 = fitFont(p, t, twt, tf.css, tickerW, tickerW * 0.22);
+    p.font = twt + ' ' + fs2 + 'px ' + tf.css;
     p.fillText(t, cx, y);
     y += fs2 * 1.1;
   }
@@ -438,12 +485,13 @@ function drawArcCA(p, cx, cy, r, W) {
   if (!text) return cy + r;
   var gap = r * 0.16;
   var span = 2.97;                                  /* ~170 deg of wrap */
-  p.font = textWeight + ' 100px ' + PRINT_FONT;
+  var af = fontById(caFont), awt = nearestWeight(af, textWeight);
+  p.font = awt + ' 100px ' + af.css;
   var adv = p.measureText(text).width / 100;        /* advance per 1px of font */
   var denom = adv - span * 0.45;
   var fs = denom > 0 ? Math.min(span * (r + gap) / denom, W * 0.05) : r * 0.2;
   p.save();
-  p.font = textWeight + ' ' + fs + 'px ' + PRINT_FONT;
+  p.font = awt + ' ' + fs + 'px ' + af.css;
   p.fillStyle = textColor;
   p.textAlign = 'center';
   p.textBaseline = 'middle';
@@ -490,12 +538,13 @@ function drawDesign(p, W) {
       if (showCA && token.ca) below = drawArcCA(p, bcx, bcy, s1 / 2, W);
       if (showTicker && token.ticker) {
         var tb = '$' + token.ticker;
-        var fsb = fitFont(p, tb, textWeight, PRINT_FONT, s1 * 1.2, s1 * 0.26);
+        var bf = fontById(tickerFont), bwt = nearestWeight(bf, textWeight);
+        var fsb = fitFont(p, tb, bwt, bf.css, s1 * 1.2, s1 * 0.26);
         p.save();
         p.fillStyle = textColor;
         p.textAlign = 'center';
         p.textBaseline = 'top';
-        p.font = textWeight + ' ' + fsb + 'px ' + PRINT_FONT;
+        p.font = bwt + ' ' + fsb + 'px ' + bf.css;
         p.fillText(tb, bcx, below + s1 * 0.06);
         p.restore();
       }
@@ -517,7 +566,8 @@ function drawDesign(p, W) {
     p.arc(cx, cy, r, 0, Math.PI * 2);
     p.fill();
     p.fillStyle = '#0d0f17';
-    p.font = textWeight + ' ' + 0.0667 * W + 'px ' + PRINT_FONT;
+    var ff = fontById(tickerFont);
+    p.font = nearestWeight(ff, textWeight) + ' ' + 0.0667 * W + 'px ' + ff.css;
     p.textAlign = 'center';
     p.textBaseline = 'middle';
     p.fillText('$' + token.ticker, cx, cy);
@@ -696,12 +746,22 @@ function buildControls() {
     textColor = spectrumHex(+document.getElementById('tmHue').value / 1000);
     textWeight = +document.getElementById('tmWeight').value;
     document.getElementById('tmWeightVal').innerText = textWeight;
+    caFont = document.getElementById('tmCaFont').value;
+    tickerFont = document.getElementById('tmTkFont').value;
+    ensureFont(fontById(caFont));
+    ensureFont(fontById(tickerFont));
     document.getElementById('tmColorHex').innerText = textColor;
     document.getElementById('tmColorSwatch').style.background = textColor;
     document.getElementById('tmColorRow').style.opacity = (showCA || showTicker) ? '1' : '0.4';
     render();
   }
-  ['tmShowCA', 'tmShowTicker', 'tmHue', 'tmWeight'].forEach(function (id) {
+  var fontOpts = FONTS.map(function (f) { return '<option value="' + f.id + '">' + f.label + '</option>'; }).join('');
+  document.getElementById('tmCaFont').innerHTML = fontOpts;
+  document.getElementById('tmTkFont').innerHTML = fontOpts;
+  document.getElementById('tmCaFont').value = caFont;
+  document.getElementById('tmTkFont').value = tickerFont;
+
+  ['tmShowCA', 'tmShowTicker', 'tmHue', 'tmWeight', 'tmCaFont', 'tmTkFont'].forEach(function (id) {
     var el = document.getElementById(id);
     el.addEventListener('input', textUpdate);
     el.addEventListener('change', textUpdate);
