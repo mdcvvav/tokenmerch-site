@@ -879,7 +879,7 @@ function drawChart() {
   var cw = plotW / rows.length;
   var bodyW = Math.max(1 * S, Math.min(cw * 0.66, 12 * S));
   var wick = Math.max(1, Math.min(cw * 0.14, 1.6 * S));
-  var GRID = 'rgba(148,163,184,0.11)';
+  var GRID = 'rgba(148,163,184,0.17)';
 
   var hoverI = -1;
   if (chartHoverX >= 0) {
