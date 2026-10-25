@@ -27,6 +27,9 @@ var CSS = [
 '#tmHue{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:9999px;outline:none;cursor:pointer;border:1px solid rgba(255,255,255,.25);background:linear-gradient(to right,#FFF 0%,#FFF 6%,#F00 6%,#FF0 20.7%,#0F0 35.3%,#0FF 50%,#00F 64.7%,#F0F 79.3%,#F00 94%,#000 94%,#000 100%)}',
 '#tmHue::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.6);cursor:pointer}',
 '#tmHue::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.6);cursor:pointer}',
+'#tmWeight{-webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:9999px;outline:none;cursor:pointer;border:1px solid rgba(255,255,255,.2);background:linear-gradient(to right,#4b5563,#e2e8f0)}',
+'#tmWeight::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
+'#tmWeight::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
 '#tokenmerch-root ::-webkit-scrollbar{width:6px;height:6px}',
 '#tokenmerch-root ::-webkit-scrollbar-track{background:#0d0f17}',
 '#tokenmerch-root ::-webkit-scrollbar-thumb{background:#272d3f;border-radius:3px}'
@@ -51,7 +54,7 @@ function addHead() {
     var l = document.createElement('link');
     l.rel = 'stylesheet'; l.href = href; head.appendChild(l);
   }
-  link('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+  link('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
   link('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
   var st = document.createElement('style');
   st.id = 'tm-style'; st.textContent = CSS; head.appendChild(st);
@@ -129,14 +132,14 @@ var MARKUP = [
 '<div id="tmChartMsg" class="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-slate-500 pointer-events-none"></div>',
 '</div></div></div>',
 
-'<div class="glass-panel rounded-2xl p-5 space-y-4">',
+'<div class="glass-panel rounded-2xl p-5 space-y-4 uppercase">',
 '<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 flex items-center justify-between"><span><i class="fa-solid fa-sliders text-brand-accent mr-2"></i> Merch Customizer</span><span class="text-[10px] text-brand-solana">Real-time Render</span></h3>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">1. PRODUCT SELECTION</label>',
 '<div class="grid grid-cols-3 gap-2 font-mono text-xs">',
-'<button data-product="tshirt" class="tm-product py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1"><i class="fa-solid fa-shirt"></i> <span>T-Shirt</span></button>',
-'<button data-product="hoodie" class="tm-product py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1"><i class="fa-solid fa-shirt"></i> <span>Hoodie</span></button>',
-'<button data-product="mug" class="tm-product py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1"><i class="fa-solid fa-mug-hot"></i> <span>Mug</span></button>',
+'<button data-product="tshirt" class="tm-product py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1"><i class="fa-solid fa-shirt"></i> <span>T-SHIRT</span></button>',
+'<button data-product="hoodie" class="tm-product py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1"><i class="fa-solid fa-shirt"></i> <span>HOODIE</span></button>',
+'<button data-product="mug" class="tm-product py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1"><i class="fa-solid fa-mug-hot"></i> <span>MUG</span></button>',
 '</div></div>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">2. GARMENT COLOR</label>',
@@ -144,20 +147,22 @@ var MARKUP = [
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">3. GRAPHIC PRINT STYLE</label>',
 '<select id="printStyleSelect" class="w-full bg-brand-bg text-slate-200 border border-brand-border rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-accent">',
-'<option value="centered">Centered graphic image</option>',
-'<option value="centered-small">Centered graphic image small</option>',
-'<option value="badge-left">Image badge left</option>',
-'<option value="badge-right">Image badge right</option>',
+'<option value="centered">CENTERED GRAPHIC IMAGE</option>',
+'<option value="centered-small">CENTERED GRAPHIC IMAGE SMALL</option>',
+'<option value="badge-left">IMAGE BADGE LEFT</option>',
+'<option value="badge-right">IMAGE BADGE RIGHT</option>',
 '</select></div>',
 
 /* text under logo */
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">TEXT UNDER LOGO</label>',
 '<div class="space-y-3 bg-brand-bg p-3 rounded-xl border border-brand-border text-xs font-mono">',
-'<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">Contract address <span class="text-slate-500">(small)</span></span><input id="tmShowCA" type="checkbox" class="w-4 h-4 accent-purple-500"></label>',
-'<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">$TICKER <span class="text-slate-500">(large)</span></span><input id="tmShowTicker" type="checkbox" class="w-4 h-4 accent-purple-500"></label>',
+'<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">Contract address</span><input id="tmShowCA" type="checkbox" class="w-4 h-4 accent-purple-500"></label>',
+'<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">$TICKER</span><input id="tmShowTicker" type="checkbox" class="w-4 h-4 accent-purple-500"></label>',
 '<div id="tmColorRow" class="pt-3 border-t border-brand-border space-y-2">',
 '<div class="flex items-center justify-between"><span class="text-slate-400">Text colour <span class="text-slate-500">(both lines)</span></span><span class="flex items-center gap-2"><span id="tmColorHex" class="text-slate-300">#FFFFFF</span><span id="tmColorSwatch" class="inline-block w-6 h-6 rounded border border-white/30" style="background:#FFFFFF"></span></span></div>',
 '<input id="tmHue" type="range" min="0" max="1000" value="0">',
+'<div class="flex items-center justify-between pt-2"><span class="text-slate-400">Font weight</span><span id="tmWeightVal" class="text-slate-300">700</span></div>',
+'<input id="tmWeight" type="range" min="300" max="700" step="100" value="700">',
 '</div></div></div>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">4. SELECT SIZE</label>',
@@ -221,7 +226,7 @@ var garment = '#121212';
 var style = 'centered';
 var size = 'L';
 var zoom = false;
-var showCA = false, showTicker = false, textColor = '#FFFFFF';
+var showCA = false, showTicker = false, textColor = '#FFFFFF', textWeight = 700;
 var PRICES = { tshirt: 38, hoodie: 68, mug: 24 };
 var COLORS = [
   ['#121212', 'Jet Black'], ['#FFFFFF', 'White'], ['#4B5563', 'Heather Grey'],
@@ -394,8 +399,9 @@ function fitFont(p, text, weight, family, maxW, cap) {
   return Math.min(cap, 100 * maxW / w);
 }
 
-var MONO = '"JetBrains Mono", monospace';
-var SANS = '"Inter", sans-serif';
+/* everything that gets printed is set in Space Grotesk, at the weight
+   chosen by the slider (300-700, which is all the family ships) */
+var PRINT_FONT = '"Space Grotesk", sans-serif';
 
 /* contract address on one line, then the big $TICKER under it.
    caW is how wide the address line is allowed to run; tickerW sizes
@@ -409,15 +415,15 @@ function drawCaption(p, cx, tickerW, caW, top) {
   p.textBaseline = 'top';
   var y = top + tickerW * 0.05;
   if (showCA && token.ca) {
-    var fs = fitFont(p, token.ca, 600, MONO, caW, caW * 0.075);
-    p.font = '600 ' + fs + 'px ' + MONO;
+    var fs = fitFont(p, token.ca, textWeight, PRINT_FONT, caW, caW * 0.075);
+    p.font = textWeight + ' ' + fs + 'px ' + PRINT_FONT;
     p.fillText(token.ca, cx, y);
     y += fs * 1.5;
   }
   if (showTicker && token.ticker) {
     var t = '$' + token.ticker;
-    var fs2 = fitFont(p, t, 900, SANS, tickerW, tickerW * 0.22);
-    p.font = '900 ' + fs2 + 'px ' + SANS;
+    var fs2 = fitFont(p, t, textWeight, PRINT_FONT, tickerW, tickerW * 0.22);
+    p.font = textWeight + ' ' + fs2 + 'px ' + PRINT_FONT;
     p.fillText(t, cx, y);
     y += fs2 * 1.1;
   }
@@ -432,12 +438,12 @@ function drawArcCA(p, cx, cy, r, W) {
   if (!text) return cy + r;
   var gap = r * 0.16;
   var span = 2.97;                                  /* ~170 deg of wrap */
-  p.font = '600 100px ' + MONO;
+  p.font = textWeight + ' 100px ' + PRINT_FONT;
   var adv = p.measureText(text).width / 100;        /* advance per 1px of font */
   var denom = adv - span * 0.45;
   var fs = denom > 0 ? Math.min(span * (r + gap) / denom, W * 0.05) : r * 0.2;
   p.save();
-  p.font = '600 ' + fs + 'px ' + MONO;
+  p.font = textWeight + ' ' + fs + 'px ' + PRINT_FONT;
   p.fillStyle = textColor;
   p.textAlign = 'center';
   p.textBaseline = 'middle';
@@ -484,12 +490,12 @@ function drawDesign(p, W) {
       if (showCA && token.ca) below = drawArcCA(p, bcx, bcy, s1 / 2, W);
       if (showTicker && token.ticker) {
         var tb = '$' + token.ticker;
-        var fsb = fitFont(p, tb, 900, SANS, s1 * 1.2, s1 * 0.26);
+        var fsb = fitFont(p, tb, textWeight, PRINT_FONT, s1 * 1.2, s1 * 0.26);
         p.save();
         p.fillStyle = textColor;
         p.textAlign = 'center';
         p.textBaseline = 'top';
-        p.font = '900 ' + fsb + 'px ' + SANS;
+        p.font = textWeight + ' ' + fsb + 'px ' + PRINT_FONT;
         p.fillText(tb, bcx, below + s1 * 0.06);
         p.restore();
       }
@@ -511,7 +517,7 @@ function drawDesign(p, W) {
     p.arc(cx, cy, r, 0, Math.PI * 2);
     p.fill();
     p.fillStyle = '#0d0f17';
-    p.font = '900 ' + 0.0667 * W + 'px ' + MONO;
+    p.font = textWeight + ' ' + 0.0667 * W + 'px ' + PRINT_FONT;
     p.textAlign = 'center';
     p.textBaseline = 'middle';
     p.fillText('$' + token.ticker, cx, cy);
@@ -688,12 +694,14 @@ function buildControls() {
     showCA = document.getElementById('tmShowCA').checked;
     showTicker = document.getElementById('tmShowTicker').checked;
     textColor = spectrumHex(+document.getElementById('tmHue').value / 1000);
+    textWeight = +document.getElementById('tmWeight').value;
+    document.getElementById('tmWeightVal').innerText = textWeight;
     document.getElementById('tmColorHex').innerText = textColor;
     document.getElementById('tmColorSwatch').style.background = textColor;
     document.getElementById('tmColorRow').style.opacity = (showCA || showTicker) ? '1' : '0.4';
     render();
   }
-  ['tmShowCA', 'tmShowTicker', 'tmHue'].forEach(function (id) {
+  ['tmShowCA', 'tmShowTicker', 'tmHue', 'tmWeight'].forEach(function (id) {
     var el = document.getElementById(id);
     el.addEventListener('input', textUpdate);
     el.addEventListener('change', textUpdate);
