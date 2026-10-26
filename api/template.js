@@ -26,7 +26,10 @@ function pickTemplate(data, variantId, wanted) {
   const vm = maps.find((v) => v.variant_id === variantId) || maps[0];
   if (!vm) return null;
   const list = vm.templates || [];
-  const order = [wanted, 'front', 'default', 'all_over'].filter(Boolean);
+  // The mockup generator has no DTF templates: asking for back_dtf used to fall all
+  // the way through to 'front' and silently return the wrong side. Strip the suffix.
+  const base = wanted ? String(wanted).replace(/_dtf$/, '').replace(/_large$/, '') : null;
+  const order = [wanted, base, 'front', 'default', 'all_over'].filter(Boolean);
   let slot = null;
   for (const p of order) { slot = list.find((t) => t.placement === p); if (slot) break; }
   if (!slot) slot = list[0];
