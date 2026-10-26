@@ -42,17 +42,26 @@ jobs:
           mkdir -p "$(dirname "$OUT_PATH")"
           curl -fsSL "$SRC_URL" -o /tmp/src
           file /tmp/src
-          if [ "$SIZE" = "0" ]; then
-            cp /tmp/src "$OUT_PATH"
-          else
-            # ubuntu-latest has ImageMagick 6 (convert), not 7 (magick)
-            if command -v magick >/dev/null 2>&1; then CONV=magick;
-            elif command -v convert >/dev/null 2>&1; then CONV=convert;
-            else sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick && CONV=convert; fi
-            "$CONV" /tmp/src -resize "${SIZE}x${SIZE}" -background white -alpha remove -quality "$QUALITY" "$OUT_PATH"
-          fi
+          # Pillow ships with the runner; ImageMagick 7 does not, and apt can stall.
+          python3 - <<'PY'
+          import os
+          from PIL import Image
+          src, out = "/tmp/src", os.environ["OUT_PATH"]
+          size, quality = int(os.environ["SIZE"]), int(os.environ["QUALITY"])
+          im = Image.open(src)
+          if im.mode in ("RGBA", "LA", "P"):
+              bg = Image.new("RGB", im.size, (255, 255, 255))
+              im = im.convert("RGBA")
+              bg.paste(im, mask=im.split()[-1])
+              im = bg
+          else:
+              im = im.convert("RGB")
+          if size:
+              im = im.resize((size, size), Image.LANCZOS)
+          im.save(out, quality=quality, method=6)
+          print(out, im.size, os.path.getsize(out), "bytes")
+          PY
           ls -l "$OUT_PATH"
-
       - name: Commit
         env:
           OUT_PATH: ${{ github.event.inputs.path }}
