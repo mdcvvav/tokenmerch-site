@@ -888,6 +888,7 @@ function applyPalette(id) {
   garment = c0.code || '#1b1b1c';
   size = (hit && hit.size) || (d.sizes.indexOf('M') >= 0 ? 'M' : d.sizes[0]);
   buildPalette();
+  updateZoomUI();   /* the "shown in" note depends on the colour we just picked */
   render();
 }
 
