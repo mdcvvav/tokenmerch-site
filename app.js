@@ -216,7 +216,7 @@ var MARKUP = [
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">SIZE</label>',
 '<div id="tmSizes" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.375rem"></div>',
-'<div id="tmSizeGuideWrap" class="mt-2 text-[10px] font-mono" style="position:relative">',
+'<div id="tmSizeGuideWrap" class="mt-2 text-[10px] font-mono" style="position:relative;display:inline-block">',
 '<button id="tmSizeGuideBtn" class="text-brand-accent hover:text-white transition-colors" style="background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px">SIZE GUIDE</button>',
 '<div id="tmSizeGuide" class="rounded-xl border border-brand-border bg-brand-card shadow-2xl" style="display:none;position:absolute;z-index:60;left:0;bottom:100%;margin-bottom:8px;width:392px;max-width:88vw;max-height:260px;overflow:auto;padding:12px"></div>',
 '</div></div>',
@@ -1074,11 +1074,26 @@ function buildControls() {
       if (!cached) loadTemplate(product);
     });
   });
-  var gw = document.getElementById('tmSizeGuideWrap');
+  /* The hover target is the words themselves, not the row they sit on. A short grace
+     period lets the pointer travel from the link into the panel to read or scroll it. */
+  var gbtn = document.getElementById('tmSizeGuideBtn');
   var gb = document.getElementById('tmSizeGuide');
-  gw.addEventListener('mouseenter', function () { loadSizeGuide(); gb.style.display = 'block'; });
-  gw.addEventListener('mouseleave', function () { if (!guidePinned) gb.style.display = 'none'; });
-  document.getElementById('tmSizeGuideBtn').addEventListener('click', function () {
+  var guideTimer = null;
+  function showGuide() {
+    if (guideTimer) { clearTimeout(guideTimer); guideTimer = null; }
+    loadSizeGuide();
+    gb.style.display = 'block';
+  }
+  function hideGuide() {
+    if (guidePinned) return;
+    if (guideTimer) clearTimeout(guideTimer);
+    guideTimer = setTimeout(function () { if (!guidePinned) gb.style.display = 'none'; }, 160);
+  }
+  gbtn.addEventListener('mouseenter', showGuide);
+  gbtn.addEventListener('mouseleave', hideGuide);
+  gb.addEventListener('mouseenter', function () { if (guideTimer) { clearTimeout(guideTimer); guideTimer = null; } });
+  gb.addEventListener('mouseleave', hideGuide);
+  gbtn.addEventListener('click', function () {
     guidePinned = !guidePinned;
     loadSizeGuide();
     gb.style.display = guidePinned ? 'block' : 'none';
