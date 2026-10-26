@@ -19,6 +19,7 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
 var PRODUCTS = [
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee',
     print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true,
     /* Printful model shots with the print area measured off a calibration render.
        x0/y0/ax/ay/bx/by are fractions of the photo's width: the unit square of the
        print area maps to (x0 + u*ax + v*bx, y0 + u*ay + v*by). vTop/vH place the
@@ -30,13 +31,17 @@ var PRODUCTS = [
         x0: 0.3959, y0: 0.1981, ax: 0.1435, ay: -0.0014, bx: 0.0281, by: 0.1983, vTop: 0.125, vH: 0.75 }
     ] },
   { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee',
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
   { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee',
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
   { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee',
-    print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
+    print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
   { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee',
-    print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' } },
+    print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
   { id: 'tank',      label: 'TANK TOP',        pid: 537, vid: 13627, price: 48,  shape: 'tee',
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
     models: [
@@ -196,6 +201,7 @@ var MARKUP = [
 '<option value="centered-small">CENTERED GRAPHIC IMAGE SMALL</option>',
 '<option value="badge-left">IMAGE BADGE LEFT</option>',
 '<option value="badge-right">IMAGE BADGE RIGHT</option>',
+'<option value="back-badge">BACK PRINT + CHEST BADGE</option>',
 '</select></div>',
 
 /* text under logo */
@@ -300,7 +306,7 @@ var CHART_TTL = 30000;   /* GeckoTerminal edge-caches on-chain data for 30 s */
 
 var canvas, ctx, logoImg = null, logoReady = false;
 var modelImgs = {};
-var tpl = null, tplImg = null, tplCache = {};
+var tplCache = {};        /* 'product|placement' -> { t, img } */
 
 /* ---------------- token lookup ---------------- */
 
@@ -595,7 +601,43 @@ function drawArcCA(p, cx, cy, r, W) {
 }
 
 /* draws the artwork + text into a square print area of width W */
-function drawDesign(p, W) {
+/* The chest badge for the two-sided style: logo roundel plus the ticker, no address
+   (that lives on the back). Wearer's left is the right-hand side of a front view. */
+function drawChestBadge(p, W) {
+  if (!logoReady || !logoImg) return;
+  var s = 0.2083 * W, y = 0.125 * W, x = W - 0.229 * W - s;
+  var cx = x + s / 2, cy = y + s / 2;
+  p.save();
+  p.beginPath();
+  p.arc(cx, cy, s / 2, 0, Math.PI * 2);
+  p.clip();
+  p.drawImage(logoImg, x, y, s, s);
+  p.restore();
+  if (showTicker && token.ticker) {
+    var tb = '$' + token.ticker;
+    var bf = fontById(tickerFont), bwt = nearestWeight(bf, textWeight);
+    var fsb = fitFont(p, tb, bwt, bf.css, s * 1.2, s * 0.26);
+    p.save();
+    p.fillStyle = textColor;
+    p.textAlign = 'center';
+    p.textBaseline = 'top';
+    p.font = bwt + ' ' + fsb + 'px ' + bf.css;
+    p.fillText(tb, cx, y + s + s * 0.06);
+    p.restore();
+  }
+}
+
+function drawDesign(p, W, side) {
+  if (style === 'back-badge' && productById(product).backPrint) {
+    if (side === 'front') { drawChestBadge(p, W); return; }
+    /* the back carries the full centred artwork */
+    if (logoReady && logoImg) {
+      var sb = 0.55 * W, xb = 0.225 * W, yb = 0.0792 * W;
+      p.drawImage(logoImg, xb, yb, sb, sb);
+      drawCaption(p, W / 2, sb, sb, yb + sb);
+      return;
+    }
+  }
   if (logoReady && logoImg) {
     if (style === 'badge-left' || style === 'badge-right') {
       /* badge-left prints on the wearer's left chest, which is the
@@ -651,10 +693,10 @@ function drawDesign(p, W) {
   }
 }
 
-function designCanvas(W) {
+function designCanvas(W, side) {
   var c = document.createElement('canvas');
   c.width = W; c.height = W;
-  drawDesign(c.getContext('2d'), W);
+  drawDesign(c.getContext('2d'), W, side);
   return c;
 }
 
@@ -682,7 +724,7 @@ function drawCartoonGarment(p, k) {
 
 /* The print area is often not square (a tank is tall, a mug is wide), and the design
    is square, so fit the largest centred square inside it. Template coordinates. */
-function printSquare() {
+function printSquare(tpl) {
   var s = Math.min(tpl.print_area_width, tpl.print_area_height);
   return {
     s: s,
@@ -698,6 +740,14 @@ function viewsFor(p) {
   var flatIdx = -1;
   for (var i = 0; i < ms.length; i++) if (ms[i].flat) { flatIdx = i; break; }
   var v = [];
+  /* two-sided style: the artwork is on the back, a small badge on the chest */
+  if (style === 'back-badge' && p.backPrint) {
+    v.push({ kind: 'front', side: 'back', label: 'Back print' });
+    v.push({ kind: 'front', side: 'front', label: 'Chest badge' });
+    v.push({ kind: 'zoom', side: 'back', from: -1, label: 'Print close-up' });
+    ms.forEach(function (m, j) { if (!m.flat) v.push({ kind: 'model', idx: j, label: m.label || 'On model' }); });
+    return v;
+  }
   /* Printful's template photo is a flat laydown for some products and a worn torso for
      others, which made the first view inconsistent. A calibrated Flat mockup wins when
      the product has one. */
@@ -803,10 +853,14 @@ function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, C, C);
 
-  var hasTpl = !!(tpl && tplImg);
   var vs = viewsFor(productById(product));
   if (view >= vs.length) view = 0;
   var cur = vs[view];
+  var side = cur.side || 'front';
+  var hit = tplGet(side);
+  if (!hit && !productById(product).noTpl) loadTemplate(product, side);
+  var tpl = hit ? hit.t : null, tplImg = hit ? hit.img : null;
+  var hasTpl = !!(tpl && tplImg);
 
   if (cur.kind === 'model') {
     renderModel(productById(product).models[cur.idx], false);
@@ -826,19 +880,19 @@ function render() {
     ctx.fillStyle = garment;
     ctx.fillRect(0, 0, C, C);
     if (hasTpl) {
-      var q = printSquare();
+      var q = printSquare(tpl);
       var m = q.s * pad;
       var cx0 = q.x - m, cy0 = q.y - m;
       var cw = q.s + 2 * m;
       var k = C / cw;
       var ratio = tplImg.naturalWidth / tpl.template_width;
-      var D = designCanvas(Math.round(q.s * k));
+      var D = designCanvas(Math.round(q.s * k), side);
       ctx.drawImage(D, (q.x - cx0) * k, (q.y - cy0) * k, q.s * k, q.s * k);
       ctx.globalAlpha = 1;
       ctx.drawImage(tplImg, cx0 * ratio, cy0 * ratio, cw * ratio, cw * ratio, 0, 0, C, C);
     } else {
       var inset = C * pad;
-      ctx.drawImage(designCanvas(Math.round(C - inset * 2)), inset, inset);
+      ctx.drawImage(designCanvas(Math.round(C - inset * 2), side), inset, inset);
     }
     ctx.restore();
     return;
@@ -848,9 +902,9 @@ function render() {
     var kk = C / tpl.template_width;
     ctx.fillStyle = garment || tpl.background_color || '#0c0c0c';
     ctx.fillRect(0, 0, C, C);
-    var q2 = printSquare();
+    var q2 = printSquare(tpl);
     var pw = Math.round(q2.s * kk);
-    ctx.drawImage(designCanvas(pw), q2.x * kk, q2.y * kk, pw, pw);
+    ctx.drawImage(designCanvas(pw, side), q2.x * kk, q2.y * kk, pw, pw);
     ctx.drawImage(tplImg, 0, 0, C, C);
     ctx.restore();
     return;
@@ -1023,13 +1077,14 @@ function paintSizeGuide() {
 
 /* The print specs under the preview, straight from the product's chosen placement. */
 function updateSpecs() {
-  var pr = productById(product).print;
+  var p0 = productById(product);
+  var pr = (style === 'back-badge' && p0.backPrint && p0.back) ? p0.back : p0.print;
   if (!pr) return;
   var t = document.getElementById('tmTechLabel');
   var sz = document.getElementById('tmPrintSizeLabel');
   var up = document.getElementById('upscaleResText');
   var dp = document.getElementById('tmDpiLabel');
-  if (t) t.innerText = pr.tech;
+  if (t) t.innerText = pr.tech + ((style === 'back-badge' && p0.backPrint) ? ' / BACK + CHEST' : '');
   if (sz) sz.innerText = pr.w + ' x ' + pr.h + ' in';
   if (up) up.innerText = Math.round(pr.w * pr.dpi) + ' x ' + Math.round(pr.h * pr.dpi) + ' px';
   if (dp) dp.innerText = pr.dpi + ' DPI';
@@ -1075,17 +1130,19 @@ function buildControls() {
     b.addEventListener('click', function () {
       product = b.getAttribute('data-product');
       view = 0;
+      if (style === 'back-badge' && !productById(product).backPrint) {
+        style = 'centered';
+        document.getElementById('printStyleSelect').value = style;
+      }
       guidePinned = false;
       var gbox = document.getElementById('tmSizeGuide');
       if (gbox) { gbox.style.display = 'none'; gbox.innerHTML = ''; }
-      var cached = tplCache[product];
-      tpl = cached ? cached.t : null;
-      tplImg = cached ? cached.img : null;
       var ms0 = productById(product).models || [];
       for (var mi = 0; mi < ms0.length; mi++) if (ms0[mi].flat) loadModel(modelSrc(ms0[mi]));
       paintProductButtons(); updatePrice(); updateZoomUI(); updateSpecs(); render();
       loadPalette(product);
-      if (!cached) loadTemplate(product);
+      loadTemplate(product, 'front');
+      if (style === 'back-badge') loadTemplate(product, 'back');
     });
   });
   /* The hover target is the words themselves, not the row they sit on. A short grace
@@ -1131,7 +1188,10 @@ function buildControls() {
     paintColors(); updateVariant(); updateZoomUI(); render();
   });
   document.getElementById('printStyleSelect').addEventListener('change', function (e) {
-    style = e.target.value; render();
+    style = e.target.value;
+    view = 0;
+    if (style === 'back-badge') loadTemplate(product, 'back');
+    updateZoomUI(); updateSpecs(); render();
   });
 
   function textUpdate() {
@@ -1580,26 +1640,32 @@ function startChartPolling() {
 
 /* ---------------- Printful garment template ---------------- */
 
-function loadTemplate(id) {
+/* Templates are per product AND per side. Note the mockup generator has no DTF
+   templates: asking for back_dtf silently returns the front one, so the preview
+   always asks for the plain placement and the technique only affects the order. */
+function tplGet(side) {
+  return tplCache[product + '|' + (side || 'front')] || null;
+}
+
+function loadTemplate(id, side) {
   var p = productById(id || product);
+  var pl = side === 'back' ? 'back' : 'front';
+  var key = p.id + '|' + pl;
   /* Printful only returns a real product photo for the DTG garments; the mug and the
      all-over windbreaker come back as flat pattern guides, so those use the drawn one. */
   if (p.noTpl) return;
-  if (tplCache[p.id]) {
-    if (product === p.id) { tpl = tplCache[p.id].t; tplImg = tplCache[p.id].img; render(); }
-    return;
-  }
-  getJson(API + '/api/template?product=' + p.pid + '&variant=' + p.vid).then(function (t) {
+  if (tplCache[key]) { if (product === p.id) render(); return; }
+  getJson(API + '/api/template?product=' + p.pid + '&variant=' + p.vid + '&placement=' + pl).then(function (t) {
     if (!t || !t.image_url) throw new Error((t && t.error) || 'no template');
     var img = new Image();
     img.onload = function () {
-      tplCache[p.id] = { t: t, img: img };
-      if (product === p.id) { tpl = t; tplImg = img; render(); }
+      tplCache[key] = { t: t, img: img };
+      if (product === p.id) render();
     };
-    img.onerror = function () { console.warn('Template image failed for ' + p.id); };
+    img.onerror = function () { console.warn('Template image failed for ' + key); };
     img.src = t.image_url;
   }).catch(function (e) {
-    console.warn('No Printful template for ' + p.id + ', using the drawn fallback:', e.message);
+    console.warn('No Printful template for ' + key + ', using the drawn fallback:', e.message);
   });
 }
 
@@ -1617,7 +1683,7 @@ function start() {
   canvas = document.getElementById('mockupCanvas');
   ctx = canvas.getContext('2d');
   buildControls();
-  loadTemplate(product);
+  loadTemplate(product, 'front');
   fetchToken(DEMO_CA);
   startChartPolling();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
