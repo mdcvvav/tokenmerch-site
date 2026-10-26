@@ -1,4 +1,5 @@
 // GET /api/renderone?product=586&variant=15114&image=<public png url>
+//     [&variants=15114,15124,...]  several variants in ONE mockup task
 //     [&groups=Men's,Women's 2][&views=Front,Left Front]
 // groups/views map to Printful's mockup option groups (the model or flat style families)
 // and the camera views inside them; leave them off for the default flat set.
@@ -27,9 +28,11 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
     const productId = Number(req.query.product);
-    const variantId = Number(req.query.variant);
+    const many = String(req.query.variants || '').split(',').map(Number).filter(Boolean);
+    const variantId = Number(req.query.variant) || many[0];
+    const variantIds = many.length ? many : [variantId];
     const imageUrl = String(req.query.image || '');
-    if (!productId || !variantId || !imageUrl) throw new Error('Need product, variant and image');
+    if (!productId || !variantId || !imageUrl) throw new Error('Need product, variant(s) and image');
 
     const pfs = await pf('/mockup-generator/printfiles/' + productId);
     const placements = Object.keys(pfs.available_placements || {});
@@ -46,7 +49,7 @@ export default async function handler(req, res) {
     const task = await pf('/mockup-generator/create-task/' + productId, {
       method: 'POST',
       body: JSON.stringify({
-        variant_ids: [variantId],
+        variant_ids: variantIds,
         format: 'jpg',
         ...(groups.length ? { option_groups: groups } : {}),
         ...(views.length ? { options: views } : {}),
@@ -73,6 +76,7 @@ export default async function handler(req, res) {
       printfile: { width: W, height: H },
       mockups: (result.mockups || []).map((m) => ({
         placement: m.placement,
+        variant_ids: m.variant_ids || null,
         url: m.mockup_url,
         extra: (m.extra || []).map((e) => ({ title: e.title, option: e.option, url: e.url }))
       }))
