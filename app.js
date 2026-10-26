@@ -23,9 +23,9 @@ var PRODUCTS = [
       { src: '/models/tank-flat.webp', label: 'Full garment', flat: true, shotIn: 'Navy',
         byColor: '/models/tank-flat-', colorSlugs: ['athletic-heather','black','charcoal-heather','coral','harbor-blue','military-green','mint','navy','pacific-blue','red','squash','team-royal','white'],
         x0: 0.3075, y0: 0.2735, ax: 0.3840, ay: 0, bx: 0, by: 0.5120, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tank-m1.webp', label: 'On model', shotIn: 'Navy',
+      { src: '/models/tank-m1.webp', label: 'On model', shotIn: 'Navy', blend: 'screen',
         x0: 0.3778, y0: 0.4041, ax: 0.2500, ay: 0.0001, bx: 0.0008, by: 0.3585, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tank-m2.webp', label: 'On model 2', shotIn: 'Navy',
+      { src: '/models/tank-m2.webp', label: 'On model 2', shotIn: 'Navy', blend: 'screen',
         x0: 0.4001, y0: 0.4083, ax: 0.2349, ay: -0.0001, bx: 0.0013, by: 0.3555, vTop: 0.125, vH: 0.75 }
     ] },
   { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee',
@@ -41,9 +41,9 @@ var PRODUCTS = [
        print area maps to (x0 + u*ax + v*bx, y0 + u*ay + v*by). vTop/vH place the
        square design inside a 1800 x 2400 print area. */
     models: [
-      { src: '/models/tee-male.webp',   label: 'On model', shotIn: 'Black',
+      { src: '/models/tee-male.webp',   label: 'On model', shotIn: 'Black', blend: 'screen',
         x0: 0.3865, y0: 0.3355, ax: 0.2342, ay: -0.0001, bx: 0.0009, by: 0.3447, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tee-female.webp', label: 'On model 2', shotIn: 'Black',
+      { src: '/models/tee-female.webp', label: 'On model 2', shotIn: 'Black', blend: 'screen',
         x0: 0.3959, y0: 0.1981, ax: 0.1435, ay: -0.0014, bx: 0.0281, by: 0.1983, vTop: 0.125, vH: 0.75 }
     ] },
   { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee',
@@ -726,8 +726,10 @@ function loadModel(src) {
 }
 
 /* Draws the square design onto a model photo using the measured print-area map.
-   screen keeps light ink readable on a dark garment and still lets the fabric's
-   folds lift through; multiply is right for light garments. */
+   The default is source-over, because printed ink is opaque and that is the only mode
+   that stays accurate across a whole colour range: screen washes the design out on a
+   light garment, multiply kills it on a dark one. Worn shots on dark fabric set
+   blend: 'screen' so the folds lift through the print. */
 function modelComposite(m, C) {
   var img = modelImgs[modelSrc(m)];
   var c = document.createElement('canvas');
@@ -741,7 +743,7 @@ function modelComposite(m, C) {
   var vTop = m.vTop == null ? 0 : m.vTop;
   var vH = m.vH == null ? 1 : m.vH;
   p.save();
-  p.globalCompositeOperation = m.blend || 'screen';
+  p.globalCompositeOperation = m.blend || 'source-over';
   p.transform(m.ax * C / 512, m.ay * C / 512, m.bx * vH * C / 512, m.by * vH * C / 512,
     (m.x0 + m.bx * vTop) * C, (m.y0 + m.by * vTop) * C);
   p.drawImage(D, 0, 0);
