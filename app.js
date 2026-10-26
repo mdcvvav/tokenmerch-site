@@ -11,6 +11,27 @@
 
 var API = 'https://tokenmerch-site.vercel.app';
 var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
+
+/* The ten product slots. pid/vid are Printful's catalog product and the variant the
+   preview is drawn on; price is a placeholder retail number (~2x Printful's cost)
+   until the real pricing is set. shape is only the fallback drawing when Printful
+   has no template. */
+var PRODUCTS = [
+  { id: 'tank',      label: 'TANK TOP',        pid: 537, vid: 13627, price: 48,  shape: 'tee' },
+  { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee' },
+  { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee' },
+  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee' },
+  { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee' },
+  { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee' },
+  { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat' },
+  { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug' },
+  { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat' },
+  { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee' }
+];
+function productById(id) {
+  for (var i = 0; i < PRODUCTS.length; i++) if (PRODUCTS[i].id === id) return PRODUCTS[i];
+  return PRODUCTS[0];
+}
 /* shown on first load so the preview is never empty */
 var DEMO_CA = 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm';
 
@@ -184,7 +205,7 @@ var MARKUP = [
 '<div class="glass-panel rounded-2xl p-5 mb-6">',
 '<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 mb-4 flex items-center justify-between"><span><i class="fa-solid fa-shirt text-brand-accent mr-2"></i> Product</span><span class="text-[10px] text-slate-500">10 SLOTS</span></h3>',
 '<div id="tmProductGrid" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.5rem">',
-new Array(10).fill('<button class="tm-slot py-2 px-3 rounded-lg border border-dashed border-brand-border/80 bg-brand-bg/50 text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center" aria-label="Empty product slot">&nbsp;</button>').join(''),
+PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' + p.id + '">' + p.label + '</button>'; }).join(''),
 '</div></div>',
 
 '<div class="glass-panel rounded-2xl p-6 relative flex flex-col items-center justify-center min-h-[520px]">',
@@ -224,14 +245,13 @@ new Array(10).fill('<button class="tm-slot py-2 px-3 rounded-lg border border-da
 /* ---------------- state ---------------- */
 
 var token = { ca: '', name: '', ticker: 'TOKEN', price: '-', change: '-', img: '', pair: '' };
-var product = 'hoodie';
+var product = 'tank';
 var garment = '#121212';
 var style = 'centered';
 var size = 'L';
 var zoom = false;
 var showCA = false, showTicker = false, textColor = '#FFFFFF', textWeight = 700;
 var caFont = 'archivo', tickerFont = 'archivo';
-var PRICES = { tshirt: 38, hoodie: 68, mug: 24 };
 var COLORS = [
   ['#121212', 'Jet Black'], ['#FFFFFF', 'White'], ['#4B5563', 'Heather Grey'],
   ['#1E293B', 'Navy'], ['#581C87', 'Purple'], ['#F5F5DC', 'Cream']
@@ -243,7 +263,7 @@ var chartCache = {}, chartPending = {}, chartHoverX = -1;
 var CHART_TTL = 30000;   /* GeckoTerminal edge-caches on-chain data for 30 s */
 
 var canvas, ctx, logoImg = null, logoReady = false;
-var tpl = null, tplImg = null;
+var tpl = null, tplImg = null, tplCache = {};
 
 /* ---------------- token lookup ---------------- */
 
@@ -590,7 +610,7 @@ function designCanvas(W) {
 /* simple drawn t-shirt / mug, in an 800-unit space */
 function drawCartoonGarment(p, k) {
   p.fillStyle = garment;
-  if (product === 'mug') {
+  if (productById(product).shape === 'mug') {
     p.beginPath(); p.roundRect(240 * k, 180 * k, 320 * k, 460 * k, 35 * k); p.fill();
     p.strokeStyle = garment; p.lineWidth = 44 * k;
     p.beginPath(); p.arc(220 * k, 410 * k, 90 * k, 0.5 * Math.PI, 1.5 * Math.PI); p.stroke();
@@ -607,6 +627,17 @@ function drawCartoonGarment(p, k) {
   p.beginPath(); p.arc(400 * k, 140 * k, 83 * k, 0, Math.PI); p.stroke();
 }
 
+/* The print area is often not square (a tank is tall, a mug is wide), and the design
+   is square, so fit the largest centred square inside it. Template coordinates. */
+function printSquare() {
+  var s = Math.min(tpl.print_area_width, tpl.print_area_height);
+  return {
+    s: s,
+    x: tpl.print_area_left + (tpl.print_area_width - s) / 2,
+    y: tpl.print_area_top + (tpl.print_area_height - s) / 2
+  };
+}
+
 function render() {
   if (!canvas) return;
   var C = canvas.width;
@@ -614,22 +645,22 @@ function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, C, C);
 
-  var realHoodie = (product === 'hoodie' && tpl && tplImg);
+  var hasTpl = !!(tpl && tplImg);
 
   if (zoom) {
     /* close-up of just the print area, so the fine print is readable */
     var pad = 0.10;
     ctx.fillStyle = garment;
     ctx.fillRect(0, 0, C, C);
-    if (realHoodie) {
-      var m = tpl.print_area_width * pad;
-      var cx0 = tpl.print_area_left - m, cy0 = tpl.print_area_top - m;
-      var cw = tpl.print_area_width + 2 * m;
+    if (hasTpl) {
+      var q = printSquare();
+      var m = q.s * pad;
+      var cx0 = q.x - m, cy0 = q.y - m;
+      var cw = q.s + 2 * m;
       var k = C / cw;
       var ratio = tplImg.naturalWidth / tpl.template_width;
-      var D = designCanvas(Math.round(tpl.print_area_width * k));
-      ctx.drawImage(D, (tpl.print_area_left - cx0) * k, (tpl.print_area_top - cy0) * k,
-        tpl.print_area_width * k, tpl.print_area_height * k);
+      var D = designCanvas(Math.round(q.s * k));
+      ctx.drawImage(D, (q.x - cx0) * k, (q.y - cy0) * k, q.s * k, q.s * k);
       ctx.globalAlpha = 1;
       ctx.drawImage(tplImg, cx0 * ratio, cy0 * ratio, cw * ratio, cw * ratio, 0, 0, C, C);
     } else {
@@ -640,13 +671,13 @@ function render() {
     return;
   }
 
-  if (realHoodie) {
+  if (hasTpl) {
     var kk = C / tpl.template_width;
-    ctx.fillStyle = garment || tpl.background_color || '#0c0c0c';
+    ctx.fillStyle = tpl.background_color || garment || '#0c0c0c';
     ctx.fillRect(0, 0, C, C);
-    var pw = tpl.print_area_width * kk;
-    ctx.drawImage(designCanvas(Math.round(pw)), tpl.print_area_left * kk, tpl.print_area_top * kk,
-      pw, tpl.print_area_height * kk);
+    var q2 = printSquare();
+    var pw = Math.round(q2.s * kk);
+    ctx.drawImage(designCanvas(pw), q2.x * kk, q2.y * kk, pw, pw);
     ctx.drawImage(tplImg, 0, 0, C, C);
     ctx.restore();
     return;
@@ -655,7 +686,7 @@ function render() {
   /* drawn t-shirt / mug */
   var k2 = C / 800;
   drawCartoonGarment(ctx, k2);
-  var rect = product === 'mug'
+  var rect = productById(product).shape === 'mug'
     ? { x: 260 * k2, y: 230 * k2, w: 280 * k2 }
     : { x: 160 * k2, y: 200 * k2, w: 480 * k2 };
   ctx.drawImage(designCanvas(Math.round(rect.w)), rect.x, rect.y, rect.w, rect.w);
@@ -678,8 +709,8 @@ function spectrumHex(p) {
   return '#' + [r, g, b].map(function (v) { return v.toString(16).padStart(2, '0'); }).join('').toUpperCase();
 }
 
-var ON = 'py-2 px-3 rounded-lg border border-brand-accent bg-brand-accent/20 text-white font-bold transition-all text-center flex items-center justify-center space-x-1';
-var OFF = 'py-2 px-3 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center space-x-1';
+var ON = 'px-2 py-2 rounded-lg border border-brand-accent bg-brand-accent/20 text-white font-bold transition-all text-center flex items-center justify-center leading-tight text-[10px]';
+var OFF = 'px-2 py-2 rounded-lg border border-dashed border-brand-border/80 bg-brand-bg/50 text-slate-300 hover:border-brand-accent hover:text-white transition-all text-center flex items-center justify-center leading-tight text-[10px]';
 var SZ_ON = 'py-2 rounded-lg border border-brand-accent bg-brand-accent/20 text-white font-bold transition-all text-center';
 var SZ_OFF = 'py-2 rounded-lg border border-brand-border text-slate-300 hover:border-brand-accent transition-all text-center';
 
@@ -701,7 +732,7 @@ function paintColors() {
   });
 }
 function updatePrice() {
-  var base = PRICES[product];
+  var base = productById(product).price;
   document.getElementById('priceUsd').innerText = '$' + base + '.00';
   document.getElementById('priceSol').innerText = '~ ' + (base / 155).toFixed(2) + ' SOL';
 }
@@ -729,7 +760,11 @@ function buildControls() {
   [].forEach.call(document.querySelectorAll('.tm-product'), function (b) {
     b.addEventListener('click', function () {
       product = b.getAttribute('data-product');
+      var cached = tplCache[product];
+      tpl = cached ? cached.t : null;
+      tplImg = cached ? cached.img : null;
       paintProductButtons(); updatePrice(); render();
+      if (!cached) loadTemplate(product);
     });
   });
   [].forEach.call(document.querySelectorAll('.tm-size'), function (b) {
@@ -1192,15 +1227,23 @@ function startChartPolling() {
 
 /* ---------------- Printful garment template ---------------- */
 
-function loadTemplate() {
-  getJson(API + '/api/template?variant=' + PRINTFUL_VARIANT).then(function (t) {
+function loadTemplate(id) {
+  var p = productById(id || product);
+  if (tplCache[p.id]) {
+    if (product === p.id) { tpl = tplCache[p.id].t; tplImg = tplCache[p.id].img; render(); }
+    return;
+  }
+  getJson(API + '/api/template?product=' + p.pid + '&variant=' + p.vid).then(function (t) {
     if (!t || !t.image_url) throw new Error((t && t.error) || 'no template');
     var img = new Image();
-    img.onload = function () { tpl = t; tplImg = img; render(); };
-    img.onerror = function () { console.warn('Garment template image failed to load'); };
+    img.onload = function () {
+      tplCache[p.id] = { t: t, img: img };
+      if (product === p.id) { tpl = t; tplImg = img; render(); }
+    };
+    img.onerror = function () { console.warn('Template image failed for ' + p.id); };
     img.src = t.image_url;
   }).catch(function (e) {
-    console.warn('Realistic hoodie unavailable, using the drawn one:', e.message);
+    console.warn('No Printful template for ' + p.id + ', using the drawn fallback:', e.message);
   });
 }
 
@@ -1218,7 +1261,7 @@ function start() {
   canvas = document.getElementById('mockupCanvas');
   ctx = canvas.getContext('2d');
   buildControls();
-  loadTemplate();
+  loadTemplate(product);
   fetchToken(DEMO_CA);
   startChartPolling();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
