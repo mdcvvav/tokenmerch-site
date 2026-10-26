@@ -1,4 +1,7 @@
 // GET /api/renderone?product=586&variant=15114&image=<public png url>
+//     [&groups=Men's,Women's 2][&views=Front,Left Front]
+// groups/views map to Printful's mockup option groups (the model or flat style families)
+// and the camera views inside them; leave them off for the default flat set.
 // One-off mockup render with an arbitrary image. Used at build time only, to produce
 // the calibration shot and the blank model shot for a product; never called by visitors.
 export const config = { maxDuration: 60 };
@@ -36,11 +39,17 @@ export default async function handler(req, res) {
     const printfile = (pfs.printfiles || []).find((p) => p.printfile_id === pfId) || (pfs.printfiles || [])[0];
     const W = printfile.width, H = printfile.height;
 
+    const list = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const groups = list(req.query.groups);
+    const views = list(req.query.views);
+
     const task = await pf('/mockup-generator/create-task/' + productId, {
       method: 'POST',
       body: JSON.stringify({
         variant_ids: [variantId],
         format: 'jpg',
+        ...(groups.length ? { option_groups: groups } : {}),
+        ...(views.length ? { options: views } : {}),
         files: [{
           placement,
           image_url: imageUrl,
