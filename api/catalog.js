@@ -27,6 +27,26 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    // ?placements=<catalog product id> -> what can be printed where, and what it adds
+    const plFor = Number(req.query.placements);
+    if (plFor) {
+      const data = await pf('/products/' + plFor);
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+      return res.status(200).json({
+        product: { id: data.product.id, model: data.product.model, type: data.product.type_name },
+        techniques: data.product.techniques || null,
+        files: (data.product.files || []).map((f) => ({
+          id: f.id, type: f.type, title: f.title,
+          additionalPrice: f.additional_price,
+          width: f.width, height: f.height, dpi: f.dpi,
+          fillMode: f.fill_mode, options: (f.options || []).map((o) => o.id)
+        })),
+        options: (data.product.options || []).map((o) => ({
+          id: o.id, title: o.title, type: o.type, additionalPrice: o.additional_price
+        }))
+      });
+    }
+
     // ?sizes=<catalog product id>[&unit=inches|cm] -> Printful's size guide tables
     const sizesFor = Number(req.query.sizes);
     if (sizesFor) {
