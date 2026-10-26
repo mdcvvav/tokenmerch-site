@@ -22,7 +22,8 @@ export default async function handler(req, res) {
     // ?styles=<catalog product id> -> the mockup views Printful can render for it (v2 API)
     const styles = Number(req.query.styles);
     if (styles) {
-      const data = await pf('/v2/catalog-products/' + styles + '/mockup-styles', true);
+      // the v2 endpoint pages at 10 by default, which silently hides placements
+      const data = await pf('/v2/catalog-products/' + styles + '/mockup-styles?limit=100', true);
       res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
       return res.status(200).json(data);
     }
