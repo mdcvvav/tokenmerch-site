@@ -21,6 +21,7 @@ var PRODUCTS = [
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
     models: [
       { src: '/models/tank-flat.webp', label: 'Full garment', flat: true, shotIn: 'Navy',
+        byColor: '/models/tank-flat-', colorSlugs: ['athletic-heather','black','charcoal-heather','coral','harbor-blue','military-green','mint','navy','pacific-blue','red','squash','team-royal','white'],
         x0: 0.3075, y0: 0.2735, ax: 0.3840, ay: 0, bx: 0, by: 0.5120, vTop: 0.125, vH: 0.75 },
       { src: '/models/tank-m1.webp', label: 'On model', shotIn: 'Navy',
         x0: 0.3778, y0: 0.4041, ax: 0.2500, ay: 0.0001, bx: 0.0008, by: 0.3585, vTop: 0.125, vH: 0.75 },
@@ -691,6 +692,30 @@ function viewsFor(p) {
   return v;
 }
 
+/* A photo can't be recoloured, so for products where colour matters we render the flat
+   shot once per colour and pick the file that matches the swatch. */
+function slugify(name) {
+  return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function modelSrc(m) {
+  if (m && m.byColor && colorName) {
+    var sl = slugify(colorName);
+    if (!m.colorSlugs || m.colorSlugs.indexOf(sl) >= 0) return m.byColor + sl + '.webp';
+  }
+  return m ? m.src : '';
+}
+
+/* true when this view really is showing the colour the customer picked */
+function modelMatchesColor(m) {
+  if (!m) return true;
+  if (m.byColor && colorName) {
+    var sl = slugify(colorName);
+    if (!m.colorSlugs || m.colorSlugs.indexOf(sl) >= 0) return true;
+  }
+  return !m.shotIn || !colorName || m.shotIn === colorName;
+}
+
 function loadModel(src) {
   if (modelImgs[src]) return;
   var img = new Image();
@@ -704,7 +729,7 @@ function loadModel(src) {
    screen keeps light ink readable on a dark garment and still lets the fabric's
    folds lift through; multiply is right for light garments. */
 function modelComposite(m, C) {
-  var img = modelImgs[m.src];
+  var img = modelImgs[modelSrc(m)];
   var c = document.createElement('canvas');
   c.width = C; c.height = C;
   var p = c.getContext('2d');
@@ -739,7 +764,7 @@ function modelPrintBox(m, C) {
 
 function renderModel(m, crop) {
   var C = canvas.width;
-  if (!modelImgs[m.src]) loadModel(m.src);
+  if (!modelImgs[modelSrc(m)]) loadModel(modelSrc(m));
   var c = modelComposite(m, C);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, C, C);
@@ -950,7 +975,7 @@ function updateZoomUI() {
      follows the colour picker. Say so rather than quietly showing the wrong colour. */
   var m = vs[view].kind === 'model' ? (p.models || [])[vs[view].idx]
         : (vs[view].kind === 'zoom' && vs[view].from >= 0 ? (p.models || [])[vs[view].from] : null);
-  if (m && m.shotIn && colorName && m.shotIn !== colorName) label += ' \u00b7 shown in ' + m.shotIn;
+  if (m && !modelMatchesColor(m)) label += ' \u00b7 shown in ' + m.shotIn;
   document.getElementById('tmViewLabel').innerText = label;
 }
 function step(d) {
@@ -958,8 +983,8 @@ function step(d) {
   view = (view + d + vs.length) % vs.length;
   var cur = vs[view];
   var ms = productById(product).models || [];
-  if (cur.kind === 'model') loadModel(ms[cur.idx].src);
-  if (cur.kind === 'zoom' && cur.from >= 0) loadModel(ms[cur.from].src);
+  if (cur.kind === 'model') loadModel(modelSrc(ms[cur.idx]));
+  if (cur.kind === 'zoom' && cur.from >= 0) loadModel(modelSrc(ms[cur.from]));
   updateZoomUI(); render();
 }
 
@@ -979,7 +1004,7 @@ function buildControls() {
       tpl = cached ? cached.t : null;
       tplImg = cached ? cached.img : null;
       var ms0 = productById(product).models || [];
-      for (var mi = 0; mi < ms0.length; mi++) if (ms0[mi].flat) loadModel(ms0[mi].src);
+      for (var mi = 0; mi < ms0.length; mi++) if (ms0[mi].flat) loadModel(modelSrc(ms0[mi]));
       paintProductButtons(); updatePrice(); updateZoomUI(); updateSpecs(); render();
       loadPalette(product);
       if (!cached) loadTemplate(product);
@@ -999,6 +1024,7 @@ function buildControls() {
     if (!c) return;
     colorName = c.name;
     garment = c.code || garment;
+    (productById(product).models || []).forEach(function (m) { if (m.byColor) loadModel(modelSrc(m)); });
     paintColors(); updateVariant(); updateZoomUI(); render();
   });
   document.getElementById('printStyleSelect').addEventListener('change', function (e) {
