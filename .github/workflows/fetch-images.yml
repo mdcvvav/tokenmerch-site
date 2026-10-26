@@ -1,0 +1,68 @@
+name: Fetch images into repo (batch)
+
+# Same idea as fetch-image.yml but takes a JSON list, so a whole colour range lands in
+# one run. Printful mockup URLs expire after 72 hours, so anything worth keeping has to
+# be pulled in promptly.
+
+on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: 'JSON array: [{"url":"...","path":"models/x.webp"}, ...]'
+        required: true
+      size:
+        description: Square size in px (0 keeps the original)
+        required: false
+        default: "800"
+      quality:
+        description: WebP quality
+        required: false
+        default: "82"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and convert
+        env:
+          FILES: ${{ github.event.inputs.files }}
+          SIZE: ${{ github.event.inputs.size }}
+          QUALITY: ${{ github.event.inputs.quality }}
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check pillow
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from PIL import Image
+          items = json.loads(os.environ["FILES"])
+          size, quality = int(os.environ["SIZE"]), int(os.environ["QUALITY"])
+          for it in items:
+              url, out = it["url"], it["path"]
+              os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+              urllib.request.urlretrieve(url, "/tmp/src")
+              im = Image.open("/tmp/src")
+              if im.mode in ("RGBA", "LA", "P"):
+                  bg = Image.new("RGB", im.size, (255, 255, 255))
+                  im = im.convert("RGBA")
+                  bg.paste(im, mask=im.split()[-1])
+                  im = bg
+              else:
+                  im = im.convert("RGB")
+              if size:
+                  im = im.resize((size, size), Image.LANCZOS)
+              im.save(out, quality=quality, method=6)
+              print(out, im.size, os.path.getsize(out), "bytes")
+          PY
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A models
+          git commit -m "Add model images (batch)" || { echo "nothing to commit"; exit 0; }
+          git push
