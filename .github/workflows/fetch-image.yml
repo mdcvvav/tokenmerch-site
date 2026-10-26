@@ -1,0 +1,60 @@
+name: Fetch image into repo
+
+# Pulls a one-off Printful mockup into the repository, resized to a square WebP.
+# Printful mockup URLs expire after 72 hours, so anything we want to keep has to
+# land here. Run it from the Actions tab.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Source image URL
+        required: true
+      path:
+        description: "Repo path to write, e.g. models/tee-male.webp"
+        required: true
+      size:
+        description: Square size in px (0 keeps the original)
+        required: false
+        default: "800"
+      quality:
+        description: WebP quality
+        required: false
+        default: "82"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and convert
+        env:
+          SRC_URL: ${{ github.event.inputs.url }}
+          OUT_PATH: ${{ github.event.inputs.path }}
+          SIZE: ${{ github.event.inputs.size }}
+          QUALITY: ${{ github.event.inputs.quality }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$OUT_PATH")"
+          curl -fsSL "$SRC_URL" -o /tmp/src
+          file /tmp/src
+          if [ "$SIZE" = "0" ]; then
+            cp /tmp/src "$OUT_PATH"
+          else
+            magick /tmp/src -resize "${SIZE}x${SIZE}" -background white -alpha remove -quality "$QUALITY" "$OUT_PATH"
+          fi
+          ls -l "$OUT_PATH"
+
+      - name: Commit
+        env:
+          OUT_PATH: ${{ github.event.inputs.path }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$OUT_PATH"
+          git commit -m "Add $OUT_PATH" || { echo "nothing to commit"; exit 0; }
+          git push
