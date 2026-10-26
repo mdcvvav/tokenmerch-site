@@ -737,7 +737,7 @@ function renderModel(m, crop) {
   if (!c) return;
   if (!crop) { ctx.drawImage(c, 0, 0); return; }
   var b = modelPrintBox(m, C);
-  var side = Math.max(b.w, b.h) * 1.2;
+  var side = Math.max(b.w, b.h) * 1.7;   /* leave fabric around the print, like the template close-up */
   var cx = b.x + b.w / 2, cy = b.y + b.h / 2;
   ctx.drawImage(c, cx - side / 2, cy - side / 2, side, side, 0, 0, C, C);
 }
