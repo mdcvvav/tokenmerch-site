@@ -17,7 +17,13 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
    until the real pricing is set. shape is only the fallback drawing when Printful
    has no template. */
 var PRODUCTS = [
-  { id: 'tank',      label: 'TANK TOP',        pid: 537, vid: 13627, price: 48,  shape: 'tee' },
+  { id: 'tank',      label: 'TANK TOP',        pid: 537, vid: 13627, price: 48,  shape: 'tee',
+    models: [
+      { src: '/models/tank-m1.webp', label: 'On model',
+        x0: 0.3778, y0: 0.4041, ax: 0.2500, ay: 0.0001, bx: 0.0008, by: 0.3585, vTop: 0.125, vH: 0.75 },
+      { src: '/models/tank-m2.webp', label: 'On model 2',
+        x0: 0.4001, y0: 0.4083, ax: 0.2349, ay: -0.0001, bx: 0.0013, by: 0.3555, vTop: 0.125, vH: 0.75 }
+    ] },
   { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee' },
   { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee' },
   { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee' },
