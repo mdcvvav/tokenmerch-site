@@ -43,6 +43,7 @@ jobs:
           curl -fsSL "$SRC_URL" -o /tmp/src
           file /tmp/src
           # Pillow ships with the runner; ImageMagick 7 does not, and apt can stall.
+          python3 -m pip install --quiet --disable-pip-version-check pillow
           python3 - <<'PY'
           import os
           from PIL import Image
