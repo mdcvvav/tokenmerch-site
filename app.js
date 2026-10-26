@@ -44,6 +44,7 @@ var PRODUCTS = [
     back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
   { id: 'tank',      label: 'TANK TOP',        pid: 537, vid: 13627, price: 48,  shape: 'tee',
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true,
     models: [
       { src: '/models/tank-flat.webp', label: 'Full garment', flat: true, shotIn: 'Navy',
         byColor: '/models/tank-flat-', colorSlugs: ['athletic-heather','black','charcoal-heather','coral','harbor-blue','military-green','mint','navy','pacific-blue','red','squash','team-royal','white'],
@@ -202,6 +203,7 @@ var MARKUP = [
 '<option value="badge-left">IMAGE BADGE LEFT</option>',
 '<option value="badge-right">IMAGE BADGE RIGHT</option>',
 '<option value="back-badge">BACK PRINT + CHEST BADGE</option>',
+'<option value="back-ticker">BACK PRINT + TICKER BADGE</option>',
 '</select></div>',
 
 /* text under logo */
@@ -601,12 +603,34 @@ function drawArcCA(p, cx, cy, r, W) {
 }
 
 /* draws the artwork + text into a square print area of width W */
-/* The chest badge for the two-sided style: logo roundel plus the ticker, no address
-   (that lives on the back). Wearer's left is the right-hand side of a front view. */
-function drawChestBadge(p, W) {
-  if (!logoReady || !logoImg) return;
+/* Both styles that print on the back and mark the chest. */
+function twoSided() {
+  return style === 'back-badge' || style === 'back-ticker';
+}
+
+/* The chest mark: either the logo roundel with the ticker under it, or the ticker on
+   its own. No address either way, since that lives on the back. Wearer's left is the
+   right-hand side of a front view. */
+function drawChestBadge(p, W, tickerOnly) {
   var s = 0.2083 * W, y = 0.125 * W, x = W - 0.229 * W - s;
   var cx = x + s / 2, cy = y + s / 2;
+  var tb = '$' + (token.ticker || '');
+  var bf = fontById(tickerFont), bwt = nearestWeight(bf, textWeight);
+
+  if (tickerOnly) {
+    if (!token.ticker) return;
+    var fs = fitFont(p, tb, bwt, bf.css, s * 1.45, s * 0.52);
+    p.save();
+    p.fillStyle = textColor;
+    p.textAlign = 'center';
+    p.textBaseline = 'middle';
+    p.font = bwt + ' ' + fs + 'px ' + bf.css;
+    p.fillText(tb, cx, cy);
+    p.restore();
+    return;
+  }
+
+  if (!logoReady || !logoImg) return;
   p.save();
   p.beginPath();
   p.arc(cx, cy, s / 2, 0, Math.PI * 2);
@@ -614,8 +638,6 @@ function drawChestBadge(p, W) {
   p.drawImage(logoImg, x, y, s, s);
   p.restore();
   if (showTicker && token.ticker) {
-    var tb = '$' + token.ticker;
-    var bf = fontById(tickerFont), bwt = nearestWeight(bf, textWeight);
     var fsb = fitFont(p, tb, bwt, bf.css, s * 1.2, s * 0.26);
     p.save();
     p.fillStyle = textColor;
@@ -628,8 +650,8 @@ function drawChestBadge(p, W) {
 }
 
 function drawDesign(p, W, side) {
-  if (style === 'back-badge' && productById(product).backPrint) {
-    if (side === 'front') { drawChestBadge(p, W); return; }
+  if (twoSided() && productById(product).backPrint) {
+    if (side === 'front') { drawChestBadge(p, W, style === 'back-ticker'); return; }
     /* the back carries the full centred artwork */
     if (logoReady && logoImg) {
       var sb = 0.55 * W, xb = 0.225 * W, yb = 0.0792 * W;
@@ -741,7 +763,7 @@ function viewsFor(p) {
   for (var i = 0; i < ms.length; i++) if (ms[i].flat) { flatIdx = i; break; }
   var v = [];
   /* two-sided style: the artwork is on the back, a small badge on the chest */
-  if (style === 'back-badge' && p.backPrint) {
+  if (twoSided() && p.backPrint) {
     v.push({ kind: 'front', side: 'back', label: 'Back print' });
     v.push({ kind: 'front', side: 'front', label: 'Chest badge' });
     v.push({ kind: 'zoom', side: 'back', from: -1, label: 'Print close-up' });
@@ -1078,13 +1100,13 @@ function paintSizeGuide() {
 /* The print specs under the preview, straight from the product's chosen placement. */
 function updateSpecs() {
   var p0 = productById(product);
-  var pr = (style === 'back-badge' && p0.backPrint && p0.back) ? p0.back : p0.print;
+  var pr = (twoSided() && p0.backPrint && p0.back) ? p0.back : p0.print;
   if (!pr) return;
   var t = document.getElementById('tmTechLabel');
   var sz = document.getElementById('tmPrintSizeLabel');
   var up = document.getElementById('upscaleResText');
   var dp = document.getElementById('tmDpiLabel');
-  if (t) t.innerText = pr.tech + ((style === 'back-badge' && p0.backPrint) ? ' / BACK + CHEST' : '');
+  if (t) t.innerText = pr.tech + ((twoSided() && p0.backPrint) ? ' / BACK + CHEST' : '');
   if (sz) sz.innerText = pr.w + ' x ' + pr.h + ' in';
   if (up) up.innerText = Math.round(pr.w * pr.dpi) + ' x ' + Math.round(pr.h * pr.dpi) + ' px';
   if (dp) dp.innerText = pr.dpi + ' DPI';
@@ -1130,7 +1152,7 @@ function buildControls() {
     b.addEventListener('click', function () {
       product = b.getAttribute('data-product');
       view = 0;
-      if (style === 'back-badge' && !productById(product).backPrint) {
+      if (twoSided() && !productById(product).backPrint) {
         style = 'centered';
         document.getElementById('printStyleSelect').value = style;
       }
@@ -1142,7 +1164,7 @@ function buildControls() {
       paintProductButtons(); updatePrice(); updateZoomUI(); updateSpecs(); render();
       loadPalette(product);
       loadTemplate(product, 'front');
-      if (style === 'back-badge') loadTemplate(product, 'back');
+      if (twoSided()) loadTemplate(product, 'back');
     });
   });
   /* The hover target is the words themselves, not the row they sit on. A short grace
@@ -1190,7 +1212,7 @@ function buildControls() {
   document.getElementById('printStyleSelect').addEventListener('change', function (e) {
     style = e.target.value;
     view = 0;
-    if (style === 'back-badge') loadTemplate(product, 'back');
+    if (twoSided()) loadTemplate(product, 'back');
     updateZoomUI(); updateSpecs(); render();
   });
 
