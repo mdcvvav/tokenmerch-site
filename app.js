@@ -608,6 +608,18 @@ function twoSided() {
   return style === 'back-badge' || style === 'back-ticker';
 }
 
+/* Only products with a back placement can offer the two-sided styles. */
+function paintStyleOptions() {
+  var sel = document.getElementById('printStyleSelect');
+  if (!sel) return;
+  var ok = !!productById(product).backPrint;
+  [].forEach.call(sel.options, function (o) {
+    if (o.value === 'back-badge' || o.value === 'back-ticker') o.disabled = !ok;
+  });
+  if (!ok && twoSided()) { style = 'centered'; view = 0; }
+  sel.value = style;
+}
+
 /* The chest mark: either the logo roundel with the ticker under it, or the ticker on
    its own. No address either way, since that lives on the back. Wearer's left is the
    right-hand side of a front view. */
@@ -1145,6 +1157,7 @@ function buildControls() {
   var sw = document.getElementById('tmSizes');
 
   document.getElementById('printStyleSelect').value = style;
+  paintStyleOptions();
   paintProductButtons(); updatePrice(); updateZoomUI(); updateSpecs();
   loadPalette(product);
 
@@ -1152,10 +1165,7 @@ function buildControls() {
     b.addEventListener('click', function () {
       product = b.getAttribute('data-product');
       view = 0;
-      if (twoSided() && !productById(product).backPrint) {
-        style = 'centered';
-        document.getElementById('printStyleSelect').value = style;
-      }
+      paintStyleOptions();
       guidePinned = false;
       var gbox = document.getElementById('tmSizeGuide');
       if (gbox) { gbox.style.display = 'none'; gbox.innerHTML = ''; }
