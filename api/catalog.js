@@ -27,6 +27,35 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    // ?colors=<catalog product id> -> compact colour + size table for the customizer
+    const colorsFor = Number(req.query.colors);
+    if (colorsFor) {
+      const data = await pf('/products/' + colorsFor);
+      const ORDER = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
+      const colors = new Map();
+      const sizes = new Set();
+      for (const v of data.variants || []) {
+        const name = v.color || 'Default';
+        if (!colors.has(name)) colors.set(name, { name, code: v.color_code || null, ids: {} });
+        const size = v.size || 'One size';
+        colors.get(name).ids[size] = v.id;
+        sizes.add(size);
+      }
+      const sizeList = [...sizes].sort((a, b) => {
+        const ia = ORDER.indexOf(a), ib = ORDER.indexOf(b);
+        if (ia === -1 && ib === -1) return a.localeCompare(b);
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      });
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+      return res.status(200).json({
+        product: { id: data.product.id, type: data.product.type_name, model: data.product.model },
+        sizes: sizeList,
+        colors: [...colors.values()].sort((a, b) => a.name.localeCompare(b.name))
+      });
+    }
+
     const id = Number(req.query.id);
     if (id) {
       if (!variantCache.has(id)) {
