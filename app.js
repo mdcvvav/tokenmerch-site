@@ -218,7 +218,7 @@ var MARKUP = [
 '<div id="tmSizes" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.375rem"></div>',
 '<div id="tmSizeGuideWrap" class="mt-2 text-[10px] font-mono" style="position:relative">',
 '<button id="tmSizeGuideBtn" class="text-brand-accent hover:text-white transition-colors" style="background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px">SIZE GUIDE</button>',
-'<div id="tmSizeGuide" class="rounded-xl border border-brand-border bg-brand-card shadow-2xl" style="display:none;position:absolute;z-index:60;left:0;bottom:100%;margin-bottom:8px;width:330px;max-width:86vw;max-height:260px;overflow:auto;padding:12px"></div>',
+'<div id="tmSizeGuide" class="rounded-xl border border-brand-border bg-brand-card shadow-2xl" style="display:none;position:absolute;z-index:60;left:0;bottom:100%;margin-bottom:8px;width:392px;max-width:88vw;max-height:260px;overflow:auto;padding:12px"></div>',
 '</div></div>',
 '</div>',
 
@@ -1002,9 +1002,9 @@ function paintSizeGuide() {
   }).join('');
   box.innerHTML =
     '<div style="color:#94a3b8;margin-bottom:6px;letter-spacing:.08em">' +
-      (t.type === 'product_measure' ? 'GARMENT, MEASURED FLAT' : 'MEASURE YOURSELF') + ' (' + t.unit + ')</div>' +
+      (t.type === 'product_measure' ? 'MEASURED FLAT' : 'MEASURE YOURSELF') + ' (' + t.unit + ')</div>' +
     '<table style="width:100%;border-collapse:collapse;font-size:10px">' + head + rows + '</table>' +
-    '<div style="color:#64748b;margin-top:8px;font-size:9px">Supplier figures. Sizes can vary by up to 2 in.</div>';
+    '<div style="color:#64748b;margin-top:8px;font-size:9px">Supplier figures; actual sizes can vary slightly.</div>';
 }
 
 /* The print specs under the preview, straight from the product's chosen placement. */
