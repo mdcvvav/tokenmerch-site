@@ -5,7 +5,7 @@
 let listCache = null;
 const variantCache = new Map();
 
-async function pf(path) {
+async function pf(path, raw) {
   const token = process.env.PRINTFUL_API_TOKEN;
   if (!token) throw new Error('PRINTFUL_API_TOKEN is not set in Vercel');
   const headers = { Authorization: 'Bearer ' + token };
@@ -13,12 +13,20 @@ async function pf(path) {
   const r = await fetch('https://api.printful.com' + path, { headers });
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error('Printful ' + r.status + ': ' + JSON.stringify(body.error || r.statusText));
-  return body.result;
+  return raw ? body : body.result;
 }
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   try {
+    // ?styles=<catalog product id> -> the mockup views Printful can render for it (v2 API)
+    const styles = Number(req.query.styles);
+    if (styles) {
+      const data = await pf('/v2/catalog-products/' + styles + '/mockup-styles', true);
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+      return res.status(200).json(data);
+    }
+
     const id = Number(req.query.id);
     if (id) {
       if (!variantCache.has(id)) {
