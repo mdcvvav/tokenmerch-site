@@ -21,7 +21,17 @@ var PRODUCTS = [
   { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee' },
   { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee' },
   { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee' },
-  { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee' },
+  { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee',
+    /* Printful model shots with the print area measured off a calibration render.
+       x0/y0/ax/ay/bx/by are fractions of the photo's width: the unit square of the
+       print area maps to (x0 + u*ax + v*bx, y0 + u*ay + v*by). vTop/vH place the
+       square design inside a 1800 x 2400 print area. */
+    models: [
+      { src: '/models/tee-male.webp',   label: 'On model',
+        x0: 0.3865, y0: 0.3355, ax: 0.2342, ay: -0.0001, bx: 0.0009, by: 0.3447, vTop: 0.125, vH: 0.75 },
+      { src: '/models/tee-female.webp', label: 'On model 2',
+        x0: 0.3959, y0: 0.1981, ax: 0.1435, ay: -0.0014, bx: 0.0281, by: 0.1983, vTop: 0.125, vH: 0.75 }
+    ] },
   { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee' },
   { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat' },
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF' },
@@ -214,7 +224,11 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '</div>',
 '<div class="relative w-full aspect-square max-w-[620px] mx-auto flex items-center justify-center bg-brand-bg/60 rounded-xl border border-brand-border/60 p-2 shadow-2xl">',
 '<canvas id="mockupCanvas" width="1200" height="1200" class="w-full h-full object-contain rounded-lg"></canvas>',
-'<button id="tmZoomBtn" title="Zoom to the print" class="absolute top-3 right-3 bg-brand-card/90 hover:bg-brand-cardHover text-slate-200 border border-brand-border rounded-lg px-3 py-1.5 text-[11px] font-mono flex items-center gap-1.5 transition-all backdrop-blur"><i class="fa-solid fa-magnifying-glass-plus"></i><span id="tmZoomLabel">Zoom print</span></button>',
+'<div class="absolute top-3 right-3 bg-brand-card/90 border border-brand-border rounded-lg backdrop-blur" style="display:flex;align-items:center;gap:2px;padding:3px">',
+'<button id="tmPrev" title="Previous view" class="w-7 h-7 rounded-md text-slate-300 hover:text-white hover:bg-brand-cardHover transition-all" style="display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-chevron-left text-[11px]"></i></button>',
+'<span id="tmViewCount" class="text-[10px] font-mono text-slate-400" style="min-width:26px;text-align:center">1/2</span>',
+'<button id="tmNext" title="Next view" class="w-7 h-7 rounded-md text-slate-300 hover:text-white hover:bg-brand-cardHover transition-all" style="display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-chevron-right text-[11px]"></i></button>',
+'</div>',
 '</div>',
 '<div class="w-full mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[11px] font-mono text-slate-500 pt-2 border-t border-brand-border/60">',
 '<span class="text-slate-400"><i class="fa-solid fa-arrows-rotate text-brand-accent mr-1"></i> <span id="tmViewLabel">Full garment</span></span>',
@@ -249,7 +263,7 @@ var product = 'tank';
 var garment = '#121212';
 var style = 'centered';
 var size = 'L';
-var zoom = false;
+var view = 0;            /* index into viewsFor(product) */
 var showCA = false, showTicker = false, textColor = '#FFFFFF', textWeight = 700;
 var caFont = 'archivo', tickerFont = 'archivo';
 var COLORS = [
@@ -263,6 +277,7 @@ var chartCache = {}, chartPending = {}, chartHoverX = -1;
 var CHART_TTL = 30000;   /* GeckoTerminal edge-caches on-chain data for 30 s */
 
 var canvas, ctx, logoImg = null, logoReady = false;
+var modelImgs = {};
 var tpl = null, tplImg = null, tplCache = {};
 
 /* ---------------- token lookup ---------------- */
@@ -640,6 +655,45 @@ function printSquare() {
   };
 }
 
+/* The gallery: two canvas composites for every product, plus any calibrated
+   model photos that product has. */
+function viewsFor(p) {
+  var v = [{ kind: 'front', label: 'Full garment' }, { kind: 'zoom', label: 'Print close-up' }];
+  (p.models || []).forEach(function (m, i) { v.push({ kind: 'model', idx: i, label: m.label || 'On model' }); });
+  return v;
+}
+
+function loadModel(src) {
+  if (modelImgs[src]) return;
+  var img = new Image();
+  modelImgs[src] = img;
+  img.onload = function () { render(); };
+  img.onerror = function () { console.warn('Model photo failed:', src); };
+  img.src = API + src;
+}
+
+/* Draws the square design onto a model photo using the measured print-area map.
+   screen keeps light ink readable on a dark garment and still lets the fabric's
+   folds lift through; multiply is right for light garments. */
+function renderModel(m) {
+  var C = canvas.width;
+  var img = modelImgs[m.src];
+  if (!img) { loadModel(m.src); }
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, C, C);
+  if (!img || !img.complete || !img.naturalWidth) return;
+  ctx.drawImage(img, 0, 0, C, C);
+  var D = designCanvas(512);
+  var vTop = m.vTop == null ? 0 : m.vTop;
+  var vH = m.vH == null ? 1 : m.vH;
+  ctx.save();
+  ctx.globalCompositeOperation = m.blend || 'screen';
+  ctx.transform(m.ax * C / 512, m.ay * C / 512, m.bx * vH * C / 512, m.by * vH * C / 512,
+    (m.x0 + m.bx * vTop) * C, (m.y0 + m.by * vTop) * C);
+  ctx.drawImage(D, 0, 0);
+  ctx.restore();
+}
+
 function render() {
   if (!canvas) return;
   var C = canvas.width;
@@ -648,8 +702,17 @@ function render() {
   ctx.clearRect(0, 0, C, C);
 
   var hasTpl = !!(tpl && tplImg);
+  var vs = viewsFor(productById(product));
+  if (view >= vs.length) view = 0;
+  var cur = vs[view];
 
-  if (zoom) {
+  if (cur.kind === 'model') {
+    renderModel(productById(product).models[cur.idx]);
+    ctx.restore();
+    return;
+  }
+
+  if (cur.kind === 'zoom') {
     /* close-up of just the print area, so the fine print is readable */
     var pad = 0.10;
     ctx.fillStyle = garment;
@@ -739,10 +802,16 @@ function updatePrice() {
   document.getElementById('priceSol').innerText = '~ ' + (base / 155).toFixed(2) + ' SOL';
 }
 function updateZoomUI() {
-  document.getElementById('tmZoomLabel').innerText = zoom ? 'Full garment' : 'Zoom print';
-  document.getElementById('tmZoomBtn').querySelector('i').className =
-    zoom ? 'fa-solid fa-magnifying-glass-minus' : 'fa-solid fa-magnifying-glass-plus';
-  document.getElementById('tmViewLabel').innerText = zoom ? 'Print close-up' : 'Full garment';
+  var vs = viewsFor(productById(product));
+  if (view >= vs.length) view = 0;
+  document.getElementById('tmViewCount').innerText = (view + 1) + '/' + vs.length;
+  document.getElementById('tmViewLabel').innerText = vs[view].label;
+}
+function step(d) {
+  var vs = viewsFor(productById(product));
+  view = (view + d + vs.length) % vs.length;
+  if (vs[view].kind === 'model') loadModel(productById(product).models[vs[view].idx].src);
+  updateZoomUI(); render();
 }
 
 function buildControls() {
@@ -762,10 +831,11 @@ function buildControls() {
   [].forEach.call(document.querySelectorAll('.tm-product'), function (b) {
     b.addEventListener('click', function () {
       product = b.getAttribute('data-product');
+      view = 0;
       var cached = tplCache[product];
       tpl = cached ? cached.t : null;
       tplImg = cached ? cached.img : null;
-      paintProductButtons(); updatePrice(); render();
+      paintProductButtons(); updatePrice(); updateZoomUI(); render();
       if (!cached) loadTemplate(product);
     });
   });
@@ -842,9 +912,8 @@ function buildControls() {
     rsz = setTimeout(drawChart, 150);
   });
 
-  document.getElementById('tmZoomBtn').addEventListener('click', function () {
-    zoom = !zoom; updateZoomUI(); render();
-  });
+  document.getElementById('tmPrev').addEventListener('click', function () { step(-1); });
+  document.getElementById('tmNext').addEventListener('click', function () { step(1); });
 
   document.getElementById('fetchBtn').addEventListener('click', function () {
     var v = document.getElementById('caInput').value.trim();
