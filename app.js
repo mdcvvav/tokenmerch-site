@@ -82,7 +82,10 @@ var MARKUP = [
 '<a href="/" class="shrink-0 block w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-brand-card border border-brand-border/70 shadow-lg shadow-brand-accent/10"><img src="' + LOGO_SRC + '" alt="TokenMerch" width="64" height="64" class="w-full h-full object-cover"></a>',
 /* wordmark, centered */
 '<div class="flex-1"></div>',
-'<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><a href="/" class="tm-wordmark pointer-events-auto text-lg sm:text-3xl lg:text-4xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
+'<div class="absolute inset-0 flex flex-col items-center justify-center gap-0.5 sm:gap-1 pointer-events-none">',
+'<a href="/" class="tm-wordmark pointer-events-auto text-lg sm:text-3xl lg:text-4xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a>',
+'<span class="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.18em] text-slate-400 whitespace-nowrap"><img src="https://cdn.jsdelivr.net/gh/solana-labs/token-list@main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" alt="" width="14" height="14" class="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full">Powered by Solana</span>',
+'</div>',
 /* links, right */
 '<div class="shrink-0 flex items-center gap-1.5 sm:gap-2">',
 '<a id="tmXLink" href="#" target="_blank" rel="noopener" title="TokenMerch on X" aria-label="TokenMerch on X" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-brands fa-x-twitter"></i></a>',
@@ -106,7 +109,7 @@ var MARKUP = [
 '<input id="caInput" type="text" placeholder="Paste Solana Mint Contract Address (e.g., EKpQGS...)" style="background:transparent;border:0;box-shadow:none;color:#fff" class="w-full text-xs sm:text-sm placeholder-slate-500 focus:outline-none font-mono py-2">',
 '<button id="pasteBtn" title="Paste from Clipboard" class="text-slate-400 hover:text-brand-solana p-1.5 rounded transition-colors text-xs font-mono flex items-center gap-1"><i class="fa-regular fa-paste"></i><span class="hidden sm:inline">Paste</span></button>',
 '</div>',
-'<button id="fetchBtn" class="bg-gradient-to-r from-brand-accent to-purple-600 hover:opacity-90 text-white font-semibold px-6 py-2.5 rounded-lg flex items-center justify-center space-x-2 transition-all shadow-md text-sm"><span id="fetchBtnText">Fetch Token</span><i id="fetchSpinner" class="fa-solid fa-spinner fa-spin hidden"></i></button>',
+'<button id="fetchBtn" class="bg-gradient-to-r from-brand-accent to-purple-600 hover:opacity-90 text-white font-semibold px-6 py-2.5 rounded-lg flex items-center justify-center space-x-2 transition-all shadow-md text-sm"><span id="fetchBtnText">Drop</span><i id="fetchSpinner" class="fa-solid fa-spinner fa-spin hidden"></i></button>',
 '</div>',
 '</div></section>',
 
@@ -237,7 +240,7 @@ var COLORS = [
 ];
 var SIZES = ['S', 'M', 'L', 'XL', '2XL'];
 
-var chartRange = 'h1', chartShown = null, chartData = null, chartTimer = null;
+var chartRange = 'm5', chartShown = null, chartData = null, chartTimer = null;
 var chartCache = {}, chartPending = {}, chartHoverX = -1;
 var CHART_TTL = 30000;   /* GeckoTerminal edge-caches on-chain data for 30 s */
 
@@ -331,7 +334,7 @@ function lookup(raw) {
 function fetchToken(raw) {
   var btn = document.getElementById('fetchBtnText');
   var spin = document.getElementById('fetchSpinner');
-  btn.innerText = 'Fetching...';
+  btn.innerText = 'Loading...';
   spin.classList.remove('hidden');
   return lookup(raw).then(function (t) {
     if (!t) { alert('Could not find that token on DexScreener or Jupiter. Double-check the contract address.'); return; }
@@ -342,7 +345,7 @@ function fetchToken(raw) {
     console.error('Token lookup error:', err);
     alert('Token lookup failed: ' + err.message);
   }).then(function () {
-    btn.innerText = 'Fetch Token';
+    btn.innerText = 'Drop';
     spin.classList.add('hidden');
   });
 }
