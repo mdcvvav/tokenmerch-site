@@ -48,7 +48,13 @@ var PRODUCTS = [
      of leading with a worn torso. 31 colours, XS-3XL, and the back print is free. */
   { id: 'tank',      label: 'TANK TOP',        pid: 907, vid: 23282, price: 48,  shape: 'tee',
     print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
-    back: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true },
+    back: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true,
+    models: [
+      { src: '/models/tank-m1.webp', label: 'On model', shotIn: 'Black', blend: 'screen',
+        x0: 0.3663, y0: 0.3737, ax: 0.2637, ay: -0.0048, bx: 0.0175, by: 0.3294, vTop: 0.125, vH: 0.75 },
+      { src: '/models/tank-m2.webp', label: 'On model 2', shotIn: 'Black', blend: 'screen',
+        x0: 0.4337, y0: 0.3484, ax: 0.2279, ay: 0.0047, bx: -0.0140, by: 0.3093, vTop: 0.125, vH: 0.75 }
+    ] },
   { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED',
     print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' } },
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
