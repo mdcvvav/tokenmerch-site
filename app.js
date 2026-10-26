@@ -18,33 +18,43 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
    has no template. */
 var PRODUCTS = [
   { id: 'tank',      label: 'TANK TOP',        pid: 537, vid: 13627, price: 48,  shape: 'tee',
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
     models: [
-      { src: '/models/tank-flat.webp', label: 'Full garment', flat: true,
+      { src: '/models/tank-flat.webp', label: 'Full garment', flat: true, shotIn: 'Navy',
         x0: 0.3075, y0: 0.2735, ax: 0.3840, ay: 0, bx: 0, by: 0.5120, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tank-m1.webp', label: 'On model',
+      { src: '/models/tank-m1.webp', label: 'On model', shotIn: 'Navy',
         x0: 0.3778, y0: 0.4041, ax: 0.2500, ay: 0.0001, bx: 0.0008, by: 0.3585, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tank-m2.webp', label: 'On model 2',
+      { src: '/models/tank-m2.webp', label: 'On model 2', shotIn: 'Navy',
         x0: 0.4001, y0: 0.4083, ax: 0.2349, ay: -0.0001, bx: 0.0013, by: 0.3555, vTop: 0.125, vH: 0.75 }
     ] },
-  { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee' },
-  { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee' },
-  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee' },
+  { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee',
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+  { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee',
+    print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' } },
+  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee',
+    print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee',
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
     /* Printful model shots with the print area measured off a calibration render.
        x0/y0/ax/ay/bx/by are fractions of the photo's width: the unit square of the
        print area maps to (x0 + u*ax + v*bx, y0 + u*ay + v*by). vTop/vH place the
        square design inside a 1800 x 2400 print area. */
     models: [
-      { src: '/models/tee-male.webp',   label: 'On model',
+      { src: '/models/tee-male.webp',   label: 'On model', shotIn: 'Black',
         x0: 0.3865, y0: 0.3355, ax: 0.2342, ay: -0.0001, bx: 0.0009, by: 0.3447, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tee-female.webp', label: 'On model 2',
+      { src: '/models/tee-female.webp', label: 'On model 2', shotIn: 'Black',
         x0: 0.3959, y0: 0.1981, ax: 0.1435, ay: -0.0014, bx: 0.0281, by: 0.1983, vTop: 0.125, vH: 0.75 }
     ] },
-  { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee' },
-  { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat' },
-  { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF' },
-  { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat' },
-  { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED' }
+  { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee',
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+  { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat',
+    print: { w: 8, h: 10, dpi: 300, tech: 'Giclee', placement: 'default' } },
+  { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
+    print: { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' } },
+  { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat',
+    print: { w: 5.83, h: 8.27, dpi: 300, tech: 'Digital', placement: 'default' } },
+  { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED',
+    print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' } }
 ];
 function productById(id) {
   for (var i = 0; i < PRODUCTS.length; i++) if (PRODUCTS[i].id === id) return PRODUCTS[i];
@@ -176,8 +186,8 @@ var MARKUP = [
 '<div class="glass-panel rounded-2xl p-5 space-y-4 uppercase">',
 '<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 flex items-center justify-between"><span><i class="fa-solid fa-sliders text-brand-accent mr-2"></i> Merch Customizer</span></h3>',
 
-'<div><label class="block text-xs font-mono text-slate-400 mb-2">COLOR</label>',
-'<div id="tmColors" class="flex items-center space-x-2.5 bg-brand-bg p-2.5 rounded-xl border border-brand-border"></div></div>',
+'<div><label class="block text-xs font-mono text-slate-400 mb-2">COLOR <span id="tmColorName" class="text-slate-500"></span></label>',
+'<div id="tmColors" class="bg-brand-bg p-2.5 rounded-xl border border-brand-border" style="display:flex;flex-wrap:wrap;gap:7px;max-height:104px;overflow-y:auto"></div></div>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">POSITION</label>',
 '<select id="printStyleSelect" class="w-full bg-brand-bg text-slate-200 border border-brand-border rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-accent">',
@@ -244,7 +254,8 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '<span>Source <span id="sourceResText" class="text-slate-300">-</span></span>',
 '<span>Print <span id="upscaleResText" class="text-slate-300">1800 x 1800 px</span></span>',
 '<span id="tmPrintSizeLabel">12 x 12 in</span>',
-'<span class="text-brand-solana/70">150 DPI</span>',
+'<span id="tmTechLabel" class="text-brand-accent/80">DTF</span>',
+'<span id="tmDpiLabel" class="text-brand-solana/70">150 DPI</span>',
 '</span>',
 '</div>',
 '</div></div>',
@@ -268,17 +279,15 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 
 var token = { ca: '', name: '', ticker: 'TOKEN', price: '-', change: '-', img: '', pair: '' };
 var product = 'tank';
-var garment = '#121212';
+var garment = '#1b1b1c';
+var colorName = '';
+var curVariant = 0;
 var style = 'centered';
-var size = 'L';
+var size = '';
 var view = 0;            /* index into viewsFor(product) */
 var showCA = false, showTicker = false, textColor = '#FFFFFF', textWeight = 700;
 var caFont = 'archivo', tickerFont = 'archivo';
-var COLORS = [
-  ['#121212', 'Jet Black'], ['#FFFFFF', 'White'], ['#4B5563', 'Heather Grey'],
-  ['#1E293B', 'Navy'], ['#581C87', 'Purple'], ['#F5F5DC', 'Cream']
-];
-var SIZES = ['S', 'M', 'L', 'XL', '2XL'];
+var palettes = {};        /* product id -> { sizes, colors } from Printful */
 
 var chartRange = 'm5', chartShown = null, chartData = null, chartTimer = null;
 var chartCache = {}, chartPending = {}, chartHoverX = -1;
@@ -792,7 +801,7 @@ function render() {
 
   if (hasTpl) {
     var kk = C / tpl.template_width;
-    ctx.fillStyle = tpl.background_color || garment || '#0c0c0c';
+    ctx.fillStyle = garment || tpl.background_color || '#0c0c0c';
     ctx.fillRect(0, 0, C, C);
     var q2 = printSquare();
     var pw = Math.round(q2.s * kk);
@@ -845,21 +854,103 @@ function paintSizes() {
 }
 function paintColors() {
   [].forEach.call(document.querySelectorAll('.tm-color'), function (b) {
-    var on = b.getAttribute('data-color').toLowerCase() === garment.toLowerCase();
-    b.className = 'tm-color w-7 h-7 rounded-full focus:outline-none transition-all ' +
+    var on = b.getAttribute('data-color') === colorName;
+    b.className = 'tm-color focus:outline-none transition-all ' +
       (on ? 'ring-2 ring-brand-accent border-2 border-white' : 'border border-white/20');
   });
 }
+/* Colours and sizes come straight from Printful's catalog, per product. The template
+   image is colour-independent: the garment colour is the fill underneath it, so
+   switching colour costs nothing and needs no new request. */
+function loadPalette(id) {
+  var p = productById(id || product);
+  if (palettes[p.id]) { applyPalette(p.id); return; }
+  getJson(API + '/api/catalog?colors=' + p.pid).then(function (d) {
+    if (!d || !d.colors) throw new Error((d && d.error) || 'no colours');
+    palettes[p.id] = d;
+    if (product === p.id) applyPalette(p.id);
+  }).catch(function (e) {
+    console.warn('No colour list for ' + p.id + ':', e.message);
+  });
+}
+
+/* Pick the colour and size that the product's default variant actually is. */
+function applyPalette(id) {
+  var p = productById(id);
+  var d = palettes[p.id];
+  if (!d) return;
+  var hit = null;
+  d.colors.forEach(function (c) {
+    Object.keys(c.ids).forEach(function (sz) { if (c.ids[sz] === p.vid) hit = { c: c, size: sz }; });
+  });
+  var c0 = hit ? hit.c : d.colors[0];
+  colorName = c0.name;
+  garment = c0.code || '#1b1b1c';
+  size = (hit && hit.size) || (d.sizes.indexOf('M') >= 0 ? 'M' : d.sizes[0]);
+  buildPalette();
+  render();
+}
+
+function buildPalette() {
+  var d = palettes[product];
+  var cw = document.getElementById('tmColors');
+  var sw = document.getElementById('tmSizes');
+  if (!d) { cw.innerHTML = ''; sw.innerHTML = ''; return; }
+  cw.innerHTML = d.colors.map(function (c) {
+    return '<button class="tm-color" data-color="' + c.name + '" title="' + c.name +
+      '" style="background:' + (c.code || '#888') + ';width:26px;height:26px;border-radius:9999px;flex:0 0 auto"></button>';
+  }).join('');
+  sw.innerHTML = d.sizes.map(function (z) {
+    return '<button class="tm-size" data-size="' + z + '">' + z + '</button>';
+  }).join('');
+  paintColors(); paintSizes(); updateVariant();
+}
+
+function colorEntry() {
+  var d = palettes[product];
+  if (!d) return null;
+  for (var i = 0; i < d.colors.length; i++) if (d.colors[i].name === colorName) return d.colors[i];
+  return d.colors[0];
+}
+
+function updateVariant() {
+  var c = colorEntry();
+  curVariant = (c && c.ids[size]) || productById(product).vid;
+  var el = document.getElementById('tmColorName');
+  if (el) el.innerText = colorName ? '\u00b7 ' + colorName : '';
+}
+
+/* The print specs under the preview, straight from the product's chosen placement. */
+function updateSpecs() {
+  var pr = productById(product).print;
+  if (!pr) return;
+  var t = document.getElementById('tmTechLabel');
+  var sz = document.getElementById('tmPrintSizeLabel');
+  var up = document.getElementById('upscaleResText');
+  var dp = document.getElementById('tmDpiLabel');
+  if (t) t.innerText = pr.tech;
+  if (sz) sz.innerText = pr.w + ' x ' + pr.h + ' in';
+  if (up) up.innerText = Math.round(pr.w * pr.dpi) + ' x ' + Math.round(pr.h * pr.dpi) + ' px';
+  if (dp) dp.innerText = pr.dpi + ' DPI';
+}
+
 function updatePrice() {
   var base = productById(product).price;
   document.getElementById('priceUsd').innerText = '$' + base + '.00';
   document.getElementById('priceSol').innerText = '~ ' + (base / 155).toFixed(2) + ' SOL';
 }
 function updateZoomUI() {
-  var vs = viewsFor(productById(product));
+  var p = productById(product);
+  var vs = viewsFor(p);
   if (view >= vs.length) view = 0;
   document.getElementById('tmViewCount').innerText = (view + 1) + '/' + vs.length;
-  document.getElementById('tmViewLabel').innerText = vs[view].label;
+  var label = vs[view].label;
+  /* A model photo is a real render in one colour; the flat composite is the one that
+     follows the colour picker. Say so rather than quietly showing the wrong colour. */
+  var m = vs[view].kind === 'model' ? (p.models || [])[vs[view].idx]
+        : (vs[view].kind === 'zoom' && vs[view].from >= 0 ? (p.models || [])[vs[view].from] : null);
+  if (m && m.shotIn && colorName && m.shotIn !== colorName) label += ' \u00b7 shown in ' + m.shotIn;
+  document.getElementById('tmViewLabel').innerText = label;
 }
 function step(d) {
   var vs = viewsFor(productById(product));
@@ -873,17 +964,11 @@ function step(d) {
 
 function buildControls() {
   var cw = document.getElementById('tmColors');
-  cw.innerHTML = COLORS.map(function (c) {
-    return '<button class="tm-color" data-color="' + c[0] + '" title="' + c[1] +
-      '" style="background:' + c[0] + '"></button>';
-  }).join('');
   var sw = document.getElementById('tmSizes');
-  sw.innerHTML = SIZES.map(function (s) {
-    return '<button class="tm-size" data-size="' + s + '">' + s + '</button>';
-  }).join('');
 
   document.getElementById('printStyleSelect').value = style;
-  paintProductButtons(); paintSizes(); paintColors(); updatePrice(); updateZoomUI();
+  paintProductButtons(); updatePrice(); updateZoomUI(); updateSpecs();
+  loadPalette(product);
 
   [].forEach.call(document.querySelectorAll('.tm-product'), function (b) {
     b.addEventListener('click', function () {
@@ -894,18 +979,26 @@ function buildControls() {
       tplImg = cached ? cached.img : null;
       var ms0 = productById(product).models || [];
       for (var mi = 0; mi < ms0.length; mi++) if (ms0[mi].flat) loadModel(ms0[mi].src);
-      paintProductButtons(); updatePrice(); updateZoomUI(); render();
+      paintProductButtons(); updatePrice(); updateZoomUI(); updateSpecs(); render();
+      loadPalette(product);
       if (!cached) loadTemplate(product);
     });
   });
-  [].forEach.call(document.querySelectorAll('.tm-size'), function (b) {
-    b.addEventListener('click', function () { size = b.getAttribute('data-size'); paintSizes(); });
+  sw.addEventListener('click', function (e) {
+    var b = e.target.closest('.tm-size');
+    if (!b) return;
+    size = b.getAttribute('data-size');
+    paintSizes(); updateVariant();
   });
   cw.addEventListener('click', function (e) {
     var b = e.target.closest('.tm-color');
     if (!b) return;
-    garment = b.getAttribute('data-color');
-    paintColors(); render();
+    var c = null, d = palettes[product];
+    for (var i = 0; d && i < d.colors.length; i++) if (d.colors[i].name === b.getAttribute('data-color')) c = d.colors[i];
+    if (!c) return;
+    colorName = c.name;
+    garment = c.code || garment;
+    paintColors(); updateVariant(); updateZoomUI(); render();
   });
   document.getElementById('printStyleSelect').addEventListener('change', function (e) {
     style = e.target.value; render();
