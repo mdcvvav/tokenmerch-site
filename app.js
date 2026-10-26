@@ -17,23 +17,6 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
    until the real pricing is set. shape is only the fallback drawing when Printful
    has no template. */
 var PRODUCTS = [
-  { id: 'tank',      label: 'TANK TOP',        pid: 537, vid: 13627, price: 48,  shape: 'tee',
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
-    models: [
-      { src: '/models/tank-flat.webp', label: 'Full garment', flat: true, shotIn: 'Navy',
-        byColor: '/models/tank-flat-', colorSlugs: ['athletic-heather','black','charcoal-heather','coral','harbor-blue','military-green','mint','navy','pacific-blue','red','squash','team-royal','white'],
-        x0: 0.3075, y0: 0.2735, ax: 0.3840, ay: 0, bx: 0, by: 0.5120, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tank-m1.webp', label: 'On model', shotIn: 'Navy', blend: 'screen',
-        x0: 0.3778, y0: 0.4041, ax: 0.2500, ay: 0.0001, bx: 0.0008, by: 0.3585, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tank-m2.webp', label: 'On model 2', shotIn: 'Navy', blend: 'screen',
-        x0: 0.4001, y0: 0.4083, ax: 0.2349, ay: -0.0001, bx: 0.0013, by: 0.3555, vTop: 0.125, vH: 0.75 }
-    ] },
-  { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee',
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
-  { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee',
-    print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' } },
-  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee',
-    print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee',
     print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
     /* Printful model shots with the print area measured off a calibration render.
@@ -48,14 +31,31 @@ var PRODUCTS = [
     ] },
   { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee',
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
-  { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat',
-    print: { w: 8, h: 10, dpi: 300, tech: 'Giclee', placement: 'default' } },
+  { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee',
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee',
+    print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
+  { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee',
+    print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' } },
+  { id: 'tank',      label: 'TANK TOP',        pid: 537, vid: 13627, price: 48,  shape: 'tee',
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
+    models: [
+      { src: '/models/tank-flat.webp', label: 'Full garment', flat: true, shotIn: 'Navy',
+        byColor: '/models/tank-flat-', colorSlugs: ['athletic-heather','black','charcoal-heather','coral','harbor-blue','military-green','mint','navy','pacific-blue','red','squash','team-royal','white'],
+        x0: 0.3075, y0: 0.2735, ax: 0.3840, ay: 0, bx: 0, by: 0.5120, vTop: 0.125, vH: 0.75 },
+      { src: '/models/tank-m1.webp', label: 'On model', shotIn: 'Navy', blend: 'screen',
+        x0: 0.3778, y0: 0.4041, ax: 0.2500, ay: 0.0001, bx: 0.0008, by: 0.3585, vTop: 0.125, vH: 0.75 },
+      { src: '/models/tank-m2.webp', label: 'On model 2', shotIn: 'Navy', blend: 'screen',
+        x0: 0.4001, y0: 0.4083, ax: 0.2349, ay: -0.0001, bx: 0.0013, by: 0.3555, vTop: 0.125, vH: 0.75 }
+    ] },
+  { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED',
+    print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' } },
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
     print: { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' } },
+  { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat',
+    print: { w: 8, h: 10, dpi: 300, tech: 'Giclee', placement: 'default' } },
   { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat',
-    print: { w: 5.83, h: 8.27, dpi: 300, tech: 'Digital', placement: 'default' } },
-  { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED',
-    print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' } }
+    print: { w: 5.83, h: 8.27, dpi: 300, tech: 'Digital', placement: 'default' } }
 ];
 function productById(id) {
   for (var i = 0; i < PRODUCTS.length; i++) if (PRODUCTS[i].id === id) return PRODUCTS[i];
@@ -215,7 +215,11 @@ var MARKUP = [
 '</div></div></div>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">SIZE</label>',
-'<div id="tmSizes" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.375rem"></div></div>',
+'<div id="tmSizes" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.375rem"></div>',
+'<div id="tmSizeGuideWrap" class="mt-2 text-[10px] font-mono" style="position:relative">',
+'<button id="tmSizeGuideBtn" class="text-brand-accent hover:text-white transition-colors" style="background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px">SIZE GUIDE</button>',
+'<div id="tmSizeGuide" class="rounded-xl border border-brand-border bg-brand-card shadow-2xl" style="display:none;position:absolute;z-index:60;left:0;bottom:100%;margin-bottom:8px;width:330px;max-width:86vw;max-height:260px;overflow:auto;padding:12px"></div>',
+'</div></div>',
 '</div>',
 
 
@@ -279,7 +283,7 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 /* ---------------- state ---------------- */
 
 var token = { ca: '', name: '', ticker: 'TOKEN', price: '-', change: '-', img: '', pair: '' };
-var product = 'tank';
+var product = 'tee';
 var garment = '#1b1b1c';
 var colorName = '';
 var curVariant = 0;
@@ -948,6 +952,61 @@ function updateVariant() {
   if (el) el.innerText = colorName ? '\u00b7 ' + colorName : '';
 }
 
+/* Printful publishes a measurement table per product. Shown on hover under the size
+   row; loaded the first time it is opened and cached per product. */
+var sizeGuides = {}, guidePinned = false;
+
+function loadSizeGuide() {
+  var p = productById(product);
+  if (sizeGuides[p.id]) { paintSizeGuide(); return; }
+  paintSizeGuide();
+  getJson(API + '/api/catalog?sizes=' + p.pid).then(function (d) {
+    sizeGuides[p.id] = d;
+    if (product === p.id) paintSizeGuide();
+  }).catch(function (e) {
+    sizeGuides[p.id] = { failed: e.message };
+    if (product === p.id) paintSizeGuide();
+  });
+}
+
+function trim(v) {
+  var n = parseFloat(v);
+  return isNaN(n) ? '-' : (Math.round(n * 10) / 10);
+}
+
+function paintSizeGuide() {
+  var box = document.getElementById('tmSizeGuide');
+  if (!box) return;
+  var d = sizeGuides[product];
+  if (!d) { box.innerHTML = '<div class="text-slate-400">Loading...</div>'; return; }
+  if (d.failed || !(d.tables || []).length) {
+    box.innerHTML = '<div class="text-slate-400">No size guide for this item.</div>';
+    return;
+  }
+  var t = null;
+  d.tables.forEach(function (x) { if (!t && x.type === 'product_measure') t = x; });
+  if (!t) t = d.tables[0];
+  var sizes = d.availableSizes || [];
+  var head = '<tr><th style="text-align:left"></th>' + sizes.map(function (z) {
+    return '<th style="padding:0 3px;color:#cbd5e1;font-weight:600">' + z + '</th>';
+  }).join('') + '</tr>';
+  var rows = t.measurements.map(function (m) {
+    var by = {};
+    m.values.forEach(function (v) {
+      by[v.size] = v.value || (v.min && v.max ? trim(v.min) + '-' + trim(v.max) : (v.min || v.max || ''));
+    });
+    return '<tr><td style="color:#94a3b8;padding-right:6px;white-space:nowrap">' + m.label + '</td>' +
+      sizes.map(function (z) {
+        return '<td style="padding:0 3px;text-align:center;color:#e2e8f0">' + (by[z] ? trim(by[z]) : '-') + '</td>';
+      }).join('') + '</tr>';
+  }).join('');
+  box.innerHTML =
+    '<div style="color:#94a3b8;margin-bottom:6px;letter-spacing:.08em">' +
+      (t.type === 'product_measure' ? 'GARMENT, MEASURED FLAT' : 'MEASURE YOURSELF') + ' (' + t.unit + ')</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:10px">' + head + rows + '</table>' +
+    '<div style="color:#64748b;margin-top:8px;font-size:9px">Supplier figures. Sizes can vary by up to 2 in.</div>';
+}
+
 /* The print specs under the preview, straight from the product's chosen placement. */
 function updateSpecs() {
   var pr = productById(product).print;
@@ -1002,6 +1061,9 @@ function buildControls() {
     b.addEventListener('click', function () {
       product = b.getAttribute('data-product');
       view = 0;
+      guidePinned = false;
+      var gbox = document.getElementById('tmSizeGuide');
+      if (gbox) { gbox.style.display = 'none'; gbox.innerHTML = ''; }
       var cached = tplCache[product];
       tpl = cached ? cached.t : null;
       tplImg = cached ? cached.img : null;
@@ -1012,6 +1074,16 @@ function buildControls() {
       if (!cached) loadTemplate(product);
     });
   });
+  var gw = document.getElementById('tmSizeGuideWrap');
+  var gb = document.getElementById('tmSizeGuide');
+  gw.addEventListener('mouseenter', function () { loadSizeGuide(); gb.style.display = 'block'; });
+  gw.addEventListener('mouseleave', function () { if (!guidePinned) gb.style.display = 'none'; });
+  document.getElementById('tmSizeGuideBtn').addEventListener('click', function () {
+    guidePinned = !guidePinned;
+    loadSizeGuide();
+    gb.style.display = guidePinned ? 'block' : 'none';
+  });
+
   sw.addEventListener('click', function (e) {
     var b = e.target.closest('.tm-size');
     if (!b) return;
