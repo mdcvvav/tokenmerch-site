@@ -45,7 +45,11 @@ jobs:
           if [ "$SIZE" = "0" ]; then
             cp /tmp/src "$OUT_PATH"
           else
-            magick /tmp/src -resize "${SIZE}x${SIZE}" -background white -alpha remove -quality "$QUALITY" "$OUT_PATH"
+            # ubuntu-latest has ImageMagick 6 (convert), not 7 (magick)
+            if command -v magick >/dev/null 2>&1; then CONV=magick;
+            elif command -v convert >/dev/null 2>&1; then CONV=convert;
+            else sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick && CONV=convert; fi
+            "$CONV" /tmp/src -resize "${SIZE}x${SIZE}" -background white -alpha remove -quality "$QUALITY" "$OUT_PATH"
           fi
           ls -l "$OUT_PATH"
 
