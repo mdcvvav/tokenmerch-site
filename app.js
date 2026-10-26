@@ -514,7 +514,7 @@ function ensureFont(f) {
    caW is how wide the address line is allowed to run; tickerW sizes
    the $TICKER. Both use the website's own fonts: JetBrains Mono for
    the address, Inter for the ticker. */
-function drawCaption(p, cx, tickerW, caW, top) {
+function drawCaption(p, cx, tickerW, caW, top, caLines) {
   if (!showCA && !showTicker) return top;
   p.save();
   p.fillStyle = textColor;
@@ -523,10 +523,23 @@ function drawCaption(p, cx, tickerW, caW, top) {
   var y = top + tickerW * 0.05;
   if (showCA && token.ca) {
     var cf = fontById(caFont), cwt = nearestWeight(cf, textWeight);
-    var fs = fitFont(p, token.ca, cwt, cf.css, caW, caW * 0.075);
-    p.font = cwt + ' ' + fs + 'px ' + cf.css;
-    p.fillText(token.ca, cx, y);
-    y += fs * 1.5;
+    /* A 44-character address squeezed into a narrow graphic prints at about 0.11 in
+       tall with sub-0.5 mm strokes, which is under the safe range for DTF on fabric.
+       Over two lines it roughly doubles, so it stays legible inside the image. */
+    if (caLines === 2 && token.ca.length > 24) {
+      var cut = Math.ceil(token.ca.length / 2);
+      var l1 = token.ca.slice(0, cut), l2 = token.ca.slice(cut);
+      var fs2 = Math.min(fitFont(p, l1, cwt, cf.css, caW, caW * 0.10),
+                         fitFont(p, l2, cwt, cf.css, caW, caW * 0.10));
+      p.font = cwt + ' ' + fs2 + 'px ' + cf.css;
+      p.fillText(l1, cx, y); y += fs2 * 1.12;
+      p.fillText(l2, cx, y); y += fs2 * 1.5;
+    } else {
+      var fs = fitFont(p, token.ca, cwt, cf.css, caW, caW * 0.075);
+      p.font = cwt + ' ' + fs + 'px ' + cf.css;
+      p.fillText(token.ca, cx, y);
+      y += fs * 1.5;
+    }
   }
   if (showTicker && token.ticker) {
     var t = '$' + token.ticker;
@@ -611,10 +624,11 @@ function drawDesign(p, W) {
         p.restore();
       }
     } else if (style === 'centered-small') {
-      /* small graphic: the address may run wider than the image */
+      /* small graphic: the address is split over two lines so it fits the image
+         and still prints large enough to read */
       var s2 = 0.4167 * W, x2 = 0.2917 * W, y2 = 0.1875 * W;
       p.drawImage(logoImg, x2, y2, s2, s2);
-      drawCaption(p, W / 2, s2, Math.min(s2 * 2, W * 0.92), y2 + s2);
+      drawCaption(p, W / 2, s2, s2, y2 + s2, 2);
     } else {
       /* big centred graphic: the address stays inside the image's width */
       var s3 = 0.55 * W, x3 = 0.225 * W, y3 = 0.0792 * W;
