@@ -27,6 +27,34 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    // ?sizes=<catalog product id>[&unit=inches|cm] -> Printful's size guide tables
+    const sizesFor = Number(req.query.sizes);
+    if (sizesFor) {
+      const unit = req.query.unit === 'cm' ? 'cm' : 'inches';
+      const data = await pf('/products/' + sizesFor + '/sizes?unit=' + unit);
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+      return res.status(200).json({
+        productId: data.product_id,
+        availableSizes: data.available_sizes || [],
+        tables: (data.size_tables || []).map((t) => ({
+          type: t.type,
+          unit: t.unit,
+          description: t.description || null,
+          imageUrl: t.image_url || null,
+          imageDescription: t.image_description || null,
+          measurements: (t.measurements || []).map((m) => ({
+            label: m.type_label,
+            values: (m.values || []).map((v) => ({
+              size: v.size,
+              value: v.value || null,
+              min: v.min_value || null,
+              max: v.max_value || null
+            }))
+          }))
+        }))
+      });
+    }
+
     // ?colors=<catalog product id> -> compact colour + size table for the customizer
     const colorsFor = Number(req.query.colors);
     if (colorsFor) {
