@@ -24,9 +24,9 @@ var PRODUCTS = [
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee' },
   { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee' },
   { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat' },
-  { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug' },
+  { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF' },
   { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat' },
-  { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee' }
+  { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED' }
 ];
 function productById(id) {
   for (var i = 0; i < PRODUCTS.length; i++) if (PRODUCTS[i].id === id) return PRODUCTS[i];
@@ -609,10 +609,12 @@ function designCanvas(W) {
 
 /* simple drawn t-shirt / mug, in an 800-unit space */
 function drawCartoonGarment(p, k) {
-  p.fillStyle = garment;
-  if (productById(product).shape === 'mug') {
+  var pr = productById(product);
+  var body = pr.color || garment;
+  p.fillStyle = body;
+  if (pr.shape === 'mug') {
     p.beginPath(); p.roundRect(240 * k, 180 * k, 320 * k, 460 * k, 35 * k); p.fill();
-    p.strokeStyle = garment; p.lineWidth = 44 * k;
+    p.strokeStyle = body; p.lineWidth = 44 * k;
     p.beginPath(); p.arc(220 * k, 410 * k, 90 * k, 0.5 * Math.PI, 1.5 * Math.PI); p.stroke();
     p.strokeStyle = 'rgba(255,255,255,0.2)'; p.lineWidth = 6 * k;
     p.beginPath(); p.ellipse(400 * k, 180 * k, 160 * k, 20 * k, 0, 0, Math.PI * 2); p.stroke();
@@ -1229,6 +1231,9 @@ function startChartPolling() {
 
 function loadTemplate(id) {
   var p = productById(id || product);
+  /* Printful only returns a real product photo for the DTG garments; the mug and the
+     all-over windbreaker come back as flat pattern guides, so those use the drawn one. */
+  if (p.noTpl) return;
   if (tplCache[p.id]) {
     if (product === p.id) { tpl = tplCache[p.id].t; tplImg = tplCache[p.id].img; render(); }
     return;
