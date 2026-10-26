@@ -32,7 +32,8 @@ var CSS = [
 '#tmWeight::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
 '#tmWeight:disabled{cursor:not-allowed}',
 '#tmWeightRow{transition:opacity .15s ease}',
-'.tm-wordmark{font-family:"Orbitron","Inter",sans-serif;font-weight:700;letter-spacing:.015em;text-shadow:0 0 18px rgba(153,69,255,.28)}',
+'@media (max-width:639px){#tmNet{display:none !important}}',
+'.tm-wordmark{font-family:"Orbitron","Inter",sans-serif;font-weight:700;letter-spacing:.03em;text-shadow:0 0 18px rgba(153,69,255,.28)}',
 '.tm-wordmark:hover{color:#fff}',
 '#tokenmerch-root ::-webkit-scrollbar{width:6px;height:6px}',
 '#tokenmerch-root ::-webkit-scrollbar-track{background:#0d0f17}',
@@ -82,7 +83,7 @@ var MARKUP = [
 '<a href="/" class="shrink-0 block w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-brand-card border border-brand-border/70 shadow-lg shadow-brand-accent/10"><img src="' + LOGO_SRC + '" alt="TokenMerch" width="64" height="64" class="w-full h-full object-cover"></a>',
 /* wordmark, centered */
 '<div class="flex-1"></div>',
-'<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><a href="/" class="tm-wordmark pointer-events-auto text-base sm:text-2xl lg:text-3xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
+'<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><a href="/" class="tm-wordmark pointer-events-auto text-xl sm:text-4xl lg:text-5xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
 /* links, right */
 '<div class="shrink-0 flex items-center gap-1.5 sm:gap-2">',
 '<a id="tmXLink" href="#" target="_blank" rel="noopener" title="TokenMerch on X" aria-label="TokenMerch on X" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-brands fa-x-twitter"></i></a>',
@@ -106,7 +107,7 @@ var MARKUP = [
 '<input id="caInput" type="text" placeholder="Paste Solana Mint Contract Address (e.g., EKpQGS...)" style="background:transparent;border:0;box-shadow:none;color:#fff" class="w-full text-xs sm:text-sm placeholder-slate-500 focus:outline-none font-mono py-2">',
 '<button id="pasteBtn" title="Paste from Clipboard" class="text-slate-400 hover:text-brand-solana p-1.5 rounded transition-colors text-xs font-mono flex items-center gap-1"><i class="fa-regular fa-paste"></i><span class="hidden sm:inline">Paste</span></button>',
 '</div>',
-'<div class="hidden sm:flex items-center gap-2 px-3 text-[10px] font-mono uppercase tracking-widest whitespace-nowrap"><span class="w-2.5 h-2.5 rounded-full bg-brand-solana animate-ping"></span><span class="text-brand-solana font-semibold">Solana Mainnet</span></div>',
+'<div id="tmNet" class="font-mono uppercase whitespace-nowrap" style="display:flex;align-items:center;gap:0.5rem;padding:0 0.75rem;font-size:10px;letter-spacing:.1em"><span class="animate-ping" style="width:10px;height:10px;border-radius:9999px;background:#14F195;flex:0 0 auto"></span><span style="color:#14F195;font-weight:600">Solana Mainnet</span></div>',
 '<button id="fetchBtn" class="bg-gradient-to-r from-brand-accent to-purple-600 hover:opacity-90 text-white font-semibold px-6 py-2.5 rounded-lg flex items-center justify-center space-x-2 transition-all shadow-md text-sm"><span id="fetchBtnText">Drop</span><i id="fetchSpinner" class="fa-solid fa-spinner fa-spin hidden"></i></button>',
 '</div>',
 '</div></section>',
