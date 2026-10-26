@@ -163,7 +163,7 @@ var MARKUP = [
 '</div></div></div>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">SIZE</label>',
-'<div id="tmSizes" class="grid grid-cols-5 gap-1.5 font-mono text-xs"></div></div>',
+'<div id="tmSizes" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.375rem"></div></div>',
 '</div>',
 
 
@@ -181,7 +181,7 @@ var MARKUP = [
 /* product slots, above the preview */
 '<div class="glass-panel rounded-2xl p-5 mb-6">',
 '<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 mb-4 flex items-center justify-between"><span><i class="fa-solid fa-shirt text-brand-accent mr-2"></i> Product</span><span class="text-[10px] text-slate-500">10 SLOTS</span></h3>',
-'<div id="tmProductGrid" class="grid grid-cols-5 gap-2 font-mono text-xs">',
+'<div id="tmProductGrid" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.5rem">',
 new Array(10).fill('<button class="tm-slot py-2 px-3 rounded-lg border border-dashed border-brand-border/80 bg-brand-bg/50 text-slate-300 hover:border-brand-accent transition-all text-center flex items-center justify-center" aria-label="Empty product slot">&nbsp;</button>').join(''),
 '</div></div>',
 
