@@ -19,6 +19,8 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
 var PRODUCTS = [
   { id: 'tank',      label: 'TANK TOP',        pid: 537, vid: 13627, price: 48,  shape: 'tee',
     models: [
+      { src: '/models/tank-flat.webp', label: 'Full garment', flat: true,
+        x0: 0.3075, y0: 0.2735, ax: 0.3840, ay: 0, bx: 0, by: 0.5120, vTop: 0.125, vH: 0.75 },
       { src: '/models/tank-m1.webp', label: 'On model',
         x0: 0.3778, y0: 0.4041, ax: 0.2500, ay: 0.0001, bx: 0.0008, by: 0.3585, vTop: 0.125, vH: 0.75 },
       { src: '/models/tank-m2.webp', label: 'On model 2',
@@ -664,8 +666,19 @@ function printSquare() {
 /* The gallery: two canvas composites for every product, plus any calibrated
    model photos that product has. */
 function viewsFor(p) {
-  var v = [{ kind: 'front', label: 'Full garment' }, { kind: 'zoom', label: 'Print close-up' }];
-  (p.models || []).forEach(function (m, i) { v.push({ kind: 'model', idx: i, label: m.label || 'On model' }); });
+  var ms = p.models || [];
+  var flatIdx = -1;
+  for (var i = 0; i < ms.length; i++) if (ms[i].flat) { flatIdx = i; break; }
+  var v = [];
+  /* Printful's template photo is a flat laydown for some products and a worn torso for
+     others, which made the first view inconsistent. A calibrated Flat mockup wins when
+     the product has one. */
+  if (flatIdx >= 0) v.push({ kind: 'model', idx: flatIdx, label: ms[flatIdx].label || 'Full garment' });
+  else v.push({ kind: 'front', label: 'Full garment' });
+  v.push({ kind: 'zoom', label: 'Print close-up', from: flatIdx });
+  ms.forEach(function (m, j) {
+    if (!m.flat) v.push({ kind: 'model', idx: j, label: m.label || 'On model' });
+  });
   return v;
 }
 
@@ -681,23 +694,52 @@ function loadModel(src) {
 /* Draws the square design onto a model photo using the measured print-area map.
    screen keeps light ink readable on a dark garment and still lets the fabric's
    folds lift through; multiply is right for light garments. */
-function renderModel(m) {
-  var C = canvas.width;
+function modelComposite(m, C) {
   var img = modelImgs[m.src];
-  if (!img) { loadModel(m.src); }
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, C, C);
-  if (!img || !img.complete || !img.naturalWidth) return;
-  ctx.drawImage(img, 0, 0, C, C);
+  var c = document.createElement('canvas');
+  c.width = C; c.height = C;
+  var p = c.getContext('2d');
+  p.fillStyle = '#ffffff';
+  p.fillRect(0, 0, C, C);
+  if (!img || !img.complete || !img.naturalWidth) return null;
+  p.drawImage(img, 0, 0, C, C);
   var D = designCanvas(512);
   var vTop = m.vTop == null ? 0 : m.vTop;
   var vH = m.vH == null ? 1 : m.vH;
-  ctx.save();
-  ctx.globalCompositeOperation = m.blend || 'screen';
-  ctx.transform(m.ax * C / 512, m.ay * C / 512, m.bx * vH * C / 512, m.by * vH * C / 512,
+  p.save();
+  p.globalCompositeOperation = m.blend || 'screen';
+  p.transform(m.ax * C / 512, m.ay * C / 512, m.bx * vH * C / 512, m.by * vH * C / 512,
     (m.x0 + m.bx * vTop) * C, (m.y0 + m.by * vTop) * C);
-  ctx.drawImage(D, 0, 0);
-  ctx.restore();
+  p.drawImage(D, 0, 0);
+  p.restore();
+  return c;
+}
+
+/* The print square's bounding box in photo coordinates, so the close-up can crop to it. */
+function modelPrintBox(m, C) {
+  var vTop = m.vTop == null ? 0 : m.vTop, vH = m.vH == null ? 1 : m.vH;
+  var xs = [], ys = [];
+  [[0, vTop], [1, vTop], [0, vTop + vH], [1, vTop + vH]].forEach(function (uv) {
+    xs.push((m.x0 + uv[0] * m.ax + uv[1] * m.bx) * C);
+    ys.push((m.y0 + uv[0] * m.ay + uv[1] * m.by) * C);
+  });
+  var x1 = Math.min.apply(null, xs), x2 = Math.max.apply(null, xs);
+  var y1 = Math.min.apply(null, ys), y2 = Math.max.apply(null, ys);
+  return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+}
+
+function renderModel(m, crop) {
+  var C = canvas.width;
+  if (!modelImgs[m.src]) loadModel(m.src);
+  var c = modelComposite(m, C);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, C, C);
+  if (!c) return;
+  if (!crop) { ctx.drawImage(c, 0, 0); return; }
+  var b = modelPrintBox(m, C);
+  var side = Math.max(b.w, b.h) * 1.2;
+  var cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  ctx.drawImage(c, cx - side / 2, cy - side / 2, side, side, 0, 0, C, C);
 }
 
 function render() {
@@ -713,7 +755,13 @@ function render() {
   var cur = vs[view];
 
   if (cur.kind === 'model') {
-    renderModel(productById(product).models[cur.idx]);
+    renderModel(productById(product).models[cur.idx], false);
+    ctx.restore();
+    return;
+  }
+
+  if (cur.kind === 'zoom' && cur.from >= 0) {
+    renderModel(productById(product).models[cur.from], true);
     ctx.restore();
     return;
   }
@@ -816,7 +864,10 @@ function updateZoomUI() {
 function step(d) {
   var vs = viewsFor(productById(product));
   view = (view + d + vs.length) % vs.length;
-  if (vs[view].kind === 'model') loadModel(productById(product).models[vs[view].idx].src);
+  var cur = vs[view];
+  var ms = productById(product).models || [];
+  if (cur.kind === 'model') loadModel(ms[cur.idx].src);
+  if (cur.kind === 'zoom' && cur.from >= 0) loadModel(ms[cur.from].src);
   updateZoomUI(); render();
 }
 
@@ -841,6 +892,8 @@ function buildControls() {
       var cached = tplCache[product];
       tpl = cached ? cached.t : null;
       tplImg = cached ? cached.img : null;
+      var ms0 = productById(product).models || [];
+      for (var mi = 0; mi < ms0.length; mi++) if (ms0[mi].flat) loadModel(ms0[mi].src);
       paintProductButtons(); updatePrice(); updateZoomUI(); render();
       if (!cached) loadTemplate(product);
     });
