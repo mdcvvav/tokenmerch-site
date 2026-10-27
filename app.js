@@ -70,7 +70,18 @@ var PRODUCTS = [
      only the centred graphic is offered. */
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
     sizes: ['11 oz', '15 oz'], styles: ['centered'],
-    print: { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' } },
+    print: { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' },
+    /* Printful DOES publish a template for the mug, but it is a flat unwrapped artwork
+       guide -- a rectangle with a "Center of mug" line and a thumbnail of a mug beside
+       it -- not a photograph with a transparent print area like the garment ghosts. So
+       there is nothing to composite onto, hence noTpl, and the preview is built from
+       Printful's own blank catalogue photo plus the cylinder map below. Measured off
+       the photo; method and numbers in claude/model-shots.md. */
+    models: [
+      { src: '/mug/mug-11oz.webp', flat: true, side: 'front', label: 'Full mug', zoom: 1.25,
+        cyl: { cx: 0.6136, a: 0.2955, yRim: 0.1485, bRim: 0.0212,
+               yBase: 0.8394, bBase: 0.0348, mTop: 0.0333, mBot: 0.0333 } }
+    ] },
   { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat',
     print: { w: 8, h: 10, dpi: 300, tech: 'Giclee', placement: 'default' } },
   { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat',
@@ -770,6 +781,14 @@ function drawChestBadge(p, W, tickerOnly, inW) {
   }
 }
 
+/* A wrap or an all-over panel is far wider than it is tall. A centred graphic sized off
+   the canvas WIDTH -- correct for a garment front, where the area is portrait -- runs
+   straight off such an area, so those size the art off the HEIGHT and centre the whole
+   block vertically instead of hanging it from the standard top drop. */
+function wideArea(p) {
+  return !!(p && p.canvas && p.canvas.height && p.canvas.height < p.canvas.width * 0.8);
+}
+
 function drawDesign(p, W, side, inW) {
   var IN = perInch(W, inW);
   var top = dropInArea(productById(product), PLACE.artTopDrop, 0) * IN;
@@ -816,17 +835,24 @@ function drawDesign(p, W, side, inW) {
     } else if (style === 'centered-small') {
       /* small graphic: the address is split over two lines so it fits the image
          and still prints large enough to read */
-      var s2 = 0.4167 * W, x2 = 0.2917 * W, y2 = top;
+      var H2 = p.canvas.height;
+      var s2 = wideArea(p) ? 0.45 * H2 : 0.4167 * W;
+      var x2 = (W - s2) / 2;
+      var y2 = wideArea(p) ? Math.max(0, (H2 - s2 * 1.5) / 2) : top;
       p.drawImage(logoImg, x2, y2, s2, s2);
       drawCaption(p, W / 2, s2, s2, y2 + s2, 2);
     } else {
       /* big centred graphic: the address stays inside the image's width */
-      var s3 = 0.55 * W, x3 = 0.225 * W, y3 = top;
+      var H3 = p.canvas.height;
+      var s3 = wideArea(p) ? 0.62 * H3 : 0.55 * W;
+      var x3 = (W - s3) / 2;
+      var y3 = wideArea(p) ? Math.max(0, (H3 - s3 * 1.34) / 2) : top;
       p.drawImage(logoImg, x3, y3, s3, s3);
       drawCaption(p, W / 2, s3, s3, y3 + s3);
     }
   } else {
-    var r = 0.1875 * W, cx = W / 2, cy = top + r;
+    var HE = p.canvas.height, wE = wideArea(p);
+    var r = wE ? 0.22 * HE : 0.1875 * W, cx = W / 2, cy = wE ? HE * 0.42 : top + r;
     p.fillStyle = '#14F195';
     p.beginPath();
     p.arc(cx, cy, r, 0, Math.PI * 2);
@@ -837,7 +863,7 @@ function drawDesign(p, W, side, inW) {
     p.textAlign = 'center';
     p.textBaseline = 'middle';
     p.fillText('$' + token.ticker, cx, cy);
-    drawCaption(p, cx, 0.375 * W, W * 0.8, cy + r);
+    drawCaption(p, cx, wE ? 2 * r : 0.375 * W, wE ? 2.4 * r : W * 0.8, cy + r);
   }
 }
 
@@ -1001,8 +1027,12 @@ function modelComposite(m, C, side) {
      garment whose square design box happened to match. */
   var pr = productById(product);
   var inches = (side === 'back' && pr.back) ? pr.back : tplInches(pr);
-  var DW = 512, DH = Math.max(1, Math.round(512 * inches.h / inches.w));
+  /* the cylinder warp resamples column by column and squeezes the design towards the
+     edges, so it needs more source pixels than the affine does */
+  var DW = m.cyl ? 1536 : 512;
+  var DH = Math.max(1, Math.round(DW * inches.h / inches.w));
   var D = designCanvas(DW, DH, side, placeInW(pr, inches));
+  if (m.cyl) { cylWrap(p, m.cyl, C, D); return c; }
   var vTop = m.vTop == null ? 0 : m.vTop;
   var vH = m.vH == null ? 1 : m.vH;
   p.save();
@@ -1014,8 +1044,58 @@ function modelComposite(m, C, side) {
   return c;
 }
 
+/* Wraps the design around a cylinder instead of mapping it with an affine.
+   A mug is not a flat panel: the print file is 9 in of CIRCUMFERENCE, so horizontal
+   position across the visible face goes through sin(theta) and the artwork compresses
+   towards both silhouette edges. The top and bottom of the band follow the rim and base
+   ellipses, which is why they bow -- a horizontal circle seen slightly from above
+   projects to an ellipse, lowest at the centre of the near side.
+
+   `cyl` is in fractions of the photo's width: cx/a are the body's centre and half-width,
+   yRim/yBase the two ellipse centres with bRim/bBase their semi-minor axes, mTop/mBot
+   the margins that inset the print band from rim and base.
+
+   Drawn with MULTIPLY, unlike the flat model shots: the mug is white and glossy, so the
+   photograph's own shading and highlights have to come through the ink or the print
+   looks like a sticker lying on top of the photo. */
+function cylWrap(p, cy, C, D) {
+  var cx = cy.cx * C, a = cy.a * C;
+  var yT0 = (cy.yRim + cy.mTop) * C, yB0 = (cy.yBase - cy.mBot) * C;
+  var bT = cy.bRim * C, bB = cy.bBase * C;
+  var w = document.createElement('canvas');
+  w.width = C; w.height = C;
+  var q = w.getContext('2d');
+  var DW = D.width, DH = D.height;
+  var x0 = Math.ceil(cx - a) + 1, x1 = Math.floor(cx + a) - 1;
+  for (var X = x0; X <= x1; X++) {
+    var th = Math.asin(Math.max(-1, Math.min(1, (X - cx) / a)));
+    var u = 0.5 + th / (2 * Math.PI);
+    var u2 = 0.5 + Math.asin(Math.max(-1, Math.min(1, (X + 1 - cx) / a))) / (2 * Math.PI);
+    /* how much of the design this one output column covers: tiny at the centre,
+       wide at the edges, which is the compression */
+    var sw = Math.max(0.5, (u2 - u) * DW);
+    var c = Math.cos(th);
+    var yT = yT0 + bT * c, yB = yB0 + bB * c;
+    /* 1.02 wide, not 1: a hairline overlap, or the columns show seams */
+    q.drawImage(D, u * DW, 0, sw, DH, X, yT, 1.02, yB - yT);
+  }
+  p.save();
+  p.globalCompositeOperation = 'multiply';
+  p.drawImage(w, 0, 0);
+  p.restore();
+}
+
 /* The print square's bounding box in photo coordinates, so the close-up can crop to it. */
 function modelPrintBox(m, C) {
+  if (m.cyl) {
+    /* only the middle of the wrap is ever facing us, so the close-up frames a square
+       the height of the band, centred on the front of the mug */
+    var cy = m.cyl;
+    var yT = (cy.yRim + cy.mTop) * C;
+    var yB = (cy.yBase - cy.mBot + cy.bBase) * C;
+    var hh = yB - yT;
+    return { x: cy.cx * C - hh / 2, y: yT, w: hh, h: hh };
+  }
   var vTop = m.vTop == null ? 0 : m.vTop, vH = m.vH == null ? 1 : m.vH;
   var xs = [], ys = [];
   [[0, vTop], [1, vTop], [0, vTop + vH], [1, vTop + vH]].forEach(function (uv) {
@@ -1041,7 +1121,9 @@ function renderModel(m, crop, side) {
   var b = modelPrintBox(m, C);
   /* named `box`, not `side`: that is the parameter above, and reusing it here worked
      only by accident of ordering */
-  var box = Math.max(b.w, b.h) * 1.7;   /* leave fabric around the print, like the template close-up */
+  /* leave fabric around the print, like the template close-up. A wrap already frames
+     tightly, so those set their own smaller factor. */
+  var box = Math.max(b.w, b.h) * (m.zoom || 1.7);
   var cx = b.x + b.w / 2, cy = b.y + b.h / 2;
   ctx.drawImage(c, cx - box / 2, cy - box / 2, box, box, 0, 0, C, C);
 }
