@@ -19,17 +19,7 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
 var PRODUCTS = [
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee',
     print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
-    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true,
-    /* Printful model shots with the print area measured off a calibration render.
-       x0/y0/ax/ay/bx/by are fractions of the photo's width: the unit square of the
-       print area maps to (x0 + u*ax + v*bx, y0 + u*ay + v*by). vTop/vH place the
-       square design inside a 1800 x 2400 print area. */
-    models: [
-      { src: '/models/tee-male.webp',   label: 'On model', shotIn: 'Black', blend: 'screen',
-        x0: 0.3865, y0: 0.3355, ax: 0.2342, ay: -0.0001, bx: 0.0009, by: 0.3447, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tee-female.webp', label: 'On model 2', shotIn: 'Black', blend: 'screen',
-        x0: 0.3959, y0: 0.1981, ax: 0.1435, ay: -0.0014, bx: 0.0281, by: 0.1983, vTop: 0.125, vH: 0.75 }
-    ] },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
   { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee',
     print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
     back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
@@ -48,13 +38,7 @@ var PRODUCTS = [
      of leading with a worn torso. 31 colours, XS-3XL, and the back print is free. */
   { id: 'tank',      label: 'TANK TOP',        pid: 907, vid: 23282, price: 48,  shape: 'tee',
     print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
-    back: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true,
-    models: [
-      { src: '/models/tank-m1.webp', label: 'On model', shotIn: 'Black', blend: 'screen',
-        x0: 0.3663, y0: 0.3737, ax: 0.2637, ay: -0.0048, bx: 0.0175, by: 0.3294, vTop: 0.125, vH: 0.75 },
-      { src: '/models/tank-m2.webp', label: 'On model 2', shotIn: 'Black', blend: 'screen',
-        x0: 0.4337, y0: 0.3484, ax: 0.2279, ay: 0.0047, bx: -0.0140, by: 0.3093, vTop: 0.125, vH: 0.75 }
-    ] },
+    back: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true },
   { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED',
     print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' } },
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
@@ -89,6 +73,8 @@ var CSS = [
 '#tmWeight::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
 '#tmWeight:disabled{cursor:not-allowed}',
 '#tmWeightRow{transition:opacity .15s ease}',
+'@keyframes tmspin{to{transform:rotate(360deg)}}',
+'.tm-spinner{width:34px;height:34px;border-radius:9999px;border:3px solid rgba(255,255,255,.12);border-top-color:#9945FF;animation:tmspin .8s linear infinite}',
 '@media (max-width:639px){#tmNet{display:none !important}}',
 '.tm-wordmark{font-family:"Orbitron","Inter",sans-serif;font-weight:700;letter-spacing:.03em;text-shadow:0 0 18px rgba(153,69,255,.28)}',
 '.tm-wordmark:hover{color:#fff}',
@@ -256,6 +242,13 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '</div>',
 '<div class="relative w-full aspect-square max-w-[620px] mx-auto flex items-center justify-center bg-brand-bg/60 rounded-xl border border-brand-border/60 p-2 shadow-2xl">',
 '<canvas id="mockupCanvas" width="1200" height="1200" class="w-full h-full object-contain rounded-lg"></canvas>',
+/* Covers the canvas while Printful's template image is still in flight. Without it the
+   renderer fell through to the drawn placeholder garment for a beat on every product
+   switch, which read as a glitch. Layout is inline: Horizon overrides utility classes. */
+'<div id="tmLoading" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(13,15,23,.72);border-radius:.75rem;z-index:5">',
+'<div class="tm-spinner"></div>',
+'<span class="font-mono uppercase" style="font-size:10px;letter-spacing:.12em;color:#64748b">Loading preview</span>',
+'</div>',
 '<div class="absolute top-3 right-3 bg-brand-card/90 border border-brand-border rounded-lg backdrop-blur" style="display:flex;align-items:center;gap:2px;padding:3px">',
 '<button id="tmPrev" title="Previous view" class="w-7 h-7 rounded-md text-slate-300 hover:text-white hover:bg-brand-cardHover transition-all" style="display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-chevron-left text-[11px]"></i></button>',
 '<span id="tmViewCount" class="text-[10px] font-mono text-slate-400" style="min-width:26px;text-align:center">1/2</span>',
@@ -310,6 +303,8 @@ var CHART_TTL = 30000;   /* GeckoTerminal edge-caches on-chain data for 30 s */
 var canvas, ctx, logoImg = null, logoReady = false;
 var modelImgs = {};
 var tplCache = {};        /* 'product|placement' -> { t, img } */
+var tplPending = {};      /* same key -> true while a fetch is in flight */
+var tplFailed = {};       /* same key -> true once Printful has no usable template */
 
 /* ---------------- token lookup ---------------- */
 
@@ -769,7 +764,18 @@ function printSquare(tpl) {
 }
 
 /* The gallery: two canvas composites for every product, plus any calibrated
-   model photos that product has. */
+   model photos that product has.
+
+   NOTE: no product carries a `models` array any more. Photographs only existed for the
+   tee and the tank, and a gallery where two slots out of ten had people in them and the
+   rest did not read as inconsistent -- so every product is composites only, and every
+   product reads 1/2 (1/3 on the two-sided styles).
+
+   The model machinery below is left intact and inert: loadModel / modelComposite /
+   renderModel, the 'model' view kind, and the flat-mockup branch here. Re-enabling it is
+   a matter of putting a `models` array back on a product. The calibration numbers for the
+   four photos we had are in claude/model-shots.md, and the pipeline that produces more is
+   documented there too. */
 function viewsFor(p) {
   var ms = p.models || [];
   var flatIdx = -1;
@@ -881,6 +887,11 @@ function renderModel(m, crop) {
   ctx.drawImage(c, cx - side / 2, cy - side / 2, side, side, 0, 0, C, C);
 }
 
+function setLoading(on) {
+  var el = document.getElementById('tmLoading');
+  if (el) el.style.display = on ? 'flex' : 'none';
+}
+
 function render() {
   if (!canvas) return;
   var C = canvas.width;
@@ -896,6 +907,20 @@ function render() {
   if (!hit && !productById(product).noTpl) loadTemplate(product, side);
   var tpl = hit ? hit.t : null, tplImg = hit ? hit.img : null;
   var hasTpl = !!(tpl && tplImg);
+
+  /* The template arrives over the network, so for the first frames after a product switch
+     there is nothing real to draw. Show the spinner rather than the drawn placeholder
+     garment, which looked like the preview had broken. Products that genuinely have no
+     template (noTpl) or whose template failed to load still use the drawn one. */
+  var key = product + '|' + side;
+  if (!hasTpl && !productById(product).noTpl && !tplFailed[key]) {
+    setLoading(true);
+    ctx.fillStyle = '#0d0f17';
+    ctx.fillRect(0, 0, C, C);
+    ctx.restore();
+    return;
+  }
+  setLoading(false);
 
   if (cur.kind === 'model') {
     renderModel(productById(product).models[cur.idx], false);
@@ -1688,18 +1713,27 @@ function loadTemplate(id, side) {
      all-over windbreaker come back as flat pattern guides, so those use the drawn one. */
   if (p.noTpl) return;
   if (tplCache[key]) { if (product === p.id) render(); return; }
+  /* render() calls this whenever the template is missing, and the spinner keeps rendering,
+     so without this guard one product switch fires a burst of identical requests. */
+  if (tplPending[key]) return;
+  tplPending[key] = true;
+  function give_up(why) {
+    tplPending[key] = false;
+    tplFailed[key] = true;           /* stops the spinner; render() falls back to the drawn garment */
+    console.warn('No Printful template for ' + key + ', using the drawn fallback:', why);
+    if (product === p.id) render();
+  }
   getJson(API + '/api/template?product=' + p.pid + '&variant=' + p.vid + '&placement=' + pl).then(function (t) {
     if (!t || !t.image_url) throw new Error((t && t.error) || 'no template');
     var img = new Image();
     img.onload = function () {
+      tplPending[key] = false;
       tplCache[key] = { t: t, img: img };
       if (product === p.id) render();
     };
-    img.onerror = function () { console.warn('Template image failed for ' + key); };
+    img.onerror = function () { give_up('image failed to load'); };
     img.src = t.image_url;
-  }).catch(function (e) {
-    console.warn('No Printful template for ' + key + ', using the drawn fallback:', e.message);
-  });
+  }).catch(function (e) { give_up(e.message); });
 }
 
 /* ---------------- boot ---------------- */
