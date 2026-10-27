@@ -67,7 +67,7 @@ var PRODUCTS = [
      graphic sits around the waist rather than the chest. Badge and back print are the
      two that read correctly on this shape. */
   { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED',
-    shTop: 0,
+    shTop: 2.26, placeScale: 1.7,
     styles: ['badge-left', 'badge-right', 'back-badge', 'back-ticker'],
     print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' },
     back: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'back' }, backPrint: true,
@@ -704,6 +704,13 @@ var PLACE = {
 /* pixels per inch inside a design canvas that is `inW` inches wide */
 function perInch(W, inW) { return W / (inW || 12); }
 
+/* Cut-and-sew panels are printed oversized: the windbreaker's 34x38 file covers only
+   about 20x22 in of VISIBLE garment once seam allowance and the wrap around the sides
+   are taken off. Placement is specified in real inches, so layout has to use the
+   visible scale or a 2.6 in badge comes out at roughly 1.5 in. `placeScale` is file
+   inches per visible inch; everything else is 1. */
+function placeInW(pr, inches) { return inches.w / (pr.placeScale || 1); }
+
 /* Keep a mark `half` inches wide (half-width) inside the print area when it is
    pushed `off` inches off centre. The curved contract address wraps well outside
    the badge, and at 3.75 in off centre it ran past the edge of a 12 in area. */
@@ -1000,7 +1007,7 @@ function modelComposite(m, C, side) {
   var pr = productById(product);
   var inches = (side === 'back' && pr.back) ? pr.back : tplInches(pr);
   var DW = 512, DH = Math.max(1, Math.round(512 * inches.h / inches.w));
-  var D = designCanvas(DW, DH, side, inches.w);
+  var D = designCanvas(DW, DH, side, placeInW(pr, inches));
   var vTop = m.vTop == null ? 0 : m.vTop;
   var vH = m.vH == null ? 1 : m.vH;
   p.save();
@@ -1105,7 +1112,7 @@ function render() {
       var cw = q.s + 2 * m;
       var k = C / cw;
       var ratio = tplImg.naturalWidth / tpl.template_width;
-      var D = designCanvas(Math.round(rct.w * k), Math.round(rct.h * k), side, inches.w);
+      var D = designCanvas(Math.round(rct.w * k), Math.round(rct.h * k), side, placeInW(productById(product), inches));
       ctx.drawImage(D, (rct.x - cx0) * k, (rct.y - cy0) * k, rct.w * k, rct.h * k);
       ctx.globalAlpha = 1;
       ctx.drawImage(tplImg, cx0 * ratio, cy0 * ratio, cw * ratio, cw * ratio, 0, 0, C, C);
@@ -1124,7 +1131,7 @@ function render() {
     var q2 = printRect(tpl);
     var inches2 = tplInches(productById(product));
     var pw = Math.round(q2.w * kk), ph = Math.round(q2.h * kk);
-    ctx.drawImage(designCanvas(pw, ph, side, inches2.w), q2.x * kk, q2.y * kk, pw, ph);
+    ctx.drawImage(designCanvas(pw, ph, side, placeInW(productById(product), inches2)), q2.x * kk, q2.y * kk, pw, ph);
     ctx.drawImage(tplImg, 0, 0, C, C);
     ctx.restore();
     return;
