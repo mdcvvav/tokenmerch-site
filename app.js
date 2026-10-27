@@ -77,8 +77,21 @@ var PRODUCTS = [
        there is nothing to composite onto, hence noTpl, and the preview is built from
        Printful's own blank catalogue photo plus the cylinder map below. Measured off
        the photo; method and numbers in claude/model-shots.md. */
+    /* Printful's print area is per variant: both capacities wrap the same 9 in, and the
+       15 oz band is taller. So the 15 oz is the same diameter as the 11 oz and simply a
+       taller mug -- which is why one photograph serves both (see stretchBySize). The
+       20 oz is a different shape (10.24 x 4.02) but the store does not sell it. */
+    printBySize: {
+      '11 oz': { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' },
+      '15 oz': { w: 9, h: 3.8, dpi: 300, tech: 'Sublimation', placement: 'default' }
+    },
     models: [
       { src: '/mug/mug-11oz.webp', flat: true, side: 'front', label: 'Full mug', zoom: 1.25,
+        /* Printful's own 15 oz photo is 275x500 and shot turned at an angle, so it would
+           be soft and inconsistent beside the 11 oz. The 11 oz shot is stretched about
+           its base instead: same diameter, band 3.8/3.5 taller. */
+        stretchBySize: { '15 oz': 1.0857 },
+        wide: 0.74,
         cyl: { cx: 0.6136, a: 0.2955, yRim: 0.1485, bRim: 0.0212,
                yBase: 0.8394, bBase: 0.0348, mTop: 0.0333, mBot: 0.0333 } }
     ] },
@@ -878,7 +891,30 @@ function designCanvas(W, H, side, inW) {
    DTG this is always the product's own print area -- the mockup template describes
    exactly what we print on. `tplIn` is kept as an override in case a product ever
    prints on an area the template does not show again. */
-function tplInches(pr) { return (pr.tplIn || pr.print); }
+/* A product's print area can depend on the size picked -- the mug's band is 3.5 in on
+   the 11 oz and 3.8 on the 15 -- so nothing should read `.print` directly. */
+function printFor(pr) {
+  if (pr && pr.printBySize && pr.printBySize[size]) return pr.printBySize[size];
+  return pr && pr.print;
+}
+function tplInches(pr) { return (pr.tplIn || printFor(pr)); }
+
+/* How much taller this size's mug is than the photographed one. */
+function sizeStretch(m) {
+  return (m && m.stretchBySize && m.stretchBySize[size]) || 1;
+}
+
+/* The same cylinder, scaled vertically about the point where the mug meets the surface,
+   so a taller capacity grows upward out of the same base rather than floating. */
+function stretchCyl(cy, st) {
+  if (st === 1) return cy;
+  var base = cy.yBase + cy.bBase;
+  var f = function (y) { return base + (y - base) * st; };
+  return { cx: cy.cx, a: cy.a,
+           yRim: f(cy.yRim), bRim: cy.bRim * st,
+           yBase: f(cy.yBase), bBase: cy.bBase * st,
+           mTop: cy.mTop * st, mBot: cy.mBot * st };
+}
 
 /* simple drawn t-shirt / mug, in an 800-unit space */
 function drawCartoonGarment(p, k) {
@@ -967,6 +1003,10 @@ function viewsFor(p) {
      the product has one. */
   if (flatIdx >= 0) v.push({ kind: 'model', idx: flatIdx, side: 'front', label: ms[flatIdx].label || 'Full garment' });
   else v.push({ kind: 'front', label: 'Full garment' });
+  /* a product may ask for a second, pulled-back framing of the same composite */
+  if (flatIdx >= 0 && ms[flatIdx].wide) {
+    v.push({ kind: 'model', idx: flatIdx, side: 'front', fit: ms[flatIdx].wide, label: 'Wide shot' });
+  }
   v.push({ kind: 'zoom', label: 'Print close-up', from: flatIdx, side: 'front' });
   ms.forEach(function (m, j) {
     if (!m.flat) v.push({ kind: 'model', idx: j, label: m.label || 'On model' });
@@ -1020,7 +1060,17 @@ function modelComposite(m, C, side) {
   p.fillStyle = '#ffffff';
   p.fillRect(0, 0, C, C);
   if (!img || !img.complete || !img.naturalWidth) return null;
-  p.drawImage(img, 0, 0, C, C);
+  var st = sizeStretch(m);
+  if (st !== 1 && m.cyl) {
+    /* stretch about the base line, so the mug grows upward off the same surface */
+    var baseY = (m.cyl.yBase + m.cyl.bBase) * C;
+    p.save();
+    p.translate(0, baseY); p.scale(1, st); p.translate(0, -baseY);
+    p.drawImage(img, 0, 0, C, C);
+    p.restore();
+  } else {
+    p.drawImage(img, 0, 0, C, C);
+  }
   /* The affine maps the print area's unit square onto the photo, so the design canvas
      has to carry that area's own aspect or the artwork comes out stretched. It used to
      be a fixed 512 square, which was fine only because every model photo was a 12x16
@@ -1032,7 +1082,7 @@ function modelComposite(m, C, side) {
   var DW = m.cyl ? 1536 : 512;
   var DH = Math.max(1, Math.round(DW * inches.h / inches.w));
   var D = designCanvas(DW, DH, side, placeInW(pr, inches));
-  if (m.cyl) { cylWrap(p, m.cyl, C, D); return c; }
+  if (m.cyl) { cylWrap(p, stretchCyl(m.cyl, st), C, D); return c; }
   var vTop = m.vTop == null ? 0 : m.vTop;
   var vH = m.vH == null ? 1 : m.vH;
   p.save();
@@ -1089,8 +1139,9 @@ function cylWrap(p, cy, C, D) {
 function modelPrintBox(m, C) {
   if (m.cyl) {
     /* only the middle of the wrap is ever facing us, so the close-up frames a square
-       the height of the band, centred on the front of the mug */
-    var cy = m.cyl;
+       the height of the band, centred on the front of the mug. The band moves with the
+       size, so this has to read the stretched cylinder, not the photographed one. */
+    var cy = stretchCyl(m.cyl, sizeStretch(m));
     var yT = (cy.yRim + cy.mTop) * C;
     var yB = (cy.yBase - cy.mBot + cy.bBase) * C;
     var hh = yB - yT;
@@ -1107,7 +1158,7 @@ function modelPrintBox(m, C) {
   return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
 }
 
-function renderModel(m, crop, side) {
+function renderModel(m, crop, side, fit) {
   var C = canvas.width;
   if (!modelImgs[modelSrc(m)]) loadModel(modelSrc(m));
   var c = modelComposite(m, C, side || 'front');
@@ -1117,7 +1168,17 @@ function renderModel(m, crop, side) {
   setLoading(false);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, C, C);
-  if (!crop) { ctx.drawImage(c, 0, 0); return; }
+  if (!crop) {
+    /* `fit` pulls the camera back: the composite is drawn smaller inside the frame.
+       1 (or absent) is the normal full view. */
+    if (fit && fit !== 1) {
+      var fw = C * fit, fo = (C - fw) / 2;
+      ctx.drawImage(c, 0, 0, C, C, fo, fo, fw, fw);
+    } else {
+      ctx.drawImage(c, 0, 0);
+    }
+    return;
+  }
   var b = modelPrintBox(m, C);
   /* named `box`, not `side`: that is the parameter above, and reusing it here worked
      only by accident of ordering */
@@ -1164,7 +1225,7 @@ function render() {
   setLoading(false);
 
   if (cur.kind === 'model') {
-    renderModel(productById(product).models[cur.idx], false, cur.side);
+    renderModel(productById(product).models[cur.idx], false, cur.side, cur.fit);
     ctx.restore();
     return;
   }
@@ -1385,7 +1446,7 @@ function paintSizeGuide() {
 /* The print specs under the preview, straight from the product's chosen placement. */
 function updateSpecs() {
   var p0 = productById(product);
-  var pr = (twoSided() && p0.backPrint && p0.back) ? p0.back : p0.print;
+  var pr = (twoSided() && p0.backPrint && p0.back) ? p0.back : printFor(p0);
   if (!pr) return;
   var t = document.getElementById('tmTechLabel');
   var sz = document.getElementById('tmPrintSizeLabel');
@@ -1479,7 +1540,9 @@ function buildControls() {
     var b = e.target.closest('.tm-size');
     if (!b) return;
     size = b.getAttribute('data-size');
-    paintSizes(); updateVariant();
+    /* the mug's print area and its shape both depend on the size, so this is a real
+       re-render now, not just a variant id swap */
+    paintSizes(); updateVariant(); updateSpecs(); render();
   });
   cw.addEventListener('click', function (e) {
     var b = e.target.closest('.tm-color');
