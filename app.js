@@ -45,7 +45,7 @@ var PRODUCTS = [
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   /* the hoodies' DTG front is smaller than the DTF one they used to use -- 11x11 and
      12x12 against 15x12 -- but it is the area the mockup template actually shows */
-  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee', shTop: 3.20,
+  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15577, price: 92,  shape: 'tee', shTop: 3.20,
     print: { w: 11, h: 11, dpi: 150, tech: 'DTG', placement: 'front' },
     back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
@@ -70,7 +70,20 @@ var PRODUCTS = [
     shTop: 0,
     styles: ['badge-left', 'badge-right', 'back-badge', 'back-ticker'],
     print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' },
-    back: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'back' }, backPrint: true, },
+    back: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'back' }, backPrint: true,
+    /* Printful's template for an all-over product is a sewing pattern guide, not a
+       product photo, so there is nothing to composite onto -- hence noTpl. Its Flat
+       mockups are clean laydowns though, so the preview uses those with a measured
+       affine instead, one per side, rendered in both colours the garment comes in.
+       Calibration method and residuals: claude/model-shots.md. */
+    models: [
+      { src: '/models/wind-front-white.webp', flat: true, side: 'front', label: 'Full garment',
+        byColor: '/models/wind-front-', colorSlugs: ['white', 'black'],
+        x0: 0.2697, y0: 0.2716, ax: 0.4528, ay: -0.0008, bx: -0.0031, by: 0.7038 },
+      { src: '/models/wind-back-white.webp', flat: true, side: 'back', label: 'Back print',
+        byColor: '/models/wind-back-', colorSlugs: ['white', 'black'],
+        x0: 0.2567, y0: 0.2514, ax: 0.5047, ay: 0.0005, bx: 0.0002, by: 0.7139 }
+    ] },
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
     print: { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' } },
   { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat',
@@ -896,23 +909,37 @@ function printRect(tpl) {
    documented there too. */
 function viewsFor(p) {
   var ms = p.models || [];
-  var flatIdx = -1;
-  for (var i = 0; i < ms.length; i++) if (ms[i].flat) { flatIdx = i; break; }
+  /* a flat photo is tagged with the side it shows; untagged means the front */
+  function flatFor(side) {
+    for (var i = 0; i < ms.length; i++) {
+      if (ms[i].flat && (ms[i].side || 'front') === side) return i;
+    }
+    return -1;
+  }
+  var flatIdx = flatFor('front');
+  var flatBack = flatFor('back');
   var v = [];
   /* two-sided style: the artwork is on the back, a small badge on the chest */
   if (twoSided() && p.backPrint) {
-    v.push({ kind: 'front', side: 'back', label: 'Back print' });
-    v.push({ kind: 'front', side: 'front', label: 'Chest badge' });
-    v.push({ kind: 'zoom', side: 'back', from: -1, label: 'Print close-up' });
+    if (flatIdx >= 0 && flatBack >= 0) {
+      /* no template for this product, so both sides come off calibrated photos */
+      v.push({ kind: 'model', idx: flatBack, side: 'back', label: 'Back print' });
+      v.push({ kind: 'model', idx: flatIdx, side: 'front', label: 'Chest badge' });
+      v.push({ kind: 'zoom', side: 'back', from: flatBack, label: 'Print close-up' });
+    } else {
+      v.push({ kind: 'front', side: 'back', label: 'Back print' });
+      v.push({ kind: 'front', side: 'front', label: 'Chest badge' });
+      v.push({ kind: 'zoom', side: 'back', from: -1, label: 'Print close-up' });
+    }
     ms.forEach(function (m, j) { if (!m.flat) v.push({ kind: 'model', idx: j, label: m.label || 'On model' }); });
     return v;
   }
   /* Printful's template photo is a flat laydown for some products and a worn torso for
      others, which made the first view inconsistent. A calibrated Flat mockup wins when
      the product has one. */
-  if (flatIdx >= 0) v.push({ kind: 'model', idx: flatIdx, label: ms[flatIdx].label || 'Full garment' });
+  if (flatIdx >= 0) v.push({ kind: 'model', idx: flatIdx, side: 'front', label: ms[flatIdx].label || 'Full garment' });
   else v.push({ kind: 'front', label: 'Full garment' });
-  v.push({ kind: 'zoom', label: 'Print close-up', from: flatIdx });
+  v.push({ kind: 'zoom', label: 'Print close-up', from: flatIdx, side: 'front' });
   ms.forEach(function (m, j) {
     if (!m.flat) v.push({ kind: 'model', idx: j, label: m.label || 'On model' });
   });
@@ -957,7 +984,7 @@ function loadModel(src) {
    that stays accurate across a whole colour range: screen washes the design out on a
    light garment, multiply kills it on a dark one. Worn shots on dark fabric set
    blend: 'screen' so the folds lift through the print. */
-function modelComposite(m, C) {
+function modelComposite(m, C, side) {
   var img = modelImgs[modelSrc(m)];
   var c = document.createElement('canvas');
   c.width = C; c.height = C;
@@ -966,12 +993,19 @@ function modelComposite(m, C) {
   p.fillRect(0, 0, C, C);
   if (!img || !img.complete || !img.naturalWidth) return null;
   p.drawImage(img, 0, 0, C, C);
-  var D = designCanvas(512);
+  /* The affine maps the print area's unit square onto the photo, so the design canvas
+     has to carry that area's own aspect or the artwork comes out stretched. It used to
+     be a fixed 512 square, which was fine only because every model photo was a 12x16
+     garment whose square design box happened to match. */
+  var pr = productById(product);
+  var inches = (side === 'back' && pr.back) ? pr.back : tplInches(pr);
+  var DW = 512, DH = Math.max(1, Math.round(512 * inches.h / inches.w));
+  var D = designCanvas(DW, DH, side, inches.w);
   var vTop = m.vTop == null ? 0 : m.vTop;
   var vH = m.vH == null ? 1 : m.vH;
   p.save();
   p.globalCompositeOperation = m.blend || 'source-over';
-  p.transform(m.ax * C / 512, m.ay * C / 512, m.bx * vH * C / 512, m.by * vH * C / 512,
+  p.transform(m.ax * C / DW, m.ay * C / DW, m.bx * vH * C / DH, m.by * vH * C / DH,
     (m.x0 + m.bx * vTop) * C, (m.y0 + m.by * vTop) * C);
   p.drawImage(D, 0, 0);
   p.restore();
@@ -991,18 +1025,23 @@ function modelPrintBox(m, C) {
   return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
 }
 
-function renderModel(m, crop) {
+function renderModel(m, crop, side) {
   var C = canvas.width;
   if (!modelImgs[modelSrc(m)]) loadModel(modelSrc(m));
-  var c = modelComposite(m, C);
+  var c = modelComposite(m, C, side || 'front');
+  /* the photo is fetched like a template is, so hold the spinner rather than flashing
+     a blank white square while it arrives */
+  if (!c) { setLoading(true); ctx.fillStyle = '#0d0f17'; ctx.fillRect(0, 0, C, C); return; }
+  setLoading(false);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, C, C);
-  if (!c) return;
   if (!crop) { ctx.drawImage(c, 0, 0); return; }
   var b = modelPrintBox(m, C);
-  var side = Math.max(b.w, b.h) * 1.7;   /* leave fabric around the print, like the template close-up */
+  /* named `box`, not `side`: that is the parameter above, and reusing it here worked
+     only by accident of ordering */
+  var box = Math.max(b.w, b.h) * 1.7;   /* leave fabric around the print, like the template close-up */
   var cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-  ctx.drawImage(c, cx - side / 2, cy - side / 2, side, side, 0, 0, C, C);
+  ctx.drawImage(c, cx - box / 2, cy - box / 2, box, box, 0, 0, C, C);
 }
 
 function setLoading(on) {
@@ -1041,13 +1080,13 @@ function render() {
   setLoading(false);
 
   if (cur.kind === 'model') {
-    renderModel(productById(product).models[cur.idx], false);
+    renderModel(productById(product).models[cur.idx], false, cur.side);
     ctx.restore();
     return;
   }
 
   if (cur.kind === 'zoom' && cur.from >= 0) {
-    renderModel(productById(product).models[cur.from], true);
+    renderModel(productById(product).models[cur.from], true, cur.side);
     ctx.restore();
     return;
   }
