@@ -51,39 +51,19 @@ var PRODUCTS = [
   { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
     print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' },
     back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
+  /* Cotton Heritage M2480 -- the crewneck sibling of the M2580 premium hoodie just
+     above, so the fabric and the fit are known quantities. Ghost laydown template on
+     both sides, 19 colours, S-3XL, and the same 12x16 DTG front area as the tees.
+     Replaced the all-over windbreaker, whose printed panels never read cleanly. No
+     back print: it costs +$7.95 and, like the tank, it only looks right on a hood. */
+  { id: 'crew',      label: 'SWEATSHIRT',      pid: 411, vid: 11255, price: 70,  shape: 'tee', shTop: 3.34,
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   /* Comfort Colors 9360 heavyweight garment-dyed tank -- same line as the 1717 tee.
      Chosen over the Cotton Heritage MC1790 because its mockup template is a ghost
      laydown on BOTH sides, so the tank composites match every other garment instead
      of leading with a worn torso. 31 colours, XS-3XL, and the back print is free. */
   { id: 'tank',      label: 'TANK TOP',        pid: 907, vid: 23282, price: 48,  shape: 'tee', shTop: 6.34,
     print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
-  /* All-over cut-and-sew, so it is not a garment with a print area -- it is eight
-     separately printed panels (front, back, both sleeves, hood, hood lining, facing,
-     label) sewn together, and every one of them is included in the price. Back print
-     therefore costs nothing here, unlike the hoodies at +$7.95.
-
-     Only two colours exist (Black, White) and the panel art covers them anyway. The
-     centred styles are disallowed: a 34x38 panel runs shoulder to hem, so a centred
-     graphic sits around the waist rather than the chest. Badge and back print are the
-     two that read correctly on this shape. */
-  { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED',
-    shTop: 2.26, placeScale: 1.7,
-    styles: ['badge-left', 'badge-right', 'back-badge', 'back-ticker'],
-    print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' },
-    back: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'back' }, backPrint: true,
-    /* Printful's template for an all-over product is a sewing pattern guide, not a
-       product photo, so there is nothing to composite onto -- hence noTpl. Its Flat
-       mockups are clean laydowns though, so the preview uses those with a measured
-       affine instead, one per side, rendered in both colours the garment comes in.
-       Calibration method and residuals: claude/model-shots.md. */
-    models: [
-      { src: '/models/wind-front-white.webp', flat: true, side: 'front', label: 'Full garment',
-        byColor: '/models/wind-front-', colorSlugs: ['white', 'black'],
-        x0: 0.2697, y0: 0.2716, ax: 0.4528, ay: -0.0008, bx: -0.0031, by: 0.7038 },
-      { src: '/models/wind-back-white.webp', flat: true, side: 'back', label: 'Back print',
-        byColor: '/models/wind-back-', colorSlugs: ['white', 'black'],
-        x0: 0.2567, y0: 0.2514, ax: 0.5047, ay: 0.0005, bx: 0.0002, by: 0.7139 }
-    ] },
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
     print: { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' } },
   { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat',
@@ -652,8 +632,8 @@ function twoSided() {
 /* Only products with a back placement can offer the two-sided styles. */
 /* Which print styles a product offers. Two gates: a product with no back placement
    cannot do the two-sided styles, and a product may narrow the list further with its
-   own `styles` array -- the windbreaker does, because a centred graphic on a panel
-   that runs shoulder to hem lands at the waist. */
+   own `styles` array, which an unusual shape may need -- an all-over panel that runs
+   shoulder to hem, say, where a centred graphic would land at the waist. */
 function styleAllowed(p, v) {
   if ((v === 'back-badge' || v === 'back-ticker') && !p.backPrint) return false;
   if (p.styles && p.styles.indexOf(v) < 0) return false;
@@ -704,11 +684,11 @@ var PLACE = {
 /* pixels per inch inside a design canvas that is `inW` inches wide */
 function perInch(W, inW) { return W / (inW || 12); }
 
-/* Cut-and-sew panels are printed oversized: the windbreaker's 34x38 file covers only
-   about 20x22 in of VISIBLE garment once seam allowance and the wrap around the sides
-   are taken off. Placement is specified in real inches, so layout has to use the
-   visible scale or a 2.6 in badge comes out at roughly 1.5 in. `placeScale` is file
-   inches per visible inch; everything else is 1. */
+/* Cut-and-sew panels are printed oversized: a 34x38 panel file covers only about
+   20x22 in of VISIBLE garment once seam allowance and the wrap around the sides are
+   taken off. Placement is specified in real inches, so layout has to use the visible
+   scale or a 2.6 in badge comes out at roughly 1.5 in. `placeScale` is file inches
+   per visible inch; every product in the store today is 1. */
 function placeInW(pr, inches) { return inches.w / (pr.placeScale || 1); }
 
 /* Keep a mark `half` inches wide (half-width) inside the print area when it is
@@ -725,8 +705,8 @@ function clampOffset(off, half, inW) {
 function dropInArea(pr, drop, half) {
   /* the mug, poster and stickers have no shoulder line to measure from, so their art
      just sits a little inside the top of its print area. Note the test is for an
-     ABSENT shTop, not a falsy one: the windbreaker's panel starts at the shoulder
-     seam, so its shTop is a meaningful 0. */
+     ABSENT shTop, not a falsy one: an all-over panel starts at the shoulder seam, so
+     a shTop of 0 is meaningful. */
   if (!pr || pr.shTop == null) return Math.max(PLACE.minMargin, 0.9 - (half || 0));
   return Math.max(PLACE.minMargin, drop - pr.shTop - (half || 0));
 }
@@ -1876,8 +1856,8 @@ function loadTemplate(id, side) {
   var p = productById(id || product);
   var pl = side === 'back' ? 'back' : 'front';
   var key = p.id + '|' + pl;
-  /* Printful only returns a real product photo for the DTG garments; the mug and the
-     all-over windbreaker come back as flat pattern guides, so those use the drawn one. */
+  /* Printful only returns a real product photo for the DTG garments; the mug and any
+     all-over product come back as flat pattern guides, so those use the drawn one. */
   if (p.noTpl) return;
   if (tplCache[key]) { if (product === p.id) render(); return; }
   /* render() calls this whenever the template is missing, and the spinner keeps rendering,
