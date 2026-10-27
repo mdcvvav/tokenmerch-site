@@ -1,6 +1,9 @@
 // GET /api/renderone?product=586&variant=15114&image=<public png url>
 //     [&variants=15114,15124,...]  several variants in ONE mockup task
 //     [&groups=Men's,Women's 2][&views=Front,Left Front]
+//     [&placement=back]  which panel to print on; defaults to the front one.
+//                        Needed for all-over products, where calibrating the back
+//                        panel means sending the chart to `back`, not `front`.
 // groups/views map to Printful's mockup option groups (the model or flat style families)
 // and the camera views inside them; leave them off for the default flat set.
 // One-off mockup render with an arbitrary image. Used at build time only, to produce
@@ -36,7 +39,10 @@ export default async function handler(req, res) {
 
     const pfs = await pf('/mockup-generator/printfiles/' + productId);
     const placements = Object.keys(pfs.available_placements || {});
-    const placement = ['front', 'default', 'front_dtf'].find((p) => placements.includes(p)) || placements[0];
+    const asked = String(req.query.placement || '');
+    const placement = (asked && placements.includes(asked))
+      ? asked
+      : (['front', 'default', 'front_dtf'].find((p) => placements.includes(p)) || placements[0]);
     const vp = (pfs.variant_printfiles || []).find((v) => v.variant_id === variantId);
     const pfId = vp && vp.placements && vp.placements[placement];
     const printfile = (pfs.printfiles || []).find((p) => p.printfile_id === pfId) || (pfs.printfiles || [])[0];
