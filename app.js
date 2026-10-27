@@ -16,11 +16,17 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
    preview is drawn on; price is a placeholder retail number (~2x Printful's cost)
    until the real pricing is set. shape is only the fallback drawing when Printful
    has no template. */
-/* `tplIn` is the print area the PREVIEW composites into: Printful's mockup
-   template. It is only needed where that differs from what we actually print
-   on -- the two hoodies, whose DTF front is bigger than the DTG front the
-   mockup generator publishes a template for. Everything else prints on the
-   same area the template shows.
+/* Everything prints DTG. DTF was the default for a while because it exists on the
+   five top-row garments and is more vivid, but it carries a +$7.95/unit surcharge
+   where the DTG front is included, and on garment-dyed cotton it sits on the cloth
+   as a film rather than soaking in. DTG is cheaper, softer, and the same technique
+   on every garment -- the tank has no DTF option at all, so this is also the only
+   way the range is consistent.
+
+   One upside beyond price: the mockup generator publishes no DTF templates, so the
+   preview used to composite the hoodies into their DTG area while the spec line
+   claimed the larger DTF one. Now the template, the preview and the print file all
+   describe the same area, and `tplIn` is no longer needed anywhere.
 
    `shTop` is how far below the SHOULDER LINE that template's print area begins,
    measured off the template images. The shoulder line is the reference because
@@ -32,19 +38,19 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
    garment it looks right on. */
 var PRODUCTS = [
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee', shTop: 3.59,
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21000, price: 62,  shape: 'tee', shTop: 3.55,
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee', shTop: 2.90,
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+  /* the hoodies' DTG front is smaller than the DTF one they used to use -- 11x11 and
+     12x12 against 15x12 -- but it is the area the mockup template actually shows */
   { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee', shTop: 3.20,
-    print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
-    tplIn: { w: 11, h: 11 },
-    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
+    print: { w: 11, h: 11, dpi: 150, tech: 'DTG', placement: 'front' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
-    print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
-    tplIn: { w: 12, h: 12 },
-    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
+    print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   /* Comfort Colors 9360 heavyweight garment-dyed tank -- same line as the 1717 tee.
      Chosen over the Cotton Heritage MC1790 because its mockup template is a ghost
      laydown on BOTH sides, so the tank composites match every other garment instead
@@ -273,7 +279,7 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '<span>Source <span id="sourceResText" class="text-slate-300">-</span></span>',
 '<span>Print <span id="upscaleResText" class="text-slate-300">1800 x 1800 px</span></span>',
 '<span id="tmPrintSizeLabel">12 x 12 in</span>',
-'<span id="tmTechLabel" class="text-brand-accent/80">DTF</span>',
+'<span id="tmTechLabel" class="text-brand-accent/80">DTG</span>',
 '<span id="tmDpiLabel" class="text-brand-solana/70">150 DPI</span>',
 '</span>',
 '</div>',
@@ -540,8 +546,10 @@ function drawCaption(p, cx, tickerW, caW, top, caLines) {
   if (showCA && token.ca) {
     var cf = fontById(caFont), cwt = nearestWeight(cf, textWeight);
     /* A 44-character address squeezed into a narrow graphic prints at about 0.11 in
-       tall with sub-0.5 mm strokes, which is under the safe range for DTF on fabric.
-       Over two lines it roughly doubles, so it stays legible inside the image. */
+       tall with sub-0.5 mm strokes, which is under the safe range for printing on
+       fabric. Over two lines it roughly doubles, so it stays legible inside the
+       image. DTG holds fine detail slightly less well than DTF, so if anything this
+       matters a little more now. */
     if (caLines === 2 && token.ca.length > 24) {
       var cut = Math.ceil(token.ca.length / 2);
       var l1 = token.ca.slice(0, cut), l2 = token.ca.slice(cut);
@@ -797,9 +805,10 @@ function designCanvas(W, H, side, inW) {
   return c;
 }
 
-/* inches of the print area the PREVIEW composites into. That is the template's
-   area, which for the two hoodies is their DTG front and not the larger DTF one
-   they actually print on -- the mockup generator publishes no DTF templates. */
+/* Inches of the print area the preview composites into. Now that everything prints
+   DTG this is always the product's own print area -- the mockup template describes
+   exactly what we print on. `tplIn` is kept as an override in case a product ever
+   prints on an area the template does not show again. */
 function tplInches(pr) { return (pr.tplIn || pr.print); }
 
 /* simple drawn t-shirt / mug, in an 800-unit space */
