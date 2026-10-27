@@ -52,10 +52,14 @@ export default async function handler(req, res) {
     const sizesFor = Number(req.query.sizes);
     if (sizesFor) {
       const unit = req.query.unit === 'cm' ? 'cm' : 'inches';
-      const data = await pf('/products/' + sizesFor + '/sizes?unit=' + unit);
+      /* Printful publishes no size guide for products that are not worn -- the mug,
+         the poster, the stickers -- and returns an empty result rather than an error.
+         Without the fallback that became a 500 in the browser console every time the
+         mug was opened. */
+      const data = (await pf('/products/' + sizesFor + '/sizes?unit=' + unit)) || {};
       res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
       return res.status(200).json({
-        productId: data.product_id,
+        productId: data.product_id || null,
         availableSizes: data.available_sizes || [],
         tables: (data.size_tables || []).map((t) => ({
           type: t.type,
