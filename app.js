@@ -64,7 +64,12 @@ var PRODUCTS = [
      of leading with a worn torso. 31 colours, XS-3XL, and the back print is free. */
   { id: 'tank',      label: 'TANK TOP',        pid: 907, vid: 23282, price: 48,  shape: 'tee', shTop: 6.34,
     print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+  /* Printful lists three capacities (11 / 15 / 20 oz); the store sells the first two,
+     so the mug carries a `sizes` allow-list. It also carries a `styles` one: a mug has
+     no chest and no back, so the badge and two-sided styles are meaningless on it and
+     only the centred graphic is offered. */
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
+    sizes: ['11 oz', '15 oz'], styles: ['centered'],
     print: { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' } },
   { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat',
     print: { w: 8, h: 10, dpi: 300, tech: 'Giclee', placement: 'default' } },
@@ -491,7 +496,9 @@ function fitFont(p, text, weight, family, maxW, cap) {
    the first time it is picked, not up front, so choosing a font costs one
    request and the page starts with only the default. */
 var FONTS = [
-  { id: 'archivo', label: 'ARCHIVO BLACK', css: '"Archivo Black", sans-serif', google: 'Archivo+Black', weights: [400] },
+  /* the family really is "Archivo Black" -- Black is its weight -- but next to a colour
+     picker it reads as one, so the menu just says ARCHIVO. */
+  { id: 'archivo', label: 'ARCHIVO', css: '"Archivo Black", sans-serif', google: 'Archivo+Black', weights: [400] },
   { id: 'chakra', label: 'CHAKRA PETCH', css: '"Chakra Petch", sans-serif', google: 'Chakra+Petch', weights: [400, 500, 600, 700] },
   { id: 'inter', label: 'INTER', css: '"Inter", sans-serif', google: 'Inter', weights: [400, 500, 600, 700, 800, 900] },
   { id: 'grotesk', label: 'SPACE GROTESK', css: '"Space Grotesk", sans-serif', google: 'Space+Grotesk', weights: [400, 500, 600, 700] },
@@ -638,6 +645,14 @@ function styleAllowed(p, v) {
   if ((v === 'back-badge' || v === 'back-ticker') && !p.backPrint) return false;
   if (p.styles && p.styles.indexOf(v) < 0) return false;
   return true;
+}
+
+/* A product may also narrow the size list Printful returns, the same way `styles`
+   narrows the print styles. Printful's size list is still the source of truth for what
+   exists and for the variant ids; this only decides what the store puts on sale. */
+function sizesFor(p, all) {
+  if (!p || !p.sizes || !all) return all || [];
+  return all.filter(function (z) { return p.sizes.indexOf(z) >= 0; });
 }
 
 function paintStyleOptions() {
@@ -1192,7 +1207,10 @@ function applyPalette(id) {
   var c0 = hit ? hit.c : d.colors[0];
   colorName = c0.name;
   garment = c0.code || '#1b1b1c';
-  size = (hit && hit.size) || (d.sizes.indexOf('M') >= 0 ? 'M' : d.sizes[0]);
+  /* the default variant's own size, but only if the store offers it */
+  var sz = sizesFor(p, d.sizes);
+  size = (hit && sz.indexOf(hit.size) >= 0 ? hit.size : null) ||
+         (sz.indexOf('M') >= 0 ? 'M' : sz[0]);
   buildPalette();
   updateZoomUI();   /* the "shown in" note depends on the colour we just picked */
   render();
@@ -1207,7 +1225,7 @@ function buildPalette() {
     return '<button class="tm-color" data-color="' + c.name + '" title="' + c.name +
       '" style="background:' + (c.code || '#888') + ';width:26px;height:26px;border-radius:9999px;flex:0 0 auto"></button>';
   }).join('');
-  sw.innerHTML = d.sizes.map(function (z) {
+  sw.innerHTML = sizesFor(productById(product), d.sizes).map(function (z) {
     return '<button class="tm-size" data-size="' + z + '">' + z + '</button>';
   }).join('');
   paintColors(); paintSizes(); updateVariant();
