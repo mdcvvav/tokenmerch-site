@@ -57,8 +57,20 @@ var PRODUCTS = [
      of leading with a worn torso. 31 colours, XS-3XL, and the back print is free. */
   { id: 'tank',      label: 'TANK TOP',        pid: 907, vid: 23282, price: 48,  shape: 'tee', shTop: 6.34,
     print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+  /* All-over cut-and-sew, so it is not a garment with a print area -- it is eight
+     separately printed panels (front, back, both sleeves, hood, hood lining, facing,
+     label) sewn together, and every one of them is included in the price. Back print
+     therefore costs nothing here, unlike the hoodies at +$7.95.
+
+     Only two colours exist (Black, White) and the panel art covers them anyway. The
+     centred styles are disallowed: a 34x38 panel runs shoulder to hem, so a centred
+     graphic sits around the waist rather than the chest. Badge and back print are the
+     two that read correctly on this shape. */
   { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED',
-    print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' } },
+    shTop: 0,
+    styles: ['badge-left', 'badge-right', 'back-badge', 'back-ticker'],
+    print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' },
+    back: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'back' }, backPrint: true, },
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
     print: { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' } },
   { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat',
@@ -625,14 +637,28 @@ function twoSided() {
 }
 
 /* Only products with a back placement can offer the two-sided styles. */
+/* Which print styles a product offers. Two gates: a product with no back placement
+   cannot do the two-sided styles, and a product may narrow the list further with its
+   own `styles` array -- the windbreaker does, because a centred graphic on a panel
+   that runs shoulder to hem lands at the waist. */
+function styleAllowed(p, v) {
+  if ((v === 'back-badge' || v === 'back-ticker') && !p.backPrint) return false;
+  if (p.styles && p.styles.indexOf(v) < 0) return false;
+  return true;
+}
+
 function paintStyleOptions() {
   var sel = document.getElementById('printStyleSelect');
   if (!sel) return;
-  var ok = !!productById(product).backPrint;
+  var p = productById(product);
+  var first = null;
   [].forEach.call(sel.options, function (o) {
-    if (o.value === 'back-badge' || o.value === 'back-ticker') o.disabled = !ok;
+    var ok = styleAllowed(p, o.value);
+    o.disabled = !ok;
+    if (ok && first === null) first = o.value;
   });
-  if (!ok && twoSided()) { style = 'centered'; view = 0; }
+  /* if the style we arrived on is not offered here, fall back to the first that is */
+  if (!styleAllowed(p, style)) { style = first || 'centered'; view = 0; }
   sel.value = style;
 }
 
@@ -677,9 +703,11 @@ function clampOffset(off, half, inW) {
    `pr.shTop` inches below the shoulder line. `drop` is the target distance below
    the shoulder; `half` is half the mark's height when the target is its centre. */
 function dropInArea(pr, drop, half) {
-  /* the mug, poster, stickers and windbreaker have no shoulder line to measure
-     from, so their art just sits a little inside the top of its print area */
-  if (!pr || !pr.shTop) return Math.max(PLACE.minMargin, 0.9 - (half || 0));
+  /* the mug, poster and stickers have no shoulder line to measure from, so their art
+     just sits a little inside the top of its print area. Note the test is for an
+     ABSENT shTop, not a falsy one: the windbreaker's panel starts at the shoulder
+     seam, so its shTop is a meaningful 0. */
+  if (!pr || pr.shTop == null) return Math.max(PLACE.minMargin, 0.9 - (half || 0));
   return Math.max(PLACE.minMargin, drop - pr.shTop - (half || 0));
 }
 
