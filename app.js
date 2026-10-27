@@ -16,29 +16,41 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
    preview is drawn on; price is a placeholder retail number (~2x Printful's cost)
    until the real pricing is set. shape is only the fallback drawing when Printful
    has no template. */
+/* `tplIn` is the print area the PREVIEW composites into: Printful's mockup
+   template. It is only needed where that differs from what we actually print
+   on -- the two hoodies, whose DTF front is bigger than the DTG front the
+   mockup generator publishes a template for. Everything else prints on the
+   same area the template shows.
+
+   `shTop` is how far below the SHOULDER LINE that template's print area begins,
+   measured off the template images. The shoulder line is the reference because
+   neckline depth varies enormously -- the tee drops 2.28 in from shoulder to
+   collar, the tank 4.11 in -- so anchoring to the collar puts the same mark at
+   very different heights on the body. See claude/print-placement.md.
+
+   Back print is deliberately limited to the two hoodies -- it is the only
+   garment it looks right on. */
 var PRODUCTS = [
-  { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee',
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
-    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
-  { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee',
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
-    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
-  { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee',
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
-    back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
-  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee',
+  { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee', shTop: 3.59,
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
+  { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee', shTop: 3.55,
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
+  { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee', shTop: 2.90,
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
+  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15572, price: 92,  shape: 'tee', shTop: 3.20,
     print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
+    tplIn: { w: 11, h: 11 },
     back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
-  { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee',
+  { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
     print: { w: 15, h: 12, dpi: 150, tech: 'DTF', placement: 'front_dtf' },
+    tplIn: { w: 12, h: 12 },
     back: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'back_dtf' }, backPrint: true, },
   /* Comfort Colors 9360 heavyweight garment-dyed tank -- same line as the 1717 tee.
      Chosen over the Cotton Heritage MC1790 because its mockup template is a ghost
      laydown on BOTH sides, so the tank composites match every other garment instead
      of leading with a worn torso. 31 colours, XS-3XL, and the back print is free. */
-  { id: 'tank',      label: 'TANK TOP',        pid: 907, vid: 23282, price: 48,  shape: 'tee',
-    print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
-    back: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true },
+  { id: 'tank',      label: 'TANK TOP',        pid: 907, vid: 23282, price: 48,  shape: 'tee', shTop: 6.34,
+    print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   { id: 'wind',      label: 'WINDBREAKER',     pid: 615, vid: 15714, price: 116, shape: 'tee', noTpl: true, color: '#E8EAED',
     print: { w: 34, h: 38, dpi: 150, tech: 'Cut & sew', placement: 'front' } },
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
@@ -56,7 +68,7 @@ function productById(id) {
 var DEMO_CA = 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm';
 
 /* site logo, inlined so the banner never waits on a second request */
-var LOGO_SRC = 'data:image/webp;base64,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';
+var LOGO_SRC = 'data:image/webp;base64,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';
 
 /* ---------------- head assets ---------------- */
 
@@ -619,9 +631,55 @@ function paintStyleOptions() {
 /* The chest mark: either the logo roundel with the ticker under it, or the ticker on
    its own. No address either way, since that lives on the back. Wearer's left is the
    right-hand side of a front view. */
-function drawChestBadge(p, W, tickerOnly) {
-  var s = 0.2083 * W, y = 0.125 * W, x = W - 0.229 * W - s;
-  var cx = x + s / 2, cy = y + s / 2;
+/* ---- print placement, in real inches -----------------------------------
+   Researched against the industry standard; sources in claude/print-placement.md.
+     - full-front graphic: top of the art about 3 in below the collar
+     - left-chest mark: 3-4 in wide, centre 3.5-4 in from centre front,
+       centre about 2.5-3 in below the collar
+   Those are quoted off a crew neck, so they are restated here against the
+   SHOULDER LINE, which is the same on every garment: a crew tee's collar sits
+   2.28 in below it, so "3 in below the collar" is 5.3-5.5 in below the shoulder.
+   Nothing can print above Printful's print area, so where the area starts too
+   low (the premium hoodie at 4.94 in, the tank at 6.34 in) the mark is clamped
+   to the top of the area and sits lower than the standard asks. */
+var PLACE = {
+  badgeDia: 3.50,         /* in, left-chest mark (standard 3-4 in) */
+  badgeFromCentre: 3.75,  /* in, mark centre to centre front (standard 3.5-4) */
+  badgeCentreDrop: 5.50,  /* in below the shoulder line */
+  artTopDrop: 5.30,       /* in below the shoulder line, top of a centred graphic */
+  minMargin: 0.15         /* in, keep ink off the very edge of the print area */
+};
+
+/* pixels per inch inside a design canvas that is `inW` inches wide */
+function perInch(W, inW) { return W / (inW || 12); }
+
+/* Keep a mark `half` inches wide (half-width) inside the print area when it is
+   pushed `off` inches off centre. The curved contract address wraps well outside
+   the badge, and at 3.75 in off centre it ran past the edge of a 12 in area. */
+function clampOffset(off, half, inW) {
+  var limit = (inW || 12) / 2 - half;
+  return Math.max(0, Math.min(off, limit));
+}
+
+/* Where something lands inside the print area, given that the area itself starts
+   `pr.shTop` inches below the shoulder line. `drop` is the target distance below
+   the shoulder; `half` is half the mark's height when the target is its centre. */
+function dropInArea(pr, drop, half) {
+  /* the mug, poster, stickers and windbreaker have no shoulder line to measure
+     from, so their art just sits a little inside the top of its print area */
+  if (!pr || !pr.shTop) return Math.max(PLACE.minMargin, 0.9 - (half || 0));
+  return Math.max(PLACE.minMargin, drop - pr.shTop - (half || 0));
+}
+
+function drawChestBadge(p, W, tickerOnly, inW) {
+  var IN = perInch(W, inW);
+  var pr = productById(product);
+  var s = PLACE.badgeDia * IN;
+  var y = dropInArea(pr, PLACE.badgeCentreDrop, PLACE.badgeDia / 2) * IN;
+  /* the mark sits on the wearer's left, which is the right of a front view */
+  var off = clampOffset(PLACE.badgeFromCentre, PLACE.badgeDia * 0.6, inW);
+  var cx = W / 2 + off * IN, cy = y + s / 2;
+  var x = cx - s / 2;
   var tb = '$' + (token.ticker || '');
   var bf = fontById(tickerFont), bwt = nearestWeight(bf, textWeight);
 
@@ -657,12 +715,14 @@ function drawChestBadge(p, W, tickerOnly) {
   }
 }
 
-function drawDesign(p, W, side) {
+function drawDesign(p, W, side, inW) {
+  var IN = perInch(W, inW);
+  var top = dropInArea(productById(product), PLACE.artTopDrop, 0) * IN;
   if (twoSided() && productById(product).backPrint) {
-    if (side === 'front') { drawChestBadge(p, W, style === 'back-ticker'); return; }
+    if (side === 'front') { drawChestBadge(p, W, style === 'back-ticker', inW); return; }
     /* the back carries the full centred artwork */
     if (logoReady && logoImg) {
-      var sb = 0.55 * W, xb = 0.225 * W, yb = 0.0792 * W;
+      var sb = 0.55 * W, xb = 0.225 * W, yb = top;
       p.drawImage(logoImg, xb, yb, sb, sb);
       drawCaption(p, W / 2, sb, sb, yb + sb);
       return;
@@ -672,9 +732,12 @@ function drawDesign(p, W, side) {
     if (style === 'badge-left' || style === 'badge-right') {
       /* badge-left prints on the wearer's left chest, which is the
          right-hand side of a front view; badge-right is its mirror */
-      var s1 = 0.2083 * W, y1 = 0.125 * W;
-      var x1 = (style === 'badge-left') ? W - 0.229 * W - s1 : 0.229 * W;
-      var bcx = x1 + s1 / 2, bcy = y1 + s1 / 2;
+      var s1 = PLACE.badgeDia * IN;
+      var y1 = dropInArea(productById(product), PLACE.badgeCentreDrop, PLACE.badgeDia / 2) * IN;
+      var off1 = clampOffset(PLACE.badgeFromCentre, PLACE.badgeDia * 0.76, inW);
+      var bcx = W / 2 + (style === 'badge-left' ? off1 : -off1) * IN;
+      var bcy = y1 + s1 / 2;
+      var x1 = bcx - s1 / 2;
       p.save();
       p.beginPath();
       p.arc(bcx, bcy, s1 / 2, 0, Math.PI * 2);
@@ -698,17 +761,17 @@ function drawDesign(p, W, side) {
     } else if (style === 'centered-small') {
       /* small graphic: the address is split over two lines so it fits the image
          and still prints large enough to read */
-      var s2 = 0.4167 * W, x2 = 0.2917 * W, y2 = 0.1875 * W;
+      var s2 = 0.4167 * W, x2 = 0.2917 * W, y2 = top;
       p.drawImage(logoImg, x2, y2, s2, s2);
       drawCaption(p, W / 2, s2, s2, y2 + s2, 2);
     } else {
       /* big centred graphic: the address stays inside the image's width */
-      var s3 = 0.55 * W, x3 = 0.225 * W, y3 = 0.0792 * W;
+      var s3 = 0.55 * W, x3 = 0.225 * W, y3 = top;
       p.drawImage(logoImg, x3, y3, s3, s3);
       drawCaption(p, W / 2, s3, s3, y3 + s3);
     }
   } else {
-    var r = 0.1875 * W, cx = W / 2, cy = 0.3333 * W;
+    var r = 0.1875 * W, cx = W / 2, cy = top + r;
     p.fillStyle = '#14F195';
     p.beginPath();
     p.arc(cx, cy, r, 0, Math.PI * 2);
@@ -723,12 +786,17 @@ function drawDesign(p, W, side) {
   }
 }
 
-function designCanvas(W, side) {
+function designCanvas(W, H, side, inW) {
   var c = document.createElement('canvas');
-  c.width = W; c.height = W;
-  drawDesign(c.getContext('2d'), W, side);
+  c.width = W; c.height = H || W;
+  drawDesign(c.getContext('2d'), W, side, inW);
   return c;
 }
+
+/* inches of the print area the PREVIEW composites into. That is the template's
+   area, which for the two hoodies is their DTG front and not the larger DTF one
+   they actually print on -- the mockup generator publishes no DTF templates. */
+function tplInches(pr) { return (pr.tplIn || pr.print); }
 
 /* simple drawn t-shirt / mug, in an 800-unit space */
 function drawCartoonGarment(p, k) {
@@ -759,7 +827,16 @@ function printSquare(tpl) {
   return {
     s: s,
     x: tpl.print_area_left + (tpl.print_area_width - s) / 2,
-    y: tpl.print_area_top + (tpl.print_area_height - s) / 2
+    /* the art is top-anchored, so the close-up frames the top of the area
+       rather than its middle */
+    y: tpl.print_area_top
+  };
+}
+
+function printRect(tpl) {
+  return {
+    x: tpl.print_area_left, y: tpl.print_area_top,
+    w: tpl.print_area_width, h: tpl.print_area_height
   };
 }
 
@@ -941,18 +1018,20 @@ function render() {
     ctx.fillRect(0, 0, C, C);
     if (hasTpl) {
       var q = printSquare(tpl);
+      var rct = printRect(tpl);
+      var inches = tplInches(productById(product));
       var m = q.s * pad;
       var cx0 = q.x - m, cy0 = q.y - m;
       var cw = q.s + 2 * m;
       var k = C / cw;
       var ratio = tplImg.naturalWidth / tpl.template_width;
-      var D = designCanvas(Math.round(q.s * k), side);
-      ctx.drawImage(D, (q.x - cx0) * k, (q.y - cy0) * k, q.s * k, q.s * k);
+      var D = designCanvas(Math.round(rct.w * k), Math.round(rct.h * k), side, inches.w);
+      ctx.drawImage(D, (rct.x - cx0) * k, (rct.y - cy0) * k, rct.w * k, rct.h * k);
       ctx.globalAlpha = 1;
       ctx.drawImage(tplImg, cx0 * ratio, cy0 * ratio, cw * ratio, cw * ratio, 0, 0, C, C);
     } else {
       var inset = C * pad;
-      ctx.drawImage(designCanvas(Math.round(C - inset * 2), side), inset, inset);
+      ctx.drawImage(designCanvas(Math.round(C - inset * 2), 0, side, tplInches(productById(product)).w), inset, inset);
     }
     ctx.restore();
     return;
@@ -962,9 +1041,10 @@ function render() {
     var kk = C / tpl.template_width;
     ctx.fillStyle = garment || tpl.background_color || '#0c0c0c';
     ctx.fillRect(0, 0, C, C);
-    var q2 = printSquare(tpl);
-    var pw = Math.round(q2.s * kk);
-    ctx.drawImage(designCanvas(pw, side), q2.x * kk, q2.y * kk, pw, pw);
+    var q2 = printRect(tpl);
+    var inches2 = tplInches(productById(product));
+    var pw = Math.round(q2.w * kk), ph = Math.round(q2.h * kk);
+    ctx.drawImage(designCanvas(pw, ph, side, inches2.w), q2.x * kk, q2.y * kk, pw, ph);
     ctx.drawImage(tplImg, 0, 0, C, C);
     ctx.restore();
     return;
@@ -976,7 +1056,7 @@ function render() {
   var rect = productById(product).shape === 'mug'
     ? { x: 260 * k2, y: 230 * k2, w: 280 * k2 }
     : { x: 160 * k2, y: 200 * k2, w: 480 * k2 };
-  ctx.drawImage(designCanvas(Math.round(rect.w)), rect.x, rect.y, rect.w, rect.w);
+  ctx.drawImage(designCanvas(Math.round(rect.w), 0, 'front', tplInches(productById(product)).w), rect.x, rect.y, rect.w, rect.w);
   ctx.restore();
 }
 
