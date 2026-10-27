@@ -33,7 +33,7 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
 var PRODUCTS = [
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee', shTop: 3.59,
     print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
-  { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21005, price: 62,  shape: 'tee', shTop: 3.55,
+  { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21000, price: 62,  shape: 'tee', shTop: 3.55,
     print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
   { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee', shTop: 2.90,
     print: { w: 12, h: 16, dpi: 150, tech: 'DTF', placement: 'front_dtf' } },
@@ -643,7 +643,11 @@ function paintStyleOptions() {
    low (the premium hoodie at 4.94 in, the tank at 6.34 in) the mark is clamped
    to the top of the area and sits lower than the standard asks. */
 var PLACE = {
-  badgeDia: 3.50,         /* in, left-chest mark (standard 3-4 in) */
+  /* 2.6 in is deliberately under the published 3-4 in left-chest range. At a true
+     3.5 in the mark read as oversized against these garments in the preview, so it
+     was taken down ~26% by eye. Still inside the wider 2.5-5 in range Printify
+     quotes, and the position rules below are unchanged. */
+  badgeDia: 2.60,         /* in, left-chest mark */
   badgeFromCentre: 3.75,  /* in, mark centre to centre front (standard 3.5-4) */
   badgeCentreDrop: 5.50,  /* in below the shoulder line */
   artTopDrop: 5.30,       /* in below the shoulder line, top of a centred graphic */
