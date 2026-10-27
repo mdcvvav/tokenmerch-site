@@ -13,6 +13,10 @@ on:
       path:
         description: "Repo path to write, e.g. models/tee-male.webp"
         required: true
+      crop:
+        description: "Optional crop applied BEFORE resize: left,top,right,bottom"
+        required: false
+        default: ""
       size:
         description: Square size in px (0 keeps the original)
         required: false
@@ -35,6 +39,7 @@ jobs:
         env:
           SRC_URL: ${{ github.event.inputs.url }}
           OUT_PATH: ${{ github.event.inputs.path }}
+          CROP: ${{ github.event.inputs.crop }}
           SIZE: ${{ github.event.inputs.size }}
           QUALITY: ${{ github.event.inputs.quality }}
         run: |
@@ -57,6 +62,13 @@ jobs:
               im = bg
           else:
               im = im.convert("RGB")
+          # Crop first: resize() forces a square, so a non-square source has to be cut
+          # to the subject before it gets there or the result is stretched.
+          crop = os.environ.get("CROP", "").strip()
+          if crop:
+              box = tuple(int(v.strip()) for v in crop.split(","))
+              im = im.crop(box)
+              print("cropped to", im.size)
           if size:
               im = im.resize((size, size), Image.LANCZOS)
           im.save(out, quality=quality, method=6)
