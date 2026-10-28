@@ -112,7 +112,17 @@ var PRODUCTS = [
     sizes: ['11\u2033\u00d714\u2033'],
     art: { fixed: true, size: 6, top: 2.53, tickerFirst: true, tickerCap: 0.155 },
     print: { w: 11, h: 14, dpi: 300, tech: 'Digital', placement: 'default' } },
+  /* Kiss Cut Sheet (505), A5, the one size it comes in. Printful cuts around each
+     SEPARATE object on the sheet and adds its own white border to each, so six opaque
+     cells with transparent gutters come back as six stickers that peel off one at a
+     time. Their guidance asks for at least 0.25 in between objects; this grid leaves
+     0.37 across and 0.30 down. Excess paper is trimmed, so the layout fills the sheet.
+     Six at $7.50 the sheet beats one 4 in holographic at $6.50 for a product whose
+     whole point is that people stick them on things. */
   { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat',
+    noTpl: true, sheet: true, backing: '#eceef2', minDpi: 100,
+    sizes: ['5.83\u2033\u00d78.27\u2033'], styles: ['centered'],
+    tile: { cols: 2, rows: 3, cell: 2.357, art: 1.14, artTop: 0.15, gap: 0.09, radius: 0.16 },
     print: { w: 5.83, h: 8.27, dpi: 300, tech: 'Digital', placement: 'default' } }
 ];
 function productById(id) {
@@ -1059,6 +1069,12 @@ function drawDesign(p, W, side, inW) {
     }
   }
   if (logoReady && logoImg) {
+    var prT = productById(product);
+    if (prT.tile) {
+      artIn = prT.tile.art;
+      drawTiles(p, W, inW, prT.tile);
+      return;
+    }
     if (style === 'badge-left' || style === 'badge-right') {
       /* badge-left prints on the wearer's left chest, which is the
          right-hand side of a front view; badge-right is its mirror */
@@ -1449,6 +1465,51 @@ function setLoading(on) {
   if (el) el.style.display = on ? 'flex' : 'none';
 }
 
+/* Where each sticker sits on the sheet, in inches. Shared by the print file and by the
+   preview's cut outlines so the two can never disagree. */
+function tileRects(t, inW, inH) {
+  var gx = (inW - t.cell * t.cols) / (t.cols + 1);
+  var gy = (inH - t.cell * t.rows) / (t.rows + 1);
+  var out = [];
+  for (var r = 0; r < t.rows; r++) {
+    for (var c = 0; c < t.cols; c++) {
+      out.push({ x: gx + c * (t.cell + gx), y: gy + r * (t.cell + gy), s: t.cell });
+    }
+  }
+  return out;
+}
+
+/* One sticker: a single opaque rounded square, which is the object Printful cuts
+   around. Everything -- artwork, ticker, address -- sits inside it, because an element
+   drawn outside would be cut out as a sticker of its own. */
+function drawTile(p, S, IN, t) {
+  p.save();
+  p.beginPath();
+  p.roundRect(0, 0, S, S, t.radius * IN);
+  p.fillStyle = '#ffffff';
+  p.fill();
+  p.clip();
+  var aS = t.art * IN, aTop = t.artTop * IN;
+  p.drawImage(logoImg, (S - aS) / 2, aTop, aS, aS);
+  /* The address is given the whole cell's width rather than the artwork's, and forced
+     onto two lines: at this size one line of 44 characters prints at about 6 pt, which
+     is under the safe range. Two lines put it at roughly 12 pt. */
+  drawCaption(p, S / 2, aS, S - 0.14 * IN, aTop + aS + t.gap * IN, 2,
+              { tickerFirst: true }, IN);
+  p.restore();
+}
+
+function drawTiles(p, W, inW, t) {
+  var IN = perInch(W, inW);
+  var inH = p.canvas.height / IN;
+  tileRects(t, inW, inH).forEach(function (r) {
+    p.save();
+    p.translate(r.x * IN, r.y * IN);
+    drawTile(p, r.s * IN, IN, t);
+    p.restore();
+  });
+}
+
 /* ---- flat sheet products --------------------------------------------------
    A poster is a piece of paper: no shape to model and nothing to wrap. Printful's
    template for one is the same flat "Safe Print area" guide the mug gets -- a dashed
@@ -1474,10 +1535,26 @@ function sheetComposite(pr, C) {
   p.shadowColor = 'rgba(0,0,0,.55)';
   p.shadowBlur = C * 0.03;
   p.shadowOffsetY = C * 0.012;
-  p.fillStyle = '#ffffff';
+  p.fillStyle = pr.backing || '#ffffff';
   p.fillRect(b.x, b.y, b.w, b.h);
   p.restore();
   p.drawImage(designCanvas(Math.round(b.w), Math.round(b.h), 'front', b.inches.w), b.x, b.y);
+  /* Preview only: the stickers are white on white backing, so without this the sheet
+     reads as one solid block. Drawn on the COMPOSITE, never into the design canvas, so
+     it cannot reach the print file. */
+  if (pr.tile) {
+    var per = b.w / b.inches.w;
+    p.save();
+    p.strokeStyle = 'rgba(15,23,42,.22)';
+    p.setLineDash([per * 0.06, per * 0.05]);
+    p.lineWidth = Math.max(1, per * 0.008);
+    tileRects(pr.tile, b.inches.w, b.inches.h).forEach(function (r) {
+      p.beginPath();
+      p.roundRect(b.x + r.x * per, b.y + r.y * per, r.s * per, r.s * per, pr.tile.radius * per);
+      p.stroke();
+    });
+    p.restore();
+  }
   return { canvas: c, box: b };
 }
 
@@ -1489,10 +1566,22 @@ function renderSheet(p, C, zoom) {
   /* close-up on the printed block, so the address can be read */
   var b = r.box, a = pr.art || {};
   var perIn = b.w / b.inches.w;
-  var size = (a.size || 0.55 * b.inches.w) * perIn;
-  var top = (a.top != null ? a.top : 0.9) * perIn;
-  var box = size * 1.5;
-  var cx = b.x + b.w / 2, cy = b.y + top + size * 0.78;
+  var size, top, box, cx, cy;
+  if (pr.tile) {
+    /* one sticker, not the whole sheet */
+    var one = tileRects(pr.tile, b.inches.w, b.inches.h)[0];
+    box = one.s * perIn * 1.18;
+    cx = b.x + (one.x + one.s / 2) * perIn;
+    cy = b.y + (one.y + one.s / 2) * perIn;
+    p.fillStyle = pr.backing || '#ffffff';
+    p.fillRect(0, 0, C, C);
+    p.drawImage(r.canvas, cx - box / 2, cy - box / 2, box, box, 0, 0, C, C);
+    return;
+  }
+  size = (a.size || 0.55 * b.inches.w) * perIn;
+  top = (a.top != null ? a.top : 0.9) * perIn;
+  box = size * 1.5;
+  cx = b.x + b.w / 2; cy = b.y + top + size * 0.78;
   p.fillStyle = '#ffffff';
   p.fillRect(0, 0, C, C);
   p.drawImage(r.canvas, cx - box / 2, cy - box / 2, box, box, 0, 0, C, C);
