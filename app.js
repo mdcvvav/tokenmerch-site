@@ -62,45 +62,35 @@ var PRODUCTS = [
      rather than the colour-independent _base_whitebg ghost every other garment gives,
      so our colour fill would double up on it -- and a raw hem is the wrong canvas for
      a 10 in graphic anyway. */
-  /* Jerzees 975MPR joggers. The only product that does not print on a torso, so it is
-     also the only one with its own placement set: four leg marks and nothing else.
+  /* Cotton Heritage M7580 joggers. The only product that does not print on a torso, so it
+     is also the only one with its own placement set: four leg marks and nothing else.
 
-     WHY THIS BLANK. Every sweatpant and jogger Printful carries gets the same 3.5 x 14.5 in
-     leg strip, but WHERE that strip sits on the garment differs, and on most of them it is
-     low. Measured off each template, the strip starts 55-62% of the way down the garment --
-     the M7580 (which this replaced) at 21 in below the waistband, which is the knee, because
-     its cross pockets take up the thigh. The 975MPR is the one blank whose strip is high:
-     hip to knee, so a thigh print is actually possible. It is also the cheapest of them at
-     a $32.75 blank. The cost of that is a smaller range -- 4 colours, S-2XL -- and the
-     template, below.
+     WHICH FACE OF THE LEG. This is the whole argument, and it cost a blank to learn. Every
+     sweatpant Printful carries gets the same 3.5 x 14.5 in leg strip, but the placement NAMES
+     differ and they are not decoration: the M7580 publishes `leg_front_left` / `leg_front_right`
+     and prints on the FRONT of the leg; the Jerzees 975MPR, which sat here for an afternoon,
+     publishes `leg_left` / `leg_right` and prints down the OUTER SIDE. The 975MPR's strip is
+     the higher of the two -- crotch to knee against the M7580's above-the-knee-to-ankle -- and
+     it was chosen for that, until a flat front render showed the strip hugging the silhouette
+     edge and spilling past it. Its own templates being side-view model shots was the tell.
+     A mark riding the side seam at crotch height reads as a misprint; a mark on the front of
+     the leg reads as a design, even lower down. Front won.
 
-     NO TEMPLATE AT ALL. Every other product returns a `_whitebg` ghost laydown: a
-     semi-transparent overlay, colour-independent, that the preview fills a colour under.
-     The 975MPR's templates are all opaque photographs of a model, which would have left
-     this one slot leading with a worn shot while the other nine lead with a flat laydown.
-     So the flat laydown is ours: Printful's mockup GENERATOR will render the flat front
-     view even though it publishes no flat template, and `pants/blanks.js` holds that
-     render -- one per colour, taken with a fully transparent print file so the garment
-     comes back blank -- together with the print rectangle, which was read off the same
-     render done with a magenta calibration sheet. `blankTpl` points at that file;
-     `loadBlankTemplate` synthesises a template object from it so the rest of the renderer
-     cannot tell the difference.
+     Nothing prints on the thigh. The M7580's cross pockets take up that whole area, and its
+     strip starts 21 in below the waistband. Its 4x4 in `embroidery_apparel_front` area IS at
+     thigh height, but embroidery cannot carry arbitrary token artwork. No Printful sweatpant
+     does a DTG thigh print; all six sit 55-62% of the way down the garment.
 
-     The photo is opaque either way, so `photoTpl` still applies: the design goes ON TOP of
-     it rather than under, source-over. Not multiply -- printed ink is opaque, and multiply
-     would erase a white mark on black fabric. `tplByColor` keys the cache on the swatch.
-
-     The mark hangs `leg.top` inches DOWN from the top of the strip -- the thigh -- rather
-     than up from its bottom, which is what the M7580 needed.
+     The mark hangs `leg.top` inches DOWN from the top of the strip -- i.e. as high as the
+     garment allows -- rather than up from its bottom.
 
      left/right follow the same convention as the chest badge: LEFT is the WEARER's left,
-     which is Printful's leg_left. Each leg is its own photo with its own print rectangle,
-     so the preview switches templates with the style, not the side -- see tplSide().
+     which is Printful's leg_front_left and the right-hand leg of a front view. Each leg has
+     its own print rectangle on the same flat ghost photo, so the preview switches templates
+     with the style, not the side -- see tplSide().
 
-     Cost: $32.75 blank (2XL $35.50) + a $7.95 leg surcharge that is always charged = $40.70. */
-  { id: 'pants',     label: 'SWEATPANTS',      pid: 342, vid: 9927,  price: 84,  shape: 'tee',
-    photoTpl: true, tplByColor: true,
-    blankTpl: { js: '/pants/blanks.js', global: 'TM_PANTS' },
+     Cost: $42.75 blank (2XL $45.50) + a $7.95 leg surcharge that is always charged = $50.70. */
+  { id: 'pants',     label: 'SWEATPANTS',      pid: 412, vid: 11266, price: 104, shape: 'tee',
     styles: ['badge-left', 'badge-right', 'square-left', 'square-right'],
     styleLabels: {
       'badge-left':  'IMAGE BADGE LEFT (CIRCULAR)',
@@ -109,11 +99,11 @@ var PRODUCTS = [
       'square-right': 'IMAGE BADGE RIGHT (SQUARE)'
     },
     placementByStyle: {
-      'badge-left':  'leg_left',  'square-left':  'leg_left',
-      'badge-right': 'leg_right', 'square-right': 'leg_right'
+      'badge-left':  'leg_front_left',  'square-left':  'leg_front_left',
+      'badge-right': 'leg_front_right', 'square-right': 'leg_front_right'
     },
-    leg: { dia: 2.6, top: 1.2 },
-    print: { w: 3.5, h: 14.5, dpi: 150, tech: 'DTG', placement: 'leg_left' } },
+    leg: { dia: 2.6, top: 0.15 },
+    print: { w: 3.5, h: 14.5, dpi: 150, tech: 'DTG', placement: 'leg_front_left' } },
   /* Cotton Heritage M2580 -- the one Printful titles "Unisex Premium Pullover Hoodie".
      That "premium" is its marketing name, not a tier, and reading it as one is how the
      lineup ended up with the dearer Independent SS4500 ($45.75 blank against $39.75)
