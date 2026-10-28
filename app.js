@@ -122,7 +122,10 @@ var PRODUCTS = [
   { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat',
     noTpl: true, sheet: true, backing: '#eceef2', minDpi: 100,
     sizes: ['5.83\u2033\u00d78.27\u2033'], styles: ['centered'],
-    tile: { cols: 2, rows: 3, cell: 2.357, art: 1.14, artTop: 0.15, gap: 0.09, radius: 0.16 },
+    tile: { cols: 2, rows: 3, cell: 2.35, art: 1.14, artTop: 0.15, gap: 0.09, radius: 0.16 },
+    /* The print FILE is the whole A5 sheet, which is a production detail. What the
+       customer is buying is a 2.35 in sticker, so that is what the spec line says. */
+    spec: { w: 2.35, h: 2.35, dpi: 300, tech: 'Digital', note: 'individual sticker size' },
     print: { w: 5.83, h: 8.27, dpi: 300, tech: 'Digital', placement: 'default' } }
 ];
 function productById(id) {
@@ -142,9 +145,12 @@ var CSS = [
 '#tokenmerch-root{background-color:#0d0f17}',
 '.glass-panel{background:rgba(22,26,38,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08)}',
 '.glow-accent{box-shadow:0 0 25px -5px rgba(153,69,255,.35)}',
-'#tmHue{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:9999px;outline:none;cursor:pointer;border:1px solid rgba(255,255,255,.25);background:linear-gradient(to right,#FFF 0%,#FFF 6%,#F00 6%,#FF0 20.7%,#0F0 35.3%,#0FF 50%,#00F 64.7%,#F0F 79.3%,#F00 94%,#000 94%,#000 100%)}',
-'#tmHue::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.6);cursor:pointer}',
-'#tmHue::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.6);cursor:pointer}',
+/* The track used to carry a 1px white border, which is what showed through as a pale
+   sliver where the rounded cap met the black end. The outline is now a faint slate ring
+   OUTSIDE the track, so neither end is lightened. */
+'#tmHue{-webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:9999px;outline:none;cursor:pointer;border:0;background:linear-gradient(to right,#FFF 0%,#FFF 6%,#F00 6%,#FF0 20.7%,#0F0 35.3%,#0FF 50%,#00F 64.7%,#F0F 79.3%,#F00 94%,#000 94%,#000 100%);box-shadow:0 0 0 1px rgba(148,163,184,.28)}',
+'#tmHue::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:#fff;border:2px solid #0d0f17;box-shadow:0 1px 3px rgba(0,0,0,.65),0 0 0 1px rgba(148,163,184,.55);cursor:pointer}',
+'#tmHue::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:#fff;border:2px solid #0d0f17;box-shadow:0 1px 3px rgba(0,0,0,.65),0 0 0 1px rgba(148,163,184,.55);cursor:pointer}',
 '#tmWeight{-webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:9999px;outline:none;cursor:pointer;border:1px solid rgba(255,255,255,.2);background:linear-gradient(to right,#4b5563,#e2e8f0)}',
 '#tmWeight::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
 '#tmWeight::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
@@ -928,7 +934,24 @@ function isLightHex(hex) {
 /* every draw reads this rather than textColor, so it follows a colour change with no
    re-binding and no stale value */
 function inkColor() {
-  return inkTouched ? textColor : (isLightHex(substrateHex()) ? '#141414' : '#FFFFFF');
+  /* Pure black rather than near-black so the automatic colour is exactly reachable on
+     the slider: spectrumHex puts white at 0 and black at 1000, the two flat ends. */
+  return inkTouched ? textColor : (isLightHex(substrateHex()) ? '#000000' : '#FFFFFF');
+}
+
+/* Keep the control honest: while the ink is automatic, park the slider on the end it
+   is actually using -- white on a dark garment, black on a white one -- so the picker
+   never shows something different from what is being drawn. Setting .value in script
+   fires no input event, so this cannot be mistaken for the customer taking over. */
+function syncInkSlider() {
+  if (inkTouched) return;
+  var light = isLightHex(substrateHex());
+  var el = document.getElementById('tmHue');
+  if (el) el.value = light ? 1000 : 0;
+  var hx = document.getElementById('tmColorHex');
+  var sw = document.getElementById('tmColorSwatch');
+  if (hx) hx.innerText = inkColor() + ' auto';
+  if (sw) sw.style.background = inkColor();
 }
 
 /* Below this the warning fires. Fabric hides softness that paper shows -- ink wicks
@@ -1842,6 +1865,7 @@ function applyPalette(id) {
   size = (hit && sz.indexOf(hit.size) >= 0 ? hit.size : null) ||
          (sz.indexOf('M') >= 0 ? 'M' : sz[0]);
   buildPalette();
+  syncInkSlider();  /* the default colour decides which end the ink sits on */
   updateZoomUI();   /* the "shown in" note depends on the colour we just picked */
   render();
 }
@@ -1931,16 +1955,22 @@ function paintSizeGuide() {
 }
 
 /* The print specs under the preview, straight from the product's chosen placement. */
+/* What the spec line reports, which is not always the print area: a sticker sheet's
+   area is the sheet, and nobody is buying a sheet. */
+function specFor(pr) {
+  return (pr && pr.spec) || printFor(pr);
+}
+
 function updateSpecs() {
   var p0 = productById(product);
-  var pr = (twoSided() && p0.backPrint && p0.back) ? p0.back : printFor(p0);
+  var pr = (twoSided() && p0.backPrint && p0.back) ? p0.back : specFor(p0);
   if (!pr) return;
   var t = document.getElementById('tmTechLabel');
   var sz = document.getElementById('tmPrintSizeLabel');
   var up = document.getElementById('upscaleResText');
   var dp = document.getElementById('tmDpiLabel');
   if (t) t.innerText = pr.tech + ((twoSided() && p0.backPrint) ? ' / BACK + CHEST' : '');
-  if (sz) sz.innerText = pr.w + ' x ' + pr.h + ' in';
+  if (sz) sz.innerText = pr.w + ' x ' + pr.h + ' in' + (pr.note ? ' \u00b7 ' + pr.note : '');
   if (up) up.innerText = Math.round(pr.w * pr.dpi) + ' x ' + Math.round(pr.h * pr.dpi) + ' px';
   if (dp) dp.innerText = pr.dpi + ' DPI';
 }
@@ -2049,7 +2079,7 @@ function buildControls() {
     colorName = c.name;
     garment = c.code || garment;
     (productById(product).models || []).forEach(function (m) { if (m.byColor) loadModel(modelSrc(m)); });
-    paintColors(); updateVariant(); updateZoomUI(); render();
+    paintColors(); updateVariant(); syncInkSlider(); updateZoomUI(); render();
   });
   document.getElementById('printStyleSelect').addEventListener('change', function (e) {
     style = e.target.value;
@@ -2062,7 +2092,7 @@ function buildControls() {
     showCA = document.getElementById('tmShowCA').checked;
     showTicker = document.getElementById('tmShowTicker').checked;
     textColor = spectrumHex(+document.getElementById('tmHue').value / 1000);
-    if (!inkTouched) textColor = inkColor();
+    if (!inkTouched) { textColor = inkColor(); syncInkSlider(); }
     textWeight = +document.getElementById('tmWeight').value;
     caFont = document.getElementById('tmCaFont').value;
     tickerFont = document.getElementById('tmTkFont').value;
