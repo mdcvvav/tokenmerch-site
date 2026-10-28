@@ -376,9 +376,10 @@ var MARKUP = [
 '<span id="tmCartCount" class="text-[11px] font-mono font-bold opacity-80">EMPTY</span>',
 '</button>',
 '<div id="tmCartMsg" class="text-[10px] font-mono text-slate-400 text-center" style="display:none"></div>',
-/* What is in the cart, between the two bars: add above it, check out below it. Each line
-   carries the design it was ordered with, not a stand-in -- see renderCart(). */
-'<div id="tmCart" class="space-y-2" style="display:none"></div>',
+/* The third strip: what is in the cart so far, as the artwork itself, building up between
+   the two bars. The detail -- sizes, quantities, prices -- lives on /pages/cart, which this
+   strip opens. */
+'<div id="tmCart" style="display:none"></div>',
 '<button id="tmCheckoutBtn" class="w-full border border-brand-border bg-brand-bg text-slate-500 font-extrabold py-3 rounded-xl transition-all flex items-center justify-between px-4 text-sm" disabled>',
 '<span class="flex items-center space-x-2"><i class="fa-solid fa-lock text-xs"></i><span>CHECKOUT</span></span>',
 '<span id="tmCartTotal" class="text-[11px] font-mono font-bold">$0.00</span>',
@@ -2327,13 +2328,9 @@ function buildControls() {
   });
 
   document.getElementById('tmAddBtn').addEventListener('click', addToCart);
-  document.getElementById('tmCart').addEventListener('click', function (e) {
-    var q = e.target.closest('.tm-qty'), r = e.target.closest('.tm-rm');
-    if (q) changeLine(q.getAttribute('data-key'), parseInt(q.getAttribute('data-q'), 10));
-    else if (r) changeLine(r.getAttribute('data-key'), 0);
-  });
+
   document.getElementById('tmCheckoutBtn').addEventListener('click', function () {
-    if (cartState.ready && cartState.count > 0) window.location.href = '/checkout';
+    if (cartState.ready && cartState.count > 0) window.location.href = '/pages/cart';
   });
   refreshCart();
 }
@@ -2397,6 +2394,7 @@ function applyCart(c) {
   cartState.total = c.total_price || 0;
   paintCart();
   renderCart(c);
+  renderCartPage(c);
 }
 
 function refreshCart() {
@@ -2430,44 +2428,131 @@ function thumbUrl(line) {
   } catch (e) { return raw; }
 }
 
+/* The strip on the customiser: one tile per line, the artwork on the colour it is printed
+   on, with a badge when a line is more than one. It is a link, not a list -- the controls
+   are on the cart page, where there is room for them. */
 function renderCart(c) {
   var el = document.getElementById('tmCart');
   if (!el) return;
   var items = (c && c.items) || [];
   if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = 'block';
-  el.innerHTML = items.map(function (it) {
+  el.innerHTML =
+    '<a href="/pages/cart" class="flex items-center gap-2 bg-brand-bg rounded-xl border border-brand-border hover:border-brand-accent transition-colors p-2 overflow-x-auto" style="scrollbar-width:none">' +
+    items.map(function (it) {
+      var pr = it.properties || {};
+      var src = thumbUrl(it);
+      return '<span class="relative shrink-0 rounded-lg overflow-hidden flex items-center justify-center" ' +
+          'style="width:40px;height:40px;background:' + (pr._hex || '#1b1b1c') + '" title="' +
+          escapeHtml((it.product_title || '') + ' ' + (it.variant_title || '')) + '">' +
+        (src ? '<img src="' + src + '" alt="" loading="lazy" style="max-width:100%;max-height:100%;object-fit:contain">' : '') +
+        (it.quantity > 1 ? '<span class="absolute text-[9px] font-mono font-bold text-slate-950 bg-white rounded-full" ' +
+          'style="right:1px;bottom:1px;padding:0 3px;line-height:12px">' + it.quantity + '</span>' : '') +
+      '</span>';
+    }).join('') +
+    '<span class="ml-auto shrink-0 pl-2 text-[10px] font-mono text-brand-accent">VIEW CART \u203a</span>' +
+    '</a>';
+}
+
+/* ---------------- page two: the cart ----------------
+
+   A real page, not a drawer: /pages/cart is a Shopify page whose only content is the same
+   two-line loader the storefront uses, so this file renders it. Three pages in all --
+   customise, check what you are buying, pay -- and the middle one is the only place that can
+   show the artwork at a readable size and let the quantity change, because Shopify's checkout
+   does neither. */
+
+function onCartPage() { return /\/pages\/cart(\/|$|\?)/.test(location.pathname + (location.search ? '?' : '')); }
+
+var CART_MARKUP = [
+'<header class="border-b border-brand-border/80 bg-brand-bg/90 sticky top-0 z-40 backdrop-blur-md">',
+'<div class="max-w-3xl mx-auto px-4 sm:px-6 h-20 flex items-center gap-4">',
+'<a href="/" class="shrink-0 block w-14 h-14 rounded-xl overflow-hidden bg-brand-card border border-brand-border/70"><img src="' + LOGO_SRC + '" alt="TokenMerch" width="56" height="56" class="w-full h-full object-cover"></a>',
+'<a href="/" class="tm-wordmark text-xl sm:text-2xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a>',
+'</div></header>',
+'<main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 w-full flex-grow">',
+'<h1 class="text-2xl font-extrabold text-white">Your cart</h1>',
+'<p class="text-xs font-mono text-slate-400 mt-1 mb-6">This is the artwork that will be printed. Check it, then continue to payment.</p>',
+'<div id="tmLines" class="space-y-3"></div>',
+'<div id="tmEmpty" class="glass-panel rounded-2xl p-10 text-center" style="display:none">',
+'<p class="text-sm text-slate-300 mb-5">Nothing in the cart yet.</p>',
+'<a href="/" class="inline-block bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber text-slate-950 font-extrabold px-6 py-3 rounded-xl text-sm">START A DESIGN</a>',
+'</div>',
+'<div id="tmSummary" class="glass-panel rounded-2xl p-5 mt-6 space-y-4" style="display:none">',
+'<div class="flex items-end justify-between">',
+'<span class="text-[10px] font-mono text-slate-400 uppercase">Subtotal</span>',
+'<span id="tmSubtotal" class="text-2xl font-black text-white font-mono">$0.00</span>',
+'</div>',
+'<p class="text-[10px] font-mono text-slate-500 leading-relaxed">Shipping and any taxes are worked out on the next page, where the address and payment are entered.</p>',
+'<button id="tmPayBtn" class="w-full bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber hover:opacity-95 text-slate-950 font-extrabold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm"><i class="fa-solid fa-lock text-xs"></i><span>CONTINUE TO PAYMENT</span></button>',
+'<a href="/" class="block text-center text-[11px] font-mono text-brand-accent hover:text-white transition-colors">KEEP CUSTOMISING</a>',
+'<div id="tmCartMsg" class="text-[10px] font-mono text-slate-400 text-center" style="display:none"></div>',
+'</div>',
+'</main>',
+'<footer class="border-t border-brand-border/60 py-6 text-center text-[10px] font-mono text-slate-500">TokenMerch \u00b7 powered by Solana and Printful</footer>'
+].join('');
+
+function renderCartPage(c) {
+  var wrap = document.getElementById('tmLines');
+  if (!wrap) return;
+  var items = (c && c.items) || [];
+  var empty = document.getElementById('tmEmpty');
+  var summary = document.getElementById('tmSummary');
+  if (empty) empty.style.display = items.length ? 'none' : 'block';
+  if (summary) summary.style.display = items.length ? 'block' : 'none';
+  var sub = document.getElementById('tmSubtotal');
+  if (sub) sub.innerText = money((c && c.total_price) || 0);
+  wrap.innerHTML = items.map(function (it) {
     var pr = it.properties || {};
-    var hex = pr._hex || '#1b1b1c';
     var src = thumbUrl(it);
-    var meta = [it.variant_title || '', pr.Colour || ''].filter(Boolean).join(' \u00b7 ');
-    return '<div class="flex gap-2.5 bg-brand-bg rounded-xl border border-brand-border p-2">' +
-      '<div class="shrink-0 rounded-lg overflow-hidden flex items-center justify-center" ' +
-        'style="width:52px;height:52px;background:' + hex + '">' +
+    return '<div class="glass-panel rounded-2xl p-4 flex gap-4">' +
+      '<div class="shrink-0 rounded-xl overflow-hidden flex items-center justify-center" ' +
+        'style="width:96px;height:96px;background:' + (pr._hex || '#1b1b1c') + '">' +
         (src ? '<img src="' + src + '" alt="" loading="lazy" style="max-width:100%;max-height:100%;object-fit:contain">' : '') +
       '</div>' +
       '<div class="flex-1 min-w-0">' +
-        '<div class="text-[11px] font-bold text-white truncate">' + escapeHtml(it.product_title || it.title || '') + '</div>' +
-        '<div class="text-[10px] font-mono text-slate-400 truncate">' + escapeHtml(meta) + '</div>' +
-        '<div class="text-[10px] font-mono text-slate-500 truncate">' + escapeHtml(pr.Placement || '') + '</div>' +
-        '<div class="flex items-center justify-between mt-1.5">' +
-          '<div class="flex items-center gap-1">' +
-            '<button class="tm-qty" data-key="' + it.key + '" data-q="' + (it.quantity - 1) + '" aria-label="One fewer">\u2212</button>' +
-            '<span class="text-[11px] font-mono text-white text-center" style="width:18px">' + it.quantity + '</span>' +
-            '<button class="tm-qty" data-key="' + it.key + '" data-q="' + (it.quantity + 1) + '" aria-label="One more">+</button>' +
+        '<div class="flex items-start justify-between gap-3">' +
+          '<div class="min-w-0">' +
+            '<div class="text-sm font-bold text-white truncate">' + escapeHtml(it.product_title || it.title || '') + '</div>' +
+            '<div class="text-[11px] font-mono text-slate-400 mt-0.5">' +
+              escapeHtml([it.variant_title || '', pr.Colour || ''].filter(Boolean).join(' \u00b7 ')) + '</div>' +
+            '<div class="text-[11px] font-mono text-slate-500">' + escapeHtml(pr.Placement || '') + '</div>' +
+            '<div class="text-[10px] font-mono text-slate-500 truncate mt-1">' + escapeHtml(pr.Token || '') + '</div>' +
           '</div>' +
-          '<span class="text-[11px] font-mono text-white">' + money(it.line_price) + '</span>' +
+          '<button class="tm-rm text-slate-500 hover:text-white shrink-0" data-key="' + it.key + '" title="Remove">\u00d7</button>' +
+        '</div>' +
+        '<div class="flex items-center justify-between mt-3">' +
+          '<div class="flex items-center gap-1.5">' +
+            '<button class="tm-qty" data-key="' + it.key + '" data-q="' + (it.quantity - 1) + '" aria-label="One fewer">\u2212</button>' +
+            '<span class="text-xs font-mono text-white text-center" style="width:22px">' + it.quantity + '</span>' +
+            '<button class="tm-qty" data-key="' + it.key + '" data-q="' + (it.quantity + 1) + '" aria-label="One more">+</button>' +
+            '<span class="text-[10px] font-mono text-slate-500 ml-2">' + money(it.price) + ' each</span>' +
+          '</div>' +
+          '<span class="text-sm font-mono font-bold text-white">' + money(it.line_price) + '</span>' +
         '</div>' +
       '</div>' +
-      '<button class="tm-rm text-slate-500 hover:text-white shrink-0" data-key="' + it.key + '" title="Remove">\u00d7</button>' +
     '</div>';
   }).join('');
+}
+
+function startCartPage() {
+  document.getElementById('tmLines').addEventListener('click', cartClick);
+  document.getElementById('tmPayBtn').addEventListener('click', function () {
+    window.location.href = '/checkout';
+  });
+  refreshCart();
 }
 
 /* Quantity and removal are cart operations, which is exactly why they live here: Shopify's
    checkout renders the quantity as a number and offers no way to change it. The line KEY is
    used rather than the variant id, because two lines can share a variant and differ only in
    their design. */
+function cartClick(e) {
+  var q = e.target.closest('.tm-qty'), r = e.target.closest('.tm-rm');
+  if (q) changeLine(q.getAttribute('data-key'), parseInt(q.getAttribute('data-q'), 10));
+  else if (r) changeLine(r.getAttribute('data-key'), 0);
+}
+
 function changeLine(key, qty) {
   if (!onShopify() || !key) return;
   cartMsg('');
@@ -3055,6 +3140,7 @@ function start() {
     document.body.appendChild(root);
   }
   root.className = 'min-h-screen flex flex-col justify-between selection:bg-brand-accent selection:text-white';
+  if (onCartPage()) { root.innerHTML = CART_MARKUP; startCartPage(); return; }
   root.innerHTML = MARKUP;
   canvas = document.getElementById('mockupCanvas');
   ctx = canvas.getContext('2d');
