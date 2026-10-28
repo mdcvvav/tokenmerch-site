@@ -91,7 +91,9 @@ var PRODUCTS = [
            be soft and inconsistent beside the 11 oz. The 11 oz shot is stretched about
            its base instead: same diameter, band 3.8/3.5 taller. */
         stretchBySize: { '15 oz': 1.0857 },
-        wide: 0.74,
+        /* the tight framing was cropping close enough to read as a different product
+           from the wide one, so the mug leads with the pulled-back shot */
+        wide: 0.74, wideLabel: 'Full mug', noFull: true,
         cyl: { cx: 0.6136, a: 0.2955, yRim: 0.1485, bRim: 0.0212,
                yBase: 0.8394, bBase: 0.0348, mTop: 0.0333, mBot: 0.0333 } }
     ] },
@@ -105,6 +107,9 @@ var PRODUCTS = [
      rather than the artwork shrinking under the customer. */
   { id: 'poster',    label: 'POSTER',          pid: 1,   vid: 14125, price: 28,  shape: 'flat',
     noTpl: true, sheet: true, minDpi: 65,
+    /* Printful lists 33 sizes for this product; the store sells one. Same allow-list
+       the mug uses -- Printful stays the source of truth for the variant ids. */
+    sizes: ['11\u2033\u00d714\u2033'],
     art: { fixed: true, size: 6, top: 2.53, tickerFirst: true, tickerCap: 0.155 },
     print: { w: 11, h: 14, dpi: 300, tech: 'Digital', placement: 'default' } },
   { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat',
@@ -456,6 +461,48 @@ function lookup(raw) {
   });
 }
 
+/* ---- picking the sharpest source ------------------------------------------
+   DexScreener and Jupiter disagree about which holds the better artwork, and neither
+   wins often enough to simply order them. Measured over ten established tokens:
+   DexScreener loaded 10/10 in under 70 ms and was the larger 8 times; Jupiter loaded
+   only 3/10 -- half the tokens had no icon at all, and its IPFS gateways (ipfs.io,
+   nftstorage.link) never answered, while every arweave.net one did -- but when Jupiter
+   won it won big: BONK 192 -> 640, TRUMP 800 -> 2811.
+
+   So render from DexScreener at once, because it is fast and always there, then race
+   Jupiter in the background and swap only if its image really is larger. A dead gateway
+   costs one request nobody waited on. Both candidates are measured at the moment of
+   comparison rather than trusting whichever probe happened to land first. */
+var artTried = {};
+
+function measureImage(url, ms) {
+  return new Promise(function (res) {
+    if (!url) return res(0);
+    var img = new Image(), done = false;
+    var t = setTimeout(function () { if (!done) { done = true; res(0); } }, ms || 2500);
+    function finish(w) { if (!done) { done = true; clearTimeout(t); res(w); } }
+    img.onload = function () { finish(img.naturalWidth || 0); };
+    img.onerror = function () { finish(0); };
+    img.src = url;
+  });
+}
+
+function upgradeArtwork(t) {
+  if (!t || !t.ca || artTried[t.ca]) return;
+  artTried[t.ca] = true;
+  fromJupiter(t.ca).catch(function () { return null; }).then(function (j) {
+    if (!j || !j.img || j.img === t.img) return null;
+    return Promise.all([measureImage(t.img, 3000), measureImage(j.img, 2500)]).then(function (r) {
+      if (!token || token.ca !== t.ca) return;      /* the customer moved on */
+      if (r[1] > r[0]) {
+        token.img = j.img;
+        document.getElementById('tokenImgSidebar').src = j.img;
+        loadLogo(j.img);
+      }
+    });
+  });
+}
+
 function fetchToken(raw) {
   var btn = document.getElementById('fetchBtnText');
   var spin = document.getElementById('fetchSpinner');
@@ -482,46 +529,54 @@ function updateTokenUI() {
   document.getElementById('tokenImgSidebar').src = token.img;
   loadChart();
   loadLogo(token.img);
+  upgradeArtwork(token);
 }
 
 function loadLogo(url) {
   logoReady = false;
   setStatus('<i class="fa-solid fa-spinner fa-spin text-brand-accent"></i> Loading artwork...');
-  var tries = [
-    'https://wsrv.nl/?url=' + encodeURIComponent(url) + '&w=1200&h=1200&fit=cover&output=png',
-    url
-  ];
-  /* Measure the ORIGINAL. The first entry below asks wsrv.nl for 1200 px and gets it
-     whatever the source was, so the Source line read "1200 x 1200" for a 400 px token
-     and the quality check had nothing real to go on. */
+  /* Measure the ORIGINAL first. The resizer below returns whatever size it is asked
+     for, so the Source line used to read "1200 x 1200" for a 400 px token and the
+     quality check had nothing real to go on. */
   srcW = 0; srcH = 0;
   var probe = new Image();
   probe.onload = function () {
     srcW = probe.naturalWidth || 0; srcH = probe.naturalHeight || 0;
-    updateSourceLabel(); render();
+    updateSourceLabel(); render(); start();
   };
-  probe.onerror = function () { updateSourceLabel(); };
+  probe.onerror = function () { updateSourceLabel(); start(); };
   probe.src = url;
-  var i = 0;
-  function attempt() {
-    if (i >= tries.length) {
-      logoImg = null; logoReady = false;
-      setStatus('<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Artwork unavailable');
-      render();
-      return;
+
+  function start() {
+    /* Ask for what the source actually has rather than a flat 1200, which was quietly
+       throwing away a 2811 px icon. Floored at 1200 so a thin source still arrives
+       smoothly resampled, capped at 3000 so nothing silly comes back. */
+    var want = Math.max(1200, Math.min(3000, srcW || 0));
+    var tries = [
+      'https://wsrv.nl/?url=' + encodeURIComponent(url) + '&w=' + want + '&h=' + want + '&fit=cover&output=png',
+      url
+    ];
+    var i = 0;
+    function attempt() {
+      if (i >= tries.length) {
+        logoImg = null; logoReady = false;
+        setStatus('<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Artwork unavailable');
+        render();
+        return;
+      }
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function () {
+        logoImg = img; logoReady = true;
+        setStatus('<i class="fa-solid fa-circle-check text-brand-solana"></i> Ready');
+        updateSourceLabel();
+        render();
+      };
+      img.onerror = function () { i++; attempt(); };
+      img.src = tries[i];
     }
-    var img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = function () {
-      logoImg = img; logoReady = true;
-      setStatus('<i class="fa-solid fa-circle-check text-brand-solana"></i> Ready');
-      updateSourceLabel();
-      render();
-    };
-    img.onerror = function () { i++; attempt(); };
-    img.src = tries[i];
+    attempt();
   }
-  attempt();
 }
 
 function setStatus(html) {
@@ -1122,11 +1177,18 @@ function viewsFor(p) {
   /* Printful's template photo is a flat laydown for some products and a worn torso for
      others, which made the first view inconsistent. A calibrated Flat mockup wins when
      the product has one. */
-  if (flatIdx >= 0) v.push({ kind: 'model', idx: flatIdx, side: 'front', label: ms[flatIdx].label || 'Full garment' });
-  else v.push({ kind: 'front', label: 'Full garment' });
+  if (flatIdx >= 0) {
+    /* `noFull` drops the tight framing, leaving the pulled-back one to lead */
+    if (!ms[flatIdx].noFull) {
+      v.push({ kind: 'model', idx: flatIdx, side: 'front', label: ms[flatIdx].label || 'Full garment' });
+    }
+  } else {
+    v.push({ kind: 'front', label: 'Full garment' });
+  }
   /* a product may ask for a second, pulled-back framing of the same composite */
   if (flatIdx >= 0 && ms[flatIdx].wide) {
-    v.push({ kind: 'model', idx: flatIdx, side: 'front', fit: ms[flatIdx].wide, label: 'Wide shot' });
+    v.push({ kind: 'model', idx: flatIdx, side: 'front', fit: ms[flatIdx].wide,
+             label: ms[flatIdx].wideLabel || 'Wide shot' });
   }
   v.push({ kind: 'zoom', label: 'Print close-up', from: flatIdx, side: 'front' });
   ms.forEach(function (m, j) {
