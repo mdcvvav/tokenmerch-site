@@ -14,8 +14,10 @@
 // Env:
 //   PRINTFUL_API_TOKEN       required
 //   PRINTFUL_STORE_ID        optional (only for multi-store tokens)
-//   TM_WEBHOOK_KEY           required - the ?key= value; the URL is the gate
-//   SHOPIFY_WEBHOOK_SECRET   optional - verifies the X-Shopify-Hmac-Sha256 signature
+//   SHOPIFY_WEBHOOK_SECRET   the signing secret from Settings > Notifications > Webhooks
+//   TM_WEBHOOK_KEY           optional - a ?key= secret in the URL, as a second gate
+//                            and to unlock the GET selftest below
+// At least one of those two must be set or every request is refused.
 //   TM_WEBHOOK_DRYRUN        optional - '1' logs the payload and creates nothing
 
 import crypto from 'node:crypto';
@@ -121,8 +123,13 @@ async function printful(path, init) {
 export default async function handler(req, res) {
   const raw = await readRaw(req);
 
-  // GET ?selftest=1 reports which env vars exist. Never the values.
+  // GET ?selftest=1 reports which env vars exist. Never the values. It is only
+  // reachable once TM_WEBHOOK_KEY is set, because there is nothing else to gate it on.
   if (req.method === 'GET') {
+    if (!process.env.TM_WEBHOOK_KEY) {
+      res.status(404).json({ error: 'selftest disabled: TM_WEBHOOK_KEY is not set' });
+      return;
+    }
     if (!timingSafeEqual(req.query.key, process.env.TM_WEBHOOK_KEY)) {
       res.status(401).json({ error: 'bad key' });
       return;
@@ -144,17 +151,27 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (!timingSafeEqual(req.query.key, process.env.TM_WEBHOOK_KEY)) {
+  // Two independent gates, either of which is enough. Refuse everything until at
+  // least one is configured, so a half-finished deploy is never an open endpoint.
+  const haveKey = !!process.env.TM_WEBHOOK_KEY;
+  const haveSecret = !!process.env.SHOPIFY_WEBHOOK_SECRET;
+  if (!haveKey && !haveSecret) {
+    console.error('webhook refused: neither SHOPIFY_WEBHOOK_SECRET nor TM_WEBHOOK_KEY is set');
+    res.status(503).json({ error: 'webhook not configured' });
+    return;
+  }
+
+  if (haveKey && !timingSafeEqual(req.query.key, process.env.TM_WEBHOOK_KEY)) {
     console.warn('webhook rejected: bad or missing ?key');
     res.status(401).json({ error: 'bad key' });
     return;
   }
 
-  // 'no-secret' and 'no-raw-body' are the states where we cannot check and fall back
-  // on the ?key gate. A missing header once a secret IS set means it did not come
-  // from Shopify, because Shopify always signs.
+  // A missing header once a secret IS set means it did not come from Shopify,
+  // because Shopify always signs. 'no-raw-body' means the platform consumed the
+  // stream before we could hash it, which is survivable only if the ?key gate held.
   const hmac = verifyHmac(raw, req.headers['x-shopify-hmac-sha256']);
-  if (hmac === 'mismatch' || hmac === 'no-header') {
+  if (hmac === 'mismatch' || hmac === 'no-header' || (hmac === 'no-raw-body' && !haveKey)) {
     console.warn('webhook rejected: signature ' + hmac);
     res.status(401).json({ error: 'bad signature' });
     return;
