@@ -853,14 +853,24 @@ var ART = {
 var srcW = 0, srcH = 0;   /* the artwork's TRUE pixel size, not the upscaled copy */
 var artIn = 0;            /* in, what the last render actually drew */
 
-function artSizeIn(pr, inW) {
+/* 'centered-small' is 76% of 'centered' and has to STAY that way. Scaling only the big
+   one meant that on a thin source the big graphic hit its 4.5 in floor while the small
+   one sat at its fixed 5.0 in -- so picking "small" printed LARGER than picking "big".
+   Both now come off the same computed size. */
+var SMALL_RATIO = 0.4167 / 0.55;
+
+function artSizeIn(pr, inW, small) {
   var a = pr && pr.art;
   var max = (a && a.size) || 0.55 * inW;
-  if (a && a.fixed) return max;          /* the poster: one size, always */
-  if (!srcW) return max;                 /* nothing measured yet */
-  /* the floor can never exceed the ceiling -- the stickers' area is smaller than it */
-  var floor = Math.min(ART.dynMin, max);
-  return Math.max(floor, Math.min(max, srcW / ART.targetDpi));
+  var S;
+  if (a && a.fixed) S = max;             /* the poster: one size, always */
+  else if (!srcW) S = max;               /* nothing measured yet */
+  else {
+    /* the floor can never exceed the ceiling -- the stickers' area is smaller than it */
+    var floor = Math.min(ART.dynMin, max);
+    S = Math.max(floor, Math.min(max, srcW / ART.targetDpi));
+  }
+  return small ? S * SMALL_RATIO : S;
 }
 
 /* ---- ink colour -----------------------------------------------------------
@@ -893,6 +903,47 @@ function inkColor() {
 function minDpiFor(pr) {
   if (pr && pr.minDpi) return pr.minDpi;
   return /DTG|DTF/i.test(((printFor(pr) || {}).tech || '')) ? 80 : 100;
+}
+
+/* Everything the print renderer needs to reproduce exactly what is on screen. The
+   server used to re-derive all of this -- and re-look-up the token -- which is how the
+   two drifted apart. It now receives resolved numbers and renders them. */
+function printParams(pr, side) {
+  var inches = (side === 'back' && pr.back) ? pr.back : printFor(pr);
+  var a = pr.art || {};
+  var q = {
+    ca: token.ca || '',
+    style: style,
+    side: side === 'back' ? 'back' : 'front',
+    showCA: showCA ? '1' : '0',
+    showTicker: showTicker ? '1' : '0',
+    color: inkColor().replace('#', ''),
+    w: Math.round(inches.w * inches.dpi),
+    h: Math.round(inches.h * inches.dpi),
+    dpi: inches.dpi,
+    scale: pr.placeScale || 1,
+    shTop: pr.shTop == null ? '' : pr.shTop,
+    caFont: caFont,
+    tickerFont: tickerFont,
+    weight: textWeight,
+    img: token.img || '',
+    srcW: srcW || 0,
+    artIn: +artIn.toFixed(4),
+    caMin: ART.caMinIn
+  };
+  if (a.top != null) q.artTop = a.top;
+  if (a.tickerFirst) q.tickerFirst = '1';
+  if (a.tickerCap) q.tickerCap = a.tickerCap;
+  return q;
+}
+
+function printUrl(pr, side) {
+  var q = printParams(pr, side), parts = [];
+  Object.keys(q).forEach(function (k) {
+    if (q[k] === '' || q[k] == null) return;
+    parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(q[k]));
+  });
+  return API + '/api/print?' + parts.join('&');
 }
 
 function updateQuality() {
@@ -1035,7 +1086,7 @@ function drawDesign(p, W, side, inW) {
       /* small graphic: the address is split over two lines so it fits the image
          and still prints large enough to read */
       var H2 = p.canvas.height;
-      var s2 = wideArea(p) ? 0.45 * H2 : 0.4167 * W;
+      var s2 = wideArea(p) ? 0.45 * H2 : artSizeIn(productById(product), inW, true) * IN;
       var x2 = (W - s2) / 2;
       var y2 = wideArea(p) ? Math.max(0, (H2 - s2 * 1.5) / 2) : top;
       artIn = s2 / IN;
