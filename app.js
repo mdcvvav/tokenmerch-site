@@ -38,10 +38,13 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
    garment it looks right on. */
 var PRODUCTS = [
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee', shTop: 3.59,
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21000, price: 62,  shape: 'tee', shTop: 3.55,
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee', shTop: 2.90,
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   /* One hoodie per cut. The women's is Bella + Canvas 7502, a cropped raw-hem fleece
      with a dropped shoulder -- 10x10 DTG front, S-2XL, four colours. The men's is
@@ -59,9 +62,44 @@ var PRODUCTS = [
      rather than the colour-independent _base_whitebg ghost every other garment gives,
      so our colour fill would double up on it -- and a raw hem is the wrong canvas for
      a 10 in graphic anyway. */
-  { id: 'womens',    label: "WOMEN'S HOODIE",  pid: 317, vid: 9633,  price: 99,  shape: 'tee', shTop: 2.86,
-    print: { w: 10, h: 10, dpi: 150, tech: 'DTG', placement: 'front' } },
-  { id: 'mens',      label: "MEN'S HOODIE",    pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
+  /* Cotton Heritage M7580 joggers. The only product that does not print on a torso, so
+     it is also the only one with its own placement set: four leg marks and nothing else.
+
+     Printful's printable front-leg area is 3.5 x 14.5 in and it starts LOW -- 21 in below
+     the waistband, measured off the flat template -- because the M7580 has two cross
+     pockets taking up the thigh. The area therefore runs lower thigh to just above the
+     cuff, which is where jogger graphics live anyway. The mark is centred in the 3.5 in
+     strip and anchored `leg.bottom` inches up from the bottom of the area, so it sits
+     just above the ribbed cuff rather than floating mid-shin.
+
+     left/right follow the same convention as the chest badge: LEFT is the WEARER's left,
+     which is Printful's leg_front_left and the right-hand leg of a front view. Each leg
+     has its own template with its own print-area rectangle on the same flat photo, so
+     the preview switches templates with the style, not with the side -- see tplSide().
+
+     Costs more than it looks: the blank is $42.75 but every leg placement carries a
+     +$7.95 surcharge, so the real unit cost is $50.70. */
+  { id: 'pants',     label: 'SWEATPANTS',      pid: 412, vid: 11266, price: 104, shape: 'tee',
+    styles: ['badge-left', 'badge-right', 'square-left', 'square-right'],
+    styleLabels: {
+      'badge-left':  'IMAGE BADGE LEFT (CIRCULAR)',
+      'badge-right': 'IMAGE BADGE RIGHT (CIRCULAR)',
+      'square-left': 'IMAGE BADGE LEFT (SQUARE)',
+      'square-right': 'IMAGE BADGE RIGHT (SQUARE)'
+    },
+    placementByStyle: {
+      'badge-left':  'leg_front_left',  'square-left':  'leg_front_left',
+      'badge-right': 'leg_front_right', 'square-right': 'leg_front_right'
+    },
+    leg: { dia: 2.6, bottom: 1.6 },
+    print: { w: 3.5, h: 14.5, dpi: 150, tech: 'DTG', placement: 'leg_front_left' } },
+  /* Cotton Heritage M2580 -- the one Printful titles "Unisex Premium Pullover Hoodie".
+     That "premium" is its marketing name, not a tier, and reading it as one is how the
+     lineup ended up with the dearer Independent SS4500 ($45.75 blank against $39.75)
+     sitting in the slot labelled plain HOODIE. Neither word survives: one hoodie, and
+     the only garment that offers a back print. */
+  { id: 'hoodie',    label: 'HOODIE',          pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right', 'back-badge', 'back-ticker'],
     print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' },
     back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   /* Cotton Heritage M2480 -- the crewneck sibling of the M2580 men's hoodie just
@@ -70,12 +108,14 @@ var PRODUCTS = [
      Replaced the all-over windbreaker, whose printed panels never read cleanly. No
      back print: it costs +$7.95 and, like the tank, it only looks right on a hood. */
   { id: 'crew',      label: 'SWEATSHIRT',      pid: 411, vid: 11255, price: 70,  shape: 'tee', shTop: 3.34,
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   /* Comfort Colors 9360 heavyweight garment-dyed tank -- same line as the 1717 tee.
      Chosen over the Cotton Heritage MC1790 because its mockup template is a ghost
      laydown on BOTH sides, so the tank composites match every other garment instead
      of leading with a worn torso. 31 colours, XS-3XL, and the back print is free. */
   { id: 'tank',      label: 'TANK TOP',        pid: 907, vid: 23282, price: 48,  shape: 'tee', shTop: 6.34,
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
     print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   /* Printful lists three capacities (11 / 15 / 20 oz); the store sells the first two,
      so the mug carries a `sizes` allow-list. It also carries a `styles` one: a mug has
@@ -119,7 +159,7 @@ var PRODUCTS = [
      off an 800 px token and 67 off a 400 px one; the quality warning covers the tail
      rather than the artwork shrinking under the customer. */
   { id: 'poster',    label: 'POSTER',          pid: 1,   vid: 14125, price: 28,  shape: 'flat',
-    noTpl: true, sheet: true, minDpi: 65,
+    noTpl: true, sheet: true, minDpi: 65, styles: ['centered'],
     /* Printful lists 33 sizes for this product; the store sells one. Same allow-list
        the mug uses -- Printful stays the source of truth for the variant ids. */
     sizes: ['11\u2033\u00d714\u2033'],
@@ -280,14 +320,9 @@ var MARKUP = [
 '<div id="tmColors" class="bg-brand-bg p-2.5 rounded-xl border border-brand-border" style="display:flex;flex-wrap:wrap;gap:7px;max-height:104px;overflow-y:auto"></div></div>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">POSITION</label>',
-'<select id="printStyleSelect" class="w-full bg-brand-bg text-slate-200 border border-brand-border rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-accent">',
-'<option value="centered">CENTERED GRAPHIC IMAGE</option>',
-'<option value="centered-small">CENTERED GRAPHIC IMAGE SMALL</option>',
-'<option value="badge-left">IMAGE BADGE LEFT</option>',
-'<option value="badge-right">IMAGE BADGE RIGHT</option>',
-'<option value="back-badge">BACK PRINT + CHEST BADGE</option>',
-'<option value="back-ticker">BACK PRINT + TICKER BADGE</option>',
-'</select></div>',
+/* The options are filled in by paintStyleOptions() from the product's own `styles`
+   list, so the menu only ever offers placements that product can actually print. */
+'<select id="printStyleSelect" class="w-full bg-brand-bg text-slate-200 border border-brand-border rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-accent"></select></div>',
 
 /* text under logo */
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">TEXT</label>',
@@ -837,18 +872,35 @@ function sizesFor(p, all) {
   return all.filter(function (z) { return p.sizes.indexOf(z) >= 0; });
 }
 
+/* Every placement the store knows how to print, in menu order. A product offers the
+   subset its own `styles` list names and may relabel any of them -- the joggers call
+   theirs by leg rather than by chest side. */
+var STYLE_OPTS = [
+  ['centered',       'CENTERED GRAPHIC IMAGE'],
+  ['centered-small', 'CENTERED GRAPHIC IMAGE SMALL'],
+  ['badge-left',     'IMAGE BADGE LEFT'],
+  ['badge-right',    'IMAGE BADGE RIGHT'],
+  ['square-left',    'IMAGE BADGE LEFT (SQUARE)'],
+  ['square-right',   'IMAGE BADGE RIGHT (SQUARE)'],
+  ['back-badge',     'BACK PRINT + CHEST BADGE'],
+  ['back-ticker',    'BACK PRINT + TICKER BADGE']
+];
+
+/* The menu is rebuilt per product rather than greyed out. A disabled option still reads
+   as something the customer nearly has -- six entries with four struck through on the
+   tank taught nothing except that the store could not do it. */
 function paintStyleOptions() {
   var sel = document.getElementById('printStyleSelect');
   if (!sel) return;
   var p = productById(product);
-  var first = null;
-  [].forEach.call(sel.options, function (o) {
-    var ok = styleAllowed(p, o.value);
-    o.disabled = !ok;
-    if (ok && first === null) first = o.value;
-  });
+  var lbl = p.styleLabels || {};
+  var list = STYLE_OPTS.filter(function (o) { return styleAllowed(p, o[0]); });
+  if (!list.length) list = [['centered', 'CENTERED GRAPHIC IMAGE']];
+  sel.innerHTML = list.map(function (o) {
+    return '<option value="' + o[0] + '">' + (lbl[o[0]] || o[1]) + '</option>';
+  }).join('');
   /* if the style we arrived on is not offered here, fall back to the first that is */
-  if (!styleAllowed(p, style)) { style = first || 'centered'; view = 0; }
+  if (!styleAllowed(p, style)) { style = list[0][0]; view = 0; }
   sel.value = style;
 }
 
@@ -1000,6 +1052,7 @@ function printParams(pr, side) {
     artIn: +artIn.toFixed(4),
     caMin: ART.caMinIn
   };
+  if (pr.leg) { q.legDia = pr.leg.dia; q.legBottom = pr.leg.bottom; }
   if (a.top != null) q.artTop = a.top;
   if (a.tickerFirst) q.tickerFirst = '1';
   if (a.tickerCap) q.tickerCap = a.tickerCap;
@@ -1125,6 +1178,29 @@ function drawDesign(p, W, side, inW) {
     if (prT.tile) {
       artIn = prT.tile.art;
       drawTiles(p, W, inW, prT.tile);
+      return;
+    }
+    /* A leg mark. The area is a narrow vertical strip, so there is no left/right offset
+       to make inside it -- the strip IS the side. Centred across the 3.5 in, anchored up
+       from the bottom of the area so it lands just above the cuff, and square or round
+       depending on the style. The address goes underneath on two lines; an arc around
+       the circle, as on the chest, would run straight off a 3.5 in area. */
+    var legCfg = prT.leg;
+    if (legCfg) {
+      var HL = p.canvas.height;
+      var sqL = (style === 'square-left' || style === 'square-right');
+      var sL = legCfg.dia * IN;
+      artIn = legCfg.dia;
+      var yL = Math.max(PLACE.minMargin * IN, HL - (legCfg.bottom + legCfg.dia) * IN);
+      p.save();
+      if (!sqL) {
+        p.beginPath();
+        p.arc(W / 2, yL + sL / 2, sL / 2, 0, Math.PI * 2);
+        p.clip();
+      }
+      p.drawImage(logoImg, (W - sL) / 2, yL, sL, sL);
+      p.restore();
+      drawCaption(p, W / 2, sL, W * 0.96, yL + sL, 2, null, IN);
       return;
     }
     if (style === 'badge-left' || style === 'badge-right') {
@@ -1258,13 +1334,17 @@ function drawCartoonGarment(p, k) {
    is square, so fit the largest centred square inside it. Template coordinates. */
 function printSquare(tpl) {
   var s = Math.min(tpl.print_area_width, tpl.print_area_height);
-  return {
-    s: s,
-    x: tpl.print_area_left + (tpl.print_area_width - s) / 2,
-    /* the art is top-anchored, so the close-up frames the top of the area
-       rather than its middle */
-    y: tpl.print_area_top
-  };
+  var pr = productById(product);
+  /* the art is top-anchored, so the close-up frames the top of the area rather than its
+     middle -- except on a leg, where the mark hangs off the BOTTOM of a 14.5 in strip and
+     framing the top would show nothing but blank fabric */
+  var y = tpl.print_area_top;
+  if (pr.leg) {
+    var pxIn = tpl.print_area_width / printFor(pr).w;
+    var cyIn = printFor(pr).h - (pr.leg.bottom + pr.leg.dia / 2);
+    y = Math.max(tpl.print_area_top, tpl.print_area_top + cyIn * pxIn - s / 2);
+  }
+  return { s: s, x: tpl.print_area_left + (tpl.print_area_width - s) / 2, y: y };
 }
 
 function printRect(tpl) {
@@ -1664,7 +1744,7 @@ function renderInner() {
      there is nothing real to draw. Show the spinner rather than the drawn placeholder
      garment, which looked like the preview had broken. Products that genuinely have no
      template (noTpl) or whose template failed to load still use the drawn one. */
-  var key = product + '|' + side;
+  var key = product + '|' + tplSide(productById(product), side);
   if (!hasTpl && !productById(product).noTpl && !tplFailed[key]) {
     setLoading(true);
     ctx.fillStyle = '#0d0f17';
@@ -2584,13 +2664,21 @@ function startChartPolling() {
 /* Templates are per product AND per side. Note the mockup generator has no DTF
    templates: asking for back_dtf silently returns the front one, so the preview
    always asks for the plain placement and the technique only affects the order. */
+/* Which Printful placement this view needs. Normally the side -- front or back -- but a
+   product whose placements are a property of the STYLE rather than the side (the joggers:
+   left leg and right leg are two templates of the same flat photo) names them itself. */
+function tplSide(p, side) {
+  if (p && p.placementByStyle && p.placementByStyle[style]) return p.placementByStyle[style];
+  return side === 'back' ? 'back' : 'front';
+}
+
 function tplGet(side) {
-  return tplCache[product + '|' + (side || 'front')] || null;
+  return tplCache[product + '|' + tplSide(productById(product), side)] || null;
 }
 
 function loadTemplate(id, side) {
   var p = productById(id || product);
-  var pl = side === 'back' ? 'back' : 'front';
+  var pl = tplSide(p, side);
   var key = p.id + '|' + pl;
   /* Printful only returns a real product photo for the DTG garments; the mug and any
      all-over product come back as flat pattern guides, so those use the drawn one. */
