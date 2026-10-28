@@ -311,7 +311,14 @@ var MARKUP = [
 '<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 mb-4 flex items-center justify-between"><span><i class="fa-solid fa-shirt text-brand-accent mr-2"></i> Product</span><span class="text-[10px] text-slate-500">10 SLOTS</span></h3>',
 '<div id="tmProductGrid" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.5rem">',
 PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' + p.id + '">' + p.label + '</button>'; }).join(''),
-'</div></div>',
+'</div>',
+'<div id="tmDesc" class="mt-4 pt-3 border-t border-brand-border/60">',
+'<div id="tmDescTitle" class="text-[10px] font-mono uppercase tracking-wider text-brand-accent/80 mb-1.5"></div>',
+'<p id="tmDescBody" class="text-[12px] leading-relaxed text-slate-400 m-0"></p>',
+'<button id="tmSpecsToggle" class="mt-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors" style="display:none">+ Specs</button>',
+'<ul id="tmSpecs" class="mt-2 text-[11px] leading-relaxed text-slate-500 m-0 pl-0" style="display:none;list-style:none"></ul>',
+'</div>',
+'</div>',
 
 '<div class="glass-panel rounded-2xl p-6 relative flex flex-col items-center justify-center min-h-[520px]">',
 '<div class="w-full flex items-center justify-between mb-4 text-xs font-mono border-b border-brand-border pb-3">',
@@ -1741,6 +1748,65 @@ function paintColors() {
 /* Colours and sizes come straight from Printful's catalog, per product. The template
    image is colour-independent: the garment colour is the fill underneath it, so
    switching colour costs nothing and needs no new request. */
+/* Printful writes a blurb for every product: an intro paragraph, then bullet specs.
+   Worth showing -- it is the only place the customer learns what the garment actually
+   is. Cached per product id; the endpoint caches upstream for a day as well. */
+var descCache = {}, specsOpen = false;
+
+function loadDesc(id) {
+  var pr = productById(id);
+  if (!pr) return;
+  if (descCache[pr.pid] !== undefined) { paintDesc(id); return; }
+  descCache[pr.pid] = null;                       /* in flight */
+  paintDesc(id);
+  getJson(API + '/api/catalog?id=' + pr.pid).then(function (d) {
+    descCache[pr.pid] = (d && d.product) || {};
+    if (product === id) paintDesc(id);
+  }).catch(function (e) {
+    descCache[pr.pid] = {};
+    console.warn('No description for ' + id + ':', e.message);
+    if (product === id) paintDesc(id);
+  });
+}
+
+function paintDesc(id) {
+  var pr = productById(id);
+  var d = descCache[pr.pid];
+  var tEl = document.getElementById('tmDescTitle');
+  var bEl = document.getElementById('tmDescBody');
+  var sEl = document.getElementById('tmSpecs');
+  var gEl = document.getElementById('tmSpecsToggle');
+  if (!tEl || !bEl || !sEl || !gEl) return;
+
+  if (!d) { tEl.innerText = ''; bEl.innerText = 'Loading product details\u2026'; sEl.style.display = 'none'; gEl.style.display = 'none'; return; }
+
+  var name = [d.brand, d.model].filter(Boolean).join(' ') || pr.label;
+  tEl.innerText = name + (d.type ? ' \u00b7 ' + d.type : '');
+
+  var lines = String(d.description || '').split('\n');
+  var intro = [], bullets = [];
+  lines.forEach(function (ln) {
+    var t = ln.trim();
+    if (!t) return;
+    if (t.charAt(0) === '\u2022') bullets.push(t.replace(/^\u2022\s*/, ''));
+    else if (!bullets.length) intro.push(t);
+  });
+  bEl.innerText = intro.join(' ') || 'No description from Printful for this one.';
+
+  sEl.innerHTML = bullets.map(function (b) {
+    return '<li style="padding-left:0.85em;text-indent:-0.85em">\u00b7 ' + escapeHtml(b) + '</li>';
+  }).join('');
+  gEl.style.display = bullets.length ? 'block' : 'none';
+  sEl.style.display = (bullets.length && specsOpen) ? 'block' : 'none';
+  gEl.innerText = (specsOpen ? '\u2212' : '+') + ' Specs';
+}
+
+function escapeHtml(t) {
+  return String(t).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
 function loadPalette(id) {
   var p = productById(id || product);
   if (palettes[p.id]) { applyPalette(p.id); return; }
@@ -1909,6 +1975,12 @@ function buildControls() {
   paintStyleOptions();
   paintProductButtons(); updatePrice(); updateZoomUI(); updateSpecs();
   loadPalette(product);
+  loadDesc(product);
+
+  document.getElementById('tmSpecsToggle').addEventListener('click', function () {
+    specsOpen = !specsOpen;
+    paintDesc(product);
+  });
 
   [].forEach.call(document.querySelectorAll('.tm-product'), function (b) {
     b.addEventListener('click', function () {
@@ -1922,6 +1994,7 @@ function buildControls() {
       for (var mi = 0; mi < ms0.length; mi++) if (ms0[mi].flat) loadModel(modelSrc(ms0[mi]));
       paintProductButtons(); updatePrice(); updateZoomUI(); updateSpecs(); render();
       loadPalette(product);
+      loadDesc(product);
       loadTemplate(product, 'front');
       if (twoSided()) loadTemplate(product, 'back');
     });
