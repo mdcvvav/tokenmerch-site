@@ -308,13 +308,12 @@ var MARKUP = [
 
 /* product slots, above the preview */
 '<div class="glass-panel rounded-2xl p-5 mb-6">',
-'<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 mb-4 flex items-center justify-between"><span><i class="fa-solid fa-shirt text-brand-accent mr-2"></i> Product</span><span class="text-[10px] text-slate-500">10 SLOTS</span></h3>',
+'<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 mb-4 flex items-center justify-between"><span><i class="fa-solid fa-shirt text-brand-accent mr-2"></i> Product</span></h3>',
 '<div id="tmProductGrid" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.5rem">',
 PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' + p.id + '">' + p.label + '</button>'; }).join(''),
 '</div>',
 '<div id="tmDesc" class="mt-4 pt-3 border-t border-brand-border/60">',
 '<div id="tmDescTitle" class="text-[10px] font-mono uppercase tracking-wider text-brand-accent/80 mb-1.5"></div>',
-'<p id="tmDescBody" class="text-[12px] leading-relaxed text-slate-400 m-0"></p>',
 '<button id="tmSpecsToggle" class="mt-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors" style="display:none">+ Specs</button>',
 '<ul id="tmSpecs" class="mt-2 text-[11px] leading-relaxed text-slate-500 m-0 pl-0" style="display:none;list-style:none"></ul>',
 '</div>',
@@ -340,7 +339,6 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '</div>',
 '</div>',
 '<div class="w-full mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[11px] font-mono text-slate-500 pt-2 border-t border-brand-border/60">',
-'<span class="text-slate-400"><i class="fa-solid fa-arrows-rotate text-brand-accent mr-1"></i> <span id="tmViewLabel">Full garment</span></span>',
 '<span class="flex items-center gap-x-3 gap-y-1 flex-wrap">',
 '<span>Source <span id="sourceResText" class="text-slate-300">-</span></span>',
 '<span>Print <span id="upscaleResText" class="text-slate-300">1800 x 1800 px</span></span>',
@@ -1773,12 +1771,13 @@ function paintDesc(id) {
   var pr = productById(id);
   var d = descCache[pr.pid];
   var tEl = document.getElementById('tmDescTitle');
-  var bEl = document.getElementById('tmDescBody');
   var sEl = document.getElementById('tmSpecs');
   var gEl = document.getElementById('tmSpecsToggle');
-  if (!tEl || !bEl || !sEl || !gEl) return;
+  if (!tEl || !sEl || !gEl) return;
 
-  if (!d) { tEl.innerText = ''; bEl.innerText = 'Loading product details\u2026'; sEl.style.display = 'none'; gEl.style.display = 'none'; return; }
+  /* Printful's marketing paragraph is deliberately not shown -- the name and the specs
+     are the parts a customer can act on. */
+  if (!d) { tEl.innerText = 'Loading\u2026'; sEl.style.display = 'none'; gEl.style.display = 'none'; return; }
 
   /* Printful's type_name usually already opens with the brand and model -- "Comfort
      Colors 1717 | Adult Ringspun Cotton Tee" -- so printing both says it twice. Where
@@ -1788,15 +1787,17 @@ function paintDesc(id) {
   var full = d.type || '';
   tEl.innerText = (full && full.toLowerCase().indexOf(name.toLowerCase()) === 0) ? full : name;
 
-  var lines = String(d.description || '').split('\n');
-  var intro = [], bullets = [];
-  lines.forEach(function (ln) {
+  var bullets = [];
+  String(d.description || '').split('\n').forEach(function (ln) {
     var t = ln.trim();
-    if (!t) return;
-    if (t.charAt(0) === '\u2022') bullets.push(t.replace(/^\u2022\s*/, ''));
-    else if (!bullets.length) intro.push(t);
+    if (t.charAt(0) !== '\u2022') return;
+    t = t.replace(/^\u2022\s*/, '');
+    /* Where the blank was manufactured is Printful's business, not the customer's.
+       Covers both wordings: "Blank product sourced from Pakistan" on the garments and
+       "Paper is sourced from Japan" on the poster. */
+    if (/\bsourced from\b/i.test(t)) return;
+    bullets.push(t);
   });
-  bEl.innerText = intro.join(' ') || 'No description from Printful for this one.';
 
   sEl.innerHTML = bullets.map(function (b) {
     return '<li style="padding-left:0.85em;text-indent:-0.85em">\u00b7 ' + escapeHtml(b) + '</li>';
@@ -1960,7 +1961,9 @@ function updateZoomUI() {
   var m = vs[view].kind === 'model' ? (p.models || [])[vs[view].idx]
         : (vs[view].kind === 'zoom' && vs[view].from >= 0 ? (p.models || [])[vs[view].from] : null);
   if (m && !modelMatchesColor(m)) label += ' \u00b7 shown in ' + m.shotIn;
-  document.getElementById('tmViewLabel').innerText = label;
+  var lab = document.getElementById('tmViewLabel');   /* removed from the markup; the
+     arrows either side of the counter already say which view you are on */
+  if (lab) lab.innerText = label;
 }
 function step(d) {
   var vs = viewsFor(productById(product));
