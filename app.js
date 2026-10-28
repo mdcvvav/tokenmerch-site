@@ -2536,6 +2536,13 @@ function renderCartPage(c) {
 }
 
 function startCartPage() {
+  /* Horizon gives a page its own title and a padded, light panel to sit in. Here the panel
+     IS the page, so the chrome is removed rather than decorated around. */
+  var root = document.getElementById('tokenmerch-root');
+  var h1 = document.querySelector('#MainContent h1');
+  if (h1 && !root.contains(h1)) h1.style.display = 'none';
+  var sec = document.querySelector('#MainContent .section');
+  if (sec) { sec.style.background = 'transparent'; sec.style.padding = '0'; sec.style.maxWidth = 'none'; }
   document.getElementById('tmLines').addEventListener('click', cartClick);
   document.getElementById('tmPayBtn').addEventListener('click', function () {
     window.location.href = '/checkout';
@@ -2597,7 +2604,7 @@ function cartProps(p) {
   var props = {
     'Token': (token.ticker ? '$' + cleanTicker(token.ticker) + '  ' : '') + shortCa(token.ca),
     'Placement': styleLabel(p, style),
-    'Colour': colorName || (p.color ? 'White' : '')
+    'Colour': (colorName && colorName !== 'Default') ? colorName : (p.color ? 'White' : '')
   };
   props['_ca'] = token.ca || '';
   props['_slot'] = p.id;
