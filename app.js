@@ -62,24 +62,38 @@ var PRODUCTS = [
      rather than the colour-independent _base_whitebg ghost every other garment gives,
      so our colour fill would double up on it -- and a raw hem is the wrong canvas for
      a 10 in graphic anyway. */
-  /* Cotton Heritage M7580 joggers. The only product that does not print on a torso, so
-     it is also the only one with its own placement set: four leg marks and nothing else.
+  /* Jerzees 975MPR joggers. The only product that does not print on a torso, so it is
+     also the only one with its own placement set: four leg marks and nothing else.
 
-     Printful's printable front-leg area is 3.5 x 14.5 in and it starts LOW -- 21 in below
-     the waistband, measured off the flat template -- because the M7580 has two cross
-     pockets taking up the thigh. The area therefore runs lower thigh to just above the
-     cuff, which is where jogger graphics live anyway. The mark is centred in the 3.5 in
-     strip and anchored `leg.bottom` inches up from the bottom of the area, so it sits
-     just above the ribbed cuff rather than floating mid-shin.
+     WHY THIS BLANK. Every sweatpant and jogger Printful carries gets the same 3.5 x 14.5 in
+     leg strip, but WHERE that strip sits on the garment differs, and on most of them it is
+     low. Measured off each template, the strip starts 55-62% of the way down the garment --
+     the M7580 (which this replaced) at 21 in below the waistband, which is the knee, because
+     its cross pockets take up the thigh. The 975MPR is the one blank whose strip is high:
+     hip to knee, so a thigh print is actually possible. It is also the cheapest of them at
+     a $32.75 blank. The cost of that is a smaller range -- 4 colours, S-2XL -- and the
+     template, below.
+
+     PHOTO TEMPLATE, NOT A GHOST. Every other product returns a `_whitebg` ghost laydown: a
+     semi-transparent overlay, colour-independent, that the preview fills a colour under. The
+     975MPR returns an opaque PHOTOGRAPH of a model, one per colour
+     (01_jerzees975mpr_onman_left_<colour>_whitebg.png). So this product sets `photoTpl`,
+     which puts the design ON TOP of the template instead of under it, and `tplByColor`,
+     which keys the template cache on the swatch and asks for the selected variant. Source-
+     over, not multiply: printed ink is opaque, and multiply would erase a white mark on
+     black fabric. The gallery therefore leads with a worn shot here and a flat laydown
+     everywhere else, which is a real inconsistency, accepted for the placement.
+
+     The mark hangs `leg.top` inches DOWN from the top of the strip -- the thigh -- rather
+     than up from its bottom, which is what the M7580 needed.
 
      left/right follow the same convention as the chest badge: LEFT is the WEARER's left,
-     which is Printful's leg_front_left and the right-hand leg of a front view. Each leg
-     has its own template with its own print-area rectangle on the same flat photo, so
-     the preview switches templates with the style, not with the side -- see tplSide().
+     which is Printful's leg_left. Each leg is its own photo with its own print rectangle,
+     so the preview switches templates with the style, not the side -- see tplSide().
 
-     Costs more than it looks: the blank is $42.75 but every leg placement carries a
-     +$7.95 surcharge, so the real unit cost is $50.70. */
-  { id: 'pants',     label: 'SWEATPANTS',      pid: 412, vid: 11266, price: 104, shape: 'tee',
+     Cost: $32.75 blank (2XL $35.50) + a $7.95 leg surcharge that is always charged = $40.70. */
+  { id: 'pants',     label: 'SWEATPANTS',      pid: 342, vid: 9927,  price: 84,  shape: 'tee',
+    photoTpl: true, tplByColor: true,
     styles: ['badge-left', 'badge-right', 'square-left', 'square-right'],
     styleLabels: {
       'badge-left':  'IMAGE BADGE LEFT (CIRCULAR)',
@@ -88,11 +102,11 @@ var PRODUCTS = [
       'square-right': 'IMAGE BADGE RIGHT (SQUARE)'
     },
     placementByStyle: {
-      'badge-left':  'leg_front_left',  'square-left':  'leg_front_left',
-      'badge-right': 'leg_front_right', 'square-right': 'leg_front_right'
+      'badge-left':  'leg_left',  'square-left':  'leg_left',
+      'badge-right': 'leg_right', 'square-right': 'leg_right'
     },
-    leg: { dia: 2.6, bottom: 1.75 },
-    print: { w: 3.5, h: 14.5, dpi: 150, tech: 'DTG', placement: 'leg_front_left' } },
+    leg: { dia: 2.6, top: 1.2 },
+    print: { w: 3.5, h: 14.5, dpi: 150, tech: 'DTG', placement: 'leg_left' } },
   /* Cotton Heritage M2580 -- the one Printful titles "Unisex Premium Pullover Hoodie".
      That "premium" is its marketing name, not a tier, and reading it as one is how the
      lineup ended up with the dearer Independent SS4500 ($45.75 blank against $39.75)
@@ -1052,7 +1066,10 @@ function printParams(pr, side) {
     artIn: +artIn.toFixed(4),
     caMin: ART.caMinIn
   };
-  if (pr.leg) { q.legDia = pr.leg.dia; q.legBottom = pr.leg.bottom; }
+  if (pr.leg) {
+    q.legDia = pr.leg.dia;
+    if (pr.leg.top != null) q.legTop = pr.leg.top; else q.legBottom = pr.leg.bottom;
+  }
   if (a.top != null) q.artTop = a.top;
   if (a.tickerFirst) q.tickerFirst = '1';
   if (a.tickerCap) q.tickerCap = a.tickerCap;
@@ -1191,7 +1208,9 @@ function drawDesign(p, W, side, inW) {
       var sqL = (style === 'square-left' || style === 'square-right');
       var sL = legCfg.dia * IN;
       artIn = legCfg.dia;
-      var yL = Math.max(PLACE.minMargin * IN, HL - (legCfg.bottom + legCfg.dia) * IN);
+      var yL = legCfg.top != null
+        ? legCfg.top * IN
+        : Math.max(PLACE.minMargin * IN, HL - (legCfg.bottom + legCfg.dia) * IN);
       p.save();
       if (!sqL) {
         p.beginPath();
@@ -1344,8 +1363,13 @@ function printSquare(tpl) {
        and ticker underneath need the rest of `leg.bottom`, so the close-up is as tall as
        the whole block and spills a little onto the fabric either side of the strip. */
     var pxIn = tpl.print_area_width / printFor(pr).w;
-    s = Math.round((pr.leg.dia + pr.leg.bottom + 0.45) * pxIn);
-    y = tpl.print_area_top + tpl.print_area_height - s + Math.round(0.1 * pxIn);
+    if (pr.leg.top != null) {
+      s = Math.round((pr.leg.top + pr.leg.dia + 1.65) * pxIn);
+      y = tpl.print_area_top;
+    } else {
+      s = Math.round((pr.leg.dia + pr.leg.bottom + 0.45) * pxIn);
+      y = tpl.print_area_top + tpl.print_area_height - s + Math.round(0.1 * pxIn);
+    }
   }
   return { s: s, x: tpl.print_area_left + (tpl.print_area_width - s) / 2, y: y };
 }
@@ -1747,7 +1771,7 @@ function renderInner() {
      there is nothing real to draw. Show the spinner rather than the drawn placeholder
      garment, which looked like the preview had broken. Products that genuinely have no
      template (noTpl) or whose template failed to load still use the drawn one. */
-  var key = product + '|' + tplSide(productById(product), side);
+  var key = tplKey(productById(product), side);
   if (!hasTpl && !productById(product).noTpl && !tplFailed[key]) {
     setLoading(true);
     ctx.fillStyle = '#0d0f17';
@@ -1778,7 +1802,8 @@ function renderInner() {
   if (cur.kind === 'zoom') {
     /* close-up of just the print area, so the fine print is readable */
     var pad = 0.10;
-    ctx.fillStyle = garment;
+    var photoZ = productById(product).photoTpl;
+    ctx.fillStyle = photoZ ? '#ffffff' : garment;
     ctx.fillRect(0, 0, C, C);
     if (hasTpl) {
       var q = printSquare(tpl);
@@ -1790,9 +1815,10 @@ function renderInner() {
       var k = C / cw;
       var ratio = tplImg.naturalWidth / tpl.template_width;
       var D = designCanvas(Math.round(rct.w * k), Math.round(rct.h * k), side, placeInW(productById(product), inches));
+      if (photoZ) ctx.drawImage(tplImg, cx0 * ratio, cy0 * ratio, cw * ratio, cw * ratio, 0, 0, C, C);
       ctx.drawImage(D, (rct.x - cx0) * k, (rct.y - cy0) * k, rct.w * k, rct.h * k);
       ctx.globalAlpha = 1;
-      ctx.drawImage(tplImg, cx0 * ratio, cy0 * ratio, cw * ratio, cw * ratio, 0, 0, C, C);
+      if (!photoZ) ctx.drawImage(tplImg, cx0 * ratio, cy0 * ratio, cw * ratio, cw * ratio, 0, 0, C, C);
     } else {
       var inset = C * pad;
       ctx.drawImage(designCanvas(Math.round(C - inset * 2), 0, side, tplInches(productById(product)).w), inset, inset);
@@ -1803,13 +1829,20 @@ function renderInner() {
 
   if (hasTpl) {
     var kk = C / tpl.template_width;
-    ctx.fillStyle = garment || tpl.background_color || '#0c0c0c';
-    ctx.fillRect(0, 0, C, C);
+    var prF = productById(product);
     var q2 = printRect(tpl);
-    var inches2 = tplInches(productById(product));
+    var inches2 = tplInches(prF);
     var pw = Math.round(q2.w * kk), ph = Math.round(q2.h * kk);
-    ctx.drawImage(designCanvas(pw, ph, side, placeInW(productById(product), inches2)), q2.x * kk, q2.y * kk, pw, ph);
-    ctx.drawImage(tplImg, 0, 0, C, C);
+    var DF = designCanvas(pw, ph, side, placeInW(prF, inches2));
+    /* A ghost template is a semi-transparent overlay: fill the garment colour, lay the
+       design in the print area, then drop the ghost over both. A photo template is an
+       opaque picture of the real garment in the real colour, so there is nothing to fill
+       and the design goes on top of it instead. */
+    ctx.fillStyle = prF.photoTpl ? '#ffffff' : (garment || tpl.background_color || '#0c0c0c');
+    ctx.fillRect(0, 0, C, C);
+    if (prF.photoTpl) ctx.drawImage(tplImg, 0, 0, C, C);
+    ctx.drawImage(DF, q2.x * kk, q2.y * kk, pw, ph);
+    if (!prF.photoTpl) ctx.drawImage(tplImg, 0, 0, C, C);
     ctx.restore();
     return;
   }
@@ -2675,14 +2708,21 @@ function tplSide(p, side) {
   return side === 'back' ? 'back' : 'front';
 }
 
+/* A ghost template is one file for every colour, so the product and the placement name it.
+   A photo template is a different file per colour, so the swatch is part of the key. */
+function tplKey(p, side) {
+  return p.id + '|' + tplSide(p, side) + (p.tplByColor ? '|' + (colorName || '') : '');
+}
+
 function tplGet(side) {
-  return tplCache[product + '|' + tplSide(productById(product), side)] || null;
+  return tplCache[tplKey(productById(product), side)] || null;
 }
 
 function loadTemplate(id, side) {
   var p = productById(id || product);
   var pl = tplSide(p, side);
-  var key = p.id + '|' + pl;
+  var key = tplKey(p, side);
+  var vid = (p.tplByColor && p.id === product && curVariant) ? curVariant : p.vid;
   /* Printful only returns a real product photo for the DTG garments; the mug and any
      all-over product come back as flat pattern guides, so those use the drawn one. */
   if (p.noTpl) return;
@@ -2697,7 +2737,7 @@ function loadTemplate(id, side) {
     console.warn('No Printful template for ' + key + ', using the drawn fallback:', why);
     if (product === p.id) render();
   }
-  getJson(API + '/api/template?product=' + p.pid + '&variant=' + p.vid + '&placement=' + pl).then(function (t) {
+  getJson(API + '/api/template?product=' + p.pid + '&variant=' + vid + '&placement=' + pl).then(function (t) {
     if (!t || !t.image_url) throw new Error((t && t.error) || 'no template');
     var img = new Image();
     img.onload = function () {
