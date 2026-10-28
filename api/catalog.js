@@ -5,6 +5,24 @@
 let listCache = null;
 const variantCache = new Map();
 
+/* Printful's blurbs come back as loose HTML with hard newlines and entities. Flattened
+   here so the storefront can drop the text straight into a node without an innerHTML. */
+function cleanDesc(raw) {
+  return String(raw || '')
+    .replace(/<\s*(br|\/p|\/li|\/div)\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/[ \t]*\n[ \t]*/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 async function pf(path, raw) {
   const token = process.env.PRINTFUL_API_TOKEN;
   if (!token) throw new Error('PRINTFUL_API_TOKEN is not set in Vercel');
@@ -116,7 +134,8 @@ export default async function handler(req, res) {
         variantCache.set(id, {
           product: {
             id: data.product.id, type: data.product.type_name,
-            brand: data.product.brand, model: data.product.model
+            brand: data.product.brand, model: data.product.model,
+            description: cleanDesc(data.product.description)
           },
           variants: (data.variants || []).map((v) => ({
             id: v.id, name: v.name, size: v.size, color: v.color,
