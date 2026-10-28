@@ -91,7 +91,7 @@ var PRODUCTS = [
       'badge-left':  'leg_front_left',  'square-left':  'leg_front_left',
       'badge-right': 'leg_front_right', 'square-right': 'leg_front_right'
     },
-    leg: { dia: 2.6, bottom: 1.6 },
+    leg: { dia: 2.6, bottom: 1.75 },
     print: { w: 3.5, h: 14.5, dpi: 150, tech: 'DTG', placement: 'leg_front_left' } },
   /* Cotton Heritage M2580 -- the one Printful titles "Unisex Premium Pullover Hoodie".
      That "premium" is its marketing name, not a tier, and reading it as one is how the
@@ -1340,9 +1340,12 @@ function printSquare(tpl) {
      framing the top would show nothing but blank fabric */
   var y = tpl.print_area_top;
   if (pr.leg) {
+    /* and the crop is not the strip's width either: the mark is 2.6 in but the address
+       and ticker underneath need the rest of `leg.bottom`, so the close-up is as tall as
+       the whole block and spills a little onto the fabric either side of the strip. */
     var pxIn = tpl.print_area_width / printFor(pr).w;
-    var cyIn = printFor(pr).h - (pr.leg.bottom + pr.leg.dia / 2);
-    y = Math.max(tpl.print_area_top, tpl.print_area_top + cyIn * pxIn - s / 2);
+    s = Math.round((pr.leg.dia + pr.leg.bottom + 0.45) * pxIn);
+    y = tpl.print_area_top + tpl.print_area_height - s + Math.round(0.1 * pxIn);
   }
   return { s: s, x: tpl.print_area_left + (tpl.print_area_width - s) / 2, y: y };
 }
