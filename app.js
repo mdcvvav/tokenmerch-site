@@ -473,7 +473,7 @@ function lookup(raw) {
    Jupiter in the background and swap only if its image really is larger. A dead gateway
    costs one request nobody waited on. Both candidates are measured at the moment of
    comparison rather than trusting whichever probe happened to land first. */
-var artTried = {};
+var artBest = {};   /* ca -> the sharpest url found for it */
 
 function measureImage(url, ms) {
   return new Promise(function (res) {
@@ -487,17 +487,31 @@ function measureImage(url, ms) {
   });
 }
 
+function useArtwork(ca, url) {
+  if (!token || token.ca !== ca || !url) return;
+  token.img = url;
+  var el = document.getElementById('tokenImgSidebar');
+  if (el) el.src = url;
+  loadLogo(url);
+}
+
 function upgradeArtwork(t) {
-  if (!t || !t.ca || artTried[t.ca]) return;
-  artTried[t.ca] = true;
+  if (!t || !t.ca) return;
+  var known = artBest[t.ca];
+  if (known) {
+    /* Already decided for this token, so apply the answer instead of racing again.
+       This branch matters: every fresh lookup resets token.img to DexScreener's url,
+       so without it a second paste of the same address quietly lost the upgrade. */
+    if (known !== t.img) useArtwork(t.ca, known);
+    return;
+  }
+  artBest[t.ca] = t.img;            /* provisional -- what is on screen right now */
   fromJupiter(t.ca).catch(function () { return null; }).then(function (j) {
     if (!j || !j.img || j.img === t.img) return null;
     return Promise.all([measureImage(t.img, 3000), measureImage(j.img, 2500)]).then(function (r) {
-      if (!token || token.ca !== t.ca) return;      /* the customer moved on */
       if (r[1] > r[0]) {
-        token.img = j.img;
-        document.getElementById('tokenImgSidebar').src = j.img;
-        loadLogo(j.img);
+        artBest[t.ca] = j.img;
+        useArtwork(t.ca, j.img);    /* no-ops if the customer has moved on */
       }
     });
   });
