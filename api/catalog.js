@@ -46,6 +46,19 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    // ?templates=<catalog product id>[&placements=leg_left] -> every mockup template Printful
+    // publishes for that placement, with its print-area rectangle. The v1 mockup-generator
+    // endpoint returns exactly ONE template per placement and picks it itself, which on the
+    // joggers is a worn model photo; v2 lists them all, flat laydowns included.
+    const tplFor = Number(req.query.templates);
+    if (tplFor) {
+      const pl = String(req.query.placements || '').replace(/[^a-z0-9_,]/gi, '');
+      const data = await pf('/v2/catalog-products/' + tplFor + '/mockup-templates?limit=100' +
+        (pl ? '&placements=' + pl : ''), true);
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+      return res.status(200).json(data);
+    }
+
     // ?placements=<catalog product id> -> what can be printed where, and what it adds
     const plFor = Number(req.query.placements);
     if (plFor) {
