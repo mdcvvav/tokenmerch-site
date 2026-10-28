@@ -1810,7 +1810,11 @@ function renderInner() {
     /* close-up of just the print area, so the fine print is readable */
     var pad = 0.10;
     var photoZ = productById(product).photoTpl;
-    ctx.fillStyle = photoZ ? '#ffffff' : garment;
+    /* The close-up fills with the GARMENT colour even behind a photo template, unlike the
+       full view, which fills white and reads as a catalogue shot. A leg is narrower than the
+       block printed on it, so the crop runs off the edge of the garment -- and against the
+       photo's white surround a white mark simply vanished. */
+    ctx.fillStyle = garment;
     ctx.fillRect(0, 0, C, C);
     if (hasTpl) {
       var q = printSquare(tpl);
