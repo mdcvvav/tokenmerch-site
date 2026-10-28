@@ -57,6 +57,12 @@ export default async function handler(req, res) {
       w: String(W),
       h: String(H)
     });
+    // Forward the layout the preview resolved. Dropping any of these here puts us back
+    // where we were: the renderer re-deriving a size, a colour or an image url and
+    // quietly printing something other than what the customer approved.
+    ['dpi', 'scale', 'shTop', 'side', 'caFont', 'tickerFont', 'weight',
+     'img', 'srcW', 'artIn', 'artTop', 'tickerFirst', 'tickerCap', 'caMin']
+      .forEach((k) => { if (q[k] !== undefined && q[k] !== '') params.set(k, String(q[k])); });
     const printUrl = 'https://' + host + '/api/print?' + params.toString();
 
     const task = await pf('/mockup-generator/create-task/' + PRODUCT_ID, {
