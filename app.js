@@ -95,8 +95,18 @@ var PRODUCTS = [
         cyl: { cx: 0.6136, a: 0.2955, yRim: 0.1485, bRim: 0.0212,
                yBase: 0.8394, bBase: 0.0348, mTop: 0.0333, mBot: 0.0333 } }
     ] },
-  { id: 'poster',    label: 'POSTER',          pid: 2,   vid: 4651,  price: 59,  shape: 'flat',
-    print: { w: 8, h: 10, dpi: 300, tech: 'Giclee', placement: 'default' } },
+  /* Unframed matte poster (product 1), 11x14. The framed one (product 2) was dropped:
+     its blanks run $29.50-$107.75 against a single retail price, and all three frame
+     colours return the SAME template -- a flat "Safe Print area" guide, no frame in it
+     at all -- so there was never anything to composite onto.
+
+     One size and one art size, because consistency was the ask. 6 in prints at 133 DPI
+     off an 800 px token and 67 off a 400 px one; the quality warning covers the tail
+     rather than the artwork shrinking under the customer. */
+  { id: 'poster',    label: 'POSTER',          pid: 1,   vid: 14125, price: 28,  shape: 'flat',
+    noTpl: true, sheet: true, minDpi: 65,
+    art: { fixed: true, size: 6, top: 2.53, tickerFirst: true, tickerCap: 0.155 },
+    print: { w: 11, h: 14, dpi: 300, tech: 'Digital', placement: 'default' } },
   { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat',
     print: { w: 5.83, h: 8.27, dpi: 300, tech: 'Digital', placement: 'default' } }
 ];
@@ -317,6 +327,9 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '<span id="tmDpiLabel" class="text-brand-solana/70">150 DPI</span>',
 '</span>',
 '</div>',
+'<div id="tmQualityWarn" class="w-full mt-2 text-[11px] font-mono rounded-lg px-3 py-2" style="display:none;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.35);color:#fbbf24">',
+'<i class="fa-solid fa-triangle-exclamation mr-1"></i><span id="tmQualityText"></span>',
+'</div>',
 '</div></div>',
 
 '</div></main>',
@@ -477,6 +490,17 @@ function loadLogo(url) {
     'https://wsrv.nl/?url=' + encodeURIComponent(url) + '&w=1200&h=1200&fit=cover&output=png',
     url
   ];
+  /* Measure the ORIGINAL. The first entry below asks wsrv.nl for 1200 px and gets it
+     whatever the source was, so the Source line read "1200 x 1200" for a 400 px token
+     and the quality check had nothing real to go on. */
+  srcW = 0; srcH = 0;
+  var probe = new Image();
+  probe.onload = function () {
+    srcW = probe.naturalWidth || 0; srcH = probe.naturalHeight || 0;
+    updateSourceLabel(); render();
+  };
+  probe.onerror = function () { updateSourceLabel(); };
+  probe.src = url;
   var i = 0;
   function attempt() {
     if (i >= tries.length) {
@@ -490,8 +514,7 @@ function loadLogo(url) {
     img.onload = function () {
       logoImg = img; logoReady = true;
       setStatus('<i class="fa-solid fa-circle-check text-brand-solana"></i> Ready');
-      document.getElementById('sourceResText').innerText =
-        (img.naturalWidth || '?') + ' x ' + (img.naturalHeight || '?') + ' px';
+      updateSourceLabel();
       render();
     };
     img.onerror = function () { i++; attempt(); };
@@ -572,21 +595,37 @@ function ensureFont(f) {
    caW is how wide the address line is allowed to run; tickerW sizes
    the $TICKER. Both use the website's own fonts: JetBrains Mono for
    the address, Inter for the ticker. */
-function drawCaption(p, cx, tickerW, caW, top, caLines) {
+function drawCaption(p, cx, tickerW, caW, top, caLines, art, IN) {
   if (!showCA && !showTicker) return top;
   p.save();
   p.fillStyle = textColor;
   p.textAlign = 'center';
   p.textBaseline = 'top';
   var y = top + tickerW * 0.05;
-  if (showCA && token.ca) {
+
+  function drawTicker() {
+    if (!showTicker || !token.ticker) return;
+    var t = '$' + token.ticker;
+    var tf = fontById(tickerFont), twt = nearestWeight(tf, textWeight);
+    /* The ticker is the headline, so it is capped as a share of the artwork's width
+       rather than simply fitted to it -- otherwise a three-letter ticker grows to fill
+       six inches and swamps everything under it. */
+    var fs = fitFont(p, t, twt, tf.css, tickerW, tickerW * ((art && art.tickerCap) || 0.22));
+    p.font = twt + ' ' + fs + 'px ' + tf.css;
+    p.fillText(t, cx, y);
+    y += fs * 1.1;
+  }
+
+  function drawAddr() {
+    if (!showCA || !token.ca) return;
     var cf = fontById(caFont), cwt = nearestWeight(cf, textWeight);
-    /* A 44-character address squeezed into a narrow graphic prints at about 0.11 in
-       tall with sub-0.5 mm strokes, which is under the safe range for printing on
-       fabric. Over two lines it roughly doubles, so it stays legible inside the
-       image. DTG holds fine detail slightly less well than DTF, so if anything this
-       matters a little more now. */
-    if (caLines === 2 && token.ca.length > 24) {
+    /* A 44-character address squeezed into a narrow graphic prints at well under half a
+       millimetre of stroke, which is below the safe range for fabric. Two lines roughly
+       doubles it. The split is now forced whenever one line would fall under
+       ART.caMinIn, not only when the caller asks for it. */
+    var one = fitFont(p, token.ca, cwt, cf.css, caW, caW * 0.075);
+    var minPx = IN ? ART.caMinIn * IN : 0;
+    if ((caLines === 2 || (minPx && one < minPx)) && token.ca.length > 24) {
       var cut = Math.ceil(token.ca.length / 2);
       var l1 = token.ca.slice(0, cut), l2 = token.ca.slice(cut);
       var fs2 = Math.min(fitFont(p, l1, cwt, cf.css, caW, caW * 0.10),
@@ -595,20 +634,17 @@ function drawCaption(p, cx, tickerW, caW, top, caLines) {
       p.fillText(l1, cx, y); y += fs2 * 1.12;
       p.fillText(l2, cx, y); y += fs2 * 1.5;
     } else {
-      var fs = fitFont(p, token.ca, cwt, cf.css, caW, caW * 0.075);
-      p.font = cwt + ' ' + fs + 'px ' + cf.css;
+      p.font = cwt + ' ' + one + 'px ' + cf.css;
       p.fillText(token.ca, cx, y);
-      y += fs * 1.5;
+      y += one * 1.5;
     }
   }
-  if (showTicker && token.ticker) {
-    var t = '$' + token.ticker;
-    var tf = fontById(tickerFont), twt = nearestWeight(tf, textWeight);
-    var fs2 = fitFont(p, t, twt, tf.css, tickerW, tickerW * 0.22);
-    p.font = twt + ' ' + fs2 + 'px ' + tf.css;
-    p.fillText(t, cx, y);
-    y += fs2 * 1.1;
-  }
+
+  /* the poster leads with the ticker and sets the address under it; the garments keep
+     the original order, where the address sits tight under the artwork */
+  if (art && art.tickerFirst) { drawTicker(); y += tickerW * 0.03; drawAddr(); }
+  else { drawAddr(); drawTicker(); }
+
   p.restore();
   return y;
 }
@@ -730,6 +766,59 @@ function perInch(W, inW) { return W / (inW || 12); }
    per visible inch; every product in the store today is 1. */
 function placeInW(pr, inches) { return inches.w / (pr.placeScale || 1); }
 
+/* ---- how big the artwork prints -------------------------------------------
+   The token image is whatever the chain gave us. Measured across 52 trending Solana
+   tokens: 2% under 300 px, 17% at 400, 21% at 500-690, 60% at 800+. Printing every one
+   of them at the same size means the thin ones go soft, so the centred graphic shrinks
+   until the pixels carry it, down to a floor. A badge is small enough never to need it.
+
+   Nothing upstream will catch a thin source for us: we always generate the print file
+   at its full pixel size (1800x2400 for a 12x16 tee), so Printful's own check -- which
+   looks at file dimensions -- passes an upscaled 400 px token without comment. */
+var ART = {
+  targetDpi: 110,   /* print the artwork at this when it has the pixels */
+  dynMin: 4.5,      /* in, the smallest the centred graphic will shrink to */
+  caMinIn: 0.16     /* in, smallest font size the address may print at */
+};
+var srcW = 0, srcH = 0;   /* the artwork's TRUE pixel size, not the upscaled copy */
+var artIn = 0;            /* in, what the last render actually drew */
+
+function artSizeIn(pr, inW) {
+  var a = pr && pr.art;
+  var max = (a && a.size) || 0.55 * inW;
+  if (a && a.fixed) return max;          /* the poster: one size, always */
+  if (!srcW) return max;                 /* nothing measured yet */
+  /* the floor can never exceed the ceiling -- the stickers' area is smaller than it */
+  var floor = Math.min(ART.dynMin, max);
+  return Math.max(floor, Math.min(max, srcW / ART.targetDpi));
+}
+
+/* Below this the warning fires. Fabric hides softness that paper shows -- ink wicks
+   into cotton and the weave is a texture in its own right -- so DTG gets a lower bar. */
+function minDpiFor(pr) {
+  if (pr && pr.minDpi) return pr.minDpi;
+  return /DTG|DTF/i.test(((printFor(pr) || {}).tech || '')) ? 80 : 100;
+}
+
+function updateQuality() {
+  var box = document.getElementById('tmQualityWarn');
+  if (!box) return;
+  var txt = document.getElementById('tmQualityText');
+  var dpi = (srcW && artIn) ? Math.round(srcW / artIn) : 0;
+  if (!dpi || dpi >= minDpiFor(productById(product))) { box.style.display = 'none'; return; }
+  if (txt) txt.innerText = 'The token image source may result in a suboptimal print \u2014 ' +
+    srcW + ' px artwork printed at ' + artIn.toFixed(1) + ' in is about ' + dpi + ' DPI.';
+  box.style.display = 'block';
+}
+
+function updateSourceLabel() {
+  var el = document.getElementById('sourceResText');
+  if (!el) return;
+  if (srcW) el.innerText = srcW + ' x ' + (srcH || srcW) + ' px';
+  else if (logoImg) el.innerText = (logoImg.naturalWidth || '?') + ' x ' + (logoImg.naturalHeight || '?') + ' px';
+  else el.innerText = '-';
+}
+
 /* Keep a mark `half` inches wide (half-width) inside the print area when it is
    pushed `off` inches off centre. The curved contract address wraps well outside
    the badge, and at 3.75 in off centre it ran past the edge of a 12 in area. */
@@ -810,6 +899,7 @@ function drawDesign(p, W, side, inW) {
     /* the back carries the full centred artwork */
     if (logoReady && logoImg) {
       var sb = 0.55 * W, xb = 0.225 * W, yb = top;
+      artIn = sb / IN;
       p.drawImage(logoImg, xb, yb, sb, sb);
       drawCaption(p, W / 2, sb, sb, yb + sb);
       return;
@@ -820,6 +910,7 @@ function drawDesign(p, W, side, inW) {
       /* badge-left prints on the wearer's left chest, which is the
          right-hand side of a front view; badge-right is its mirror */
       var s1 = PLACE.badgeDia * IN;
+      artIn = PLACE.badgeDia;
       var y1 = dropInArea(productById(product), PLACE.badgeCentreDrop, PLACE.badgeDia / 2) * IN;
       var off1 = clampOffset(PLACE.badgeFromCentre, PLACE.badgeDia * 0.76, inW);
       var bcx = W / 2 + (style === 'badge-left' ? off1 : -off1) * IN;
@@ -852,16 +943,20 @@ function drawDesign(p, W, side, inW) {
       var s2 = wideArea(p) ? 0.45 * H2 : 0.4167 * W;
       var x2 = (W - s2) / 2;
       var y2 = wideArea(p) ? Math.max(0, (H2 - s2 * 1.5) / 2) : top;
+      artIn = s2 / IN;
       p.drawImage(logoImg, x2, y2, s2, s2);
-      drawCaption(p, W / 2, s2, s2, y2 + s2, 2);
+      drawCaption(p, W / 2, s2, s2, y2 + s2, 2, null, IN);
     } else {
       /* big centred graphic: the address stays inside the image's width */
       var H3 = p.canvas.height;
-      var s3 = wideArea(p) ? 0.62 * H3 : 0.55 * W;
+      var pr3 = productById(product);
+      var s3 = wideArea(p) ? 0.62 * H3 : artSizeIn(pr3, inW) * IN;
       var x3 = (W - s3) / 2;
-      var y3 = wideArea(p) ? Math.max(0, (H3 - s3 * 1.34) / 2) : top;
+      var y3 = wideArea(p) ? Math.max(0, (H3 - s3 * 1.34) / 2)
+             : ((pr3.art && pr3.art.top != null) ? pr3.art.top * IN : top);
+      artIn = s3 / IN;
       p.drawImage(logoImg, x3, y3, s3, s3);
-      drawCaption(p, W / 2, s3, s3, y3 + s3);
+      drawCaption(p, W / 2, s3, s3, y3 + s3, 0, pr3.art, IN);
     }
   } else {
     var HE = p.canvas.height, wE = wideArea(p);
@@ -1194,7 +1289,61 @@ function setLoading(on) {
   if (el) el.style.display = on ? 'flex' : 'none';
 }
 
+/* ---- flat sheet products --------------------------------------------------
+   A poster is a piece of paper: no shape to model and nothing to wrap. Printful's
+   template for one is the same flat "Safe Print area" guide the mug gets -- a dashed
+   rectangle with a caption under it -- and the preview was compositing the artwork onto
+   that, caption and all, over a black fill. So the sheet is drawn here instead. */
+function sheetBox(pr, C, pad) {
+  var inches = printFor(pr);
+  var ar = inches.w / inches.h;
+  var avail = C * (1 - pad * 2);
+  var w = avail, h = w / ar;
+  if (h > avail) { h = avail; w = h * ar; }
+  return { x: (C - w) / 2, y: (C - h) / 2, w: w, h: h, inches: inches };
+}
+
+function sheetComposite(pr, C) {
+  var b = sheetBox(pr, C, 0.075);
+  var c = document.createElement('canvas');
+  c.width = C; c.height = C;
+  var p = c.getContext('2d');
+  p.fillStyle = '#0d0f17';
+  p.fillRect(0, 0, C, C);
+  p.save();
+  p.shadowColor = 'rgba(0,0,0,.55)';
+  p.shadowBlur = C * 0.03;
+  p.shadowOffsetY = C * 0.012;
+  p.fillStyle = '#ffffff';
+  p.fillRect(b.x, b.y, b.w, b.h);
+  p.restore();
+  p.drawImage(designCanvas(Math.round(b.w), Math.round(b.h), 'front', b.inches.w), b.x, b.y);
+  return { canvas: c, box: b };
+}
+
+function renderSheet(p, C, zoom) {
+  var pr = productById(product);
+  var r = sheetComposite(pr, C);
+  setLoading(false);
+  if (!zoom) { p.drawImage(r.canvas, 0, 0); return; }
+  /* close-up on the printed block, so the address can be read */
+  var b = r.box, a = pr.art || {};
+  var perIn = b.w / b.inches.w;
+  var size = (a.size || 0.55 * b.inches.w) * perIn;
+  var top = (a.top != null ? a.top : 0.9) * perIn;
+  var box = size * 1.5;
+  var cx = b.x + b.w / 2, cy = b.y + top + size * 0.78;
+  p.fillStyle = '#ffffff';
+  p.fillRect(0, 0, C, C);
+  p.drawImage(r.canvas, cx - box / 2, cy - box / 2, box, box, 0, 0, C, C);
+}
+
 function render() {
+  renderInner();
+  updateQuality();
+}
+
+function renderInner() {
   if (!canvas) return;
   var C = canvas.width;
   ctx.save();
@@ -1223,6 +1372,12 @@ function render() {
     return;
   }
   setLoading(false);
+
+  if (productById(product).sheet) {
+    renderSheet(ctx, C, cur.kind === 'zoom');
+    ctx.restore();
+    return;
+  }
 
   if (cur.kind === 'model') {
     renderModel(productById(product).models[cur.idx], false, cur.side, cur.fit);
