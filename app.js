@@ -358,6 +358,7 @@ var style = 'centered';
 var size = '';
 var view = 0;            /* index into viewsFor(product) */
 var showCA = false, showTicker = false, textColor = '#FFFFFF', textWeight = 700;
+var inkTouched = false;   /* has the customer moved the colour slider themselves? */
 var caFont = 'archivo', tickerFont = 'archivo';
 var palettes = {};        /* product id -> { sizes, colors } from Printful */
 
@@ -598,7 +599,7 @@ function ensureFont(f) {
 function drawCaption(p, cx, tickerW, caW, top, caLines, art, IN) {
   if (!showCA && !showTicker) return top;
   p.save();
-  p.fillStyle = textColor;
+  p.fillStyle = inkColor();
   p.textAlign = 'center';
   p.textBaseline = 'top';
   var y = top + tickerW * 0.05;
@@ -663,7 +664,7 @@ function drawArcCA(p, cx, cy, r, W) {
   var fs = denom > 0 ? Math.min(span * (r + gap) / denom, W * 0.05) : r * 0.2;
   p.save();
   p.font = awt + ' ' + fs + 'px ' + af.css;
-  p.fillStyle = textColor;
+  p.fillStyle = inkColor();
   p.textAlign = 'center';
   p.textBaseline = 'middle';
   var rMid = r + gap + fs * 0.45;
@@ -793,6 +794,31 @@ function artSizeIn(pr, inW) {
   return Math.max(floor, Math.min(max, srcW / ART.targetDpi));
 }
 
+/* ---- ink colour -----------------------------------------------------------
+   The colour picker starts at #FFFFFF, which is right on a black tee and invisible on
+   anything light: a poster is white paper and the mug is white glaze, so the ticker and
+   the address were being drawn in white on white. Until the customer moves the slider
+   themselves, the ink follows whatever it is printing on. */
+function substrateHex() {
+  var pr = productById(product);
+  if (pr.sheet) return '#FFFFFF';
+  if (pr.color) return pr.color;
+  return garment || '#1b1b1c';
+}
+
+function isLightHex(hex) {
+  var h = String(hex || '').replace('#', '');
+  if (h.length !== 6) return false;
+  var r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150;
+}
+
+/* every draw reads this rather than textColor, so it follows a colour change with no
+   re-binding and no stale value */
+function inkColor() {
+  return inkTouched ? textColor : (isLightHex(substrateHex()) ? '#141414' : '#FFFFFF');
+}
+
 /* Below this the warning fires. Fabric hides softness that paper shows -- ink wicks
    into cotton and the weave is a texture in its own right -- so DTG gets a lower bar. */
 function minDpiFor(pr) {
@@ -855,7 +881,7 @@ function drawChestBadge(p, W, tickerOnly, inW) {
     if (!token.ticker) return;
     var fs = fitFont(p, tb, bwt, bf.css, s * 1.45, s * 0.52);
     p.save();
-    p.fillStyle = textColor;
+    p.fillStyle = inkColor();
     p.textAlign = 'center';
     p.textBaseline = 'middle';
     p.font = bwt + ' ' + fs + 'px ' + bf.css;
@@ -874,7 +900,7 @@ function drawChestBadge(p, W, tickerOnly, inW) {
   if (showTicker && token.ticker) {
     var fsb = fitFont(p, tb, bwt, bf.css, s * 1.2, s * 0.26);
     p.save();
-    p.fillStyle = textColor;
+    p.fillStyle = inkColor();
     p.textAlign = 'center';
     p.textBaseline = 'top';
     p.font = bwt + ' ' + fsb + 'px ' + bf.css;
@@ -929,7 +955,7 @@ function drawDesign(p, W, side, inW) {
         var bf = fontById(tickerFont), bwt = nearestWeight(bf, textWeight);
         var fsb = fitFont(p, tb, bwt, bf.css, s1 * 1.2, s1 * 0.26);
         p.save();
-        p.fillStyle = textColor;
+        p.fillStyle = inkColor();
         p.textAlign = 'center';
         p.textBaseline = 'top';
         p.font = bwt + ' ' + fsb + 'px ' + bf.css;
@@ -1721,6 +1747,7 @@ function buildControls() {
     showCA = document.getElementById('tmShowCA').checked;
     showTicker = document.getElementById('tmShowTicker').checked;
     textColor = spectrumHex(+document.getElementById('tmHue').value / 1000);
+    if (!inkTouched) textColor = inkColor();
     textWeight = +document.getElementById('tmWeight').value;
     caFont = document.getElementById('tmCaFont').value;
     tickerFont = document.getElementById('tmTkFont').value;
@@ -1735,8 +1762,8 @@ function buildControls() {
     var live = f1.weights.length > 1 || f2.weights.length > 1;
     document.getElementById('tmWeightRow').style.opacity = live ? '1' : '0.4';
     document.getElementById('tmWeight').disabled = !live;
-    document.getElementById('tmColorHex').innerText = textColor;
-    document.getElementById('tmColorSwatch').style.background = textColor;
+    document.getElementById('tmColorHex').innerText = inkColor() + (inkTouched ? '' : ' auto');
+    document.getElementById('tmColorSwatch').style.background = inkColor();
     document.getElementById('tmColorRow').style.opacity = (showCA || showTicker) ? '1' : '0.4';
     render();
   }
@@ -1748,6 +1775,9 @@ function buildControls() {
 
   ['tmShowCA', 'tmShowTicker', 'tmHue', 'tmWeight', 'tmCaFont', 'tmTkFont'].forEach(function (id) {
     var el = document.getElementById(id);
+    /* moving the hue slider is the customer taking the wheel; everything else leaves
+       the automatic choice in place */
+    if (id === 'tmHue') el.addEventListener('input', function () { inkTouched = true; });
     el.addEventListener('input', textUpdate);
     el.addEventListener('change', textUpdate);
   });
