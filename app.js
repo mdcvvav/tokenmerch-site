@@ -2722,10 +2722,21 @@ function loadTemplate(id, side) {
   var p = productById(id || product);
   var pl = tplSide(p, side);
   var key = tplKey(p, side);
-  var vid = (p.tplByColor && p.id === product && curVariant) ? curVariant : p.vid;
   /* Printful only returns a real product photo for the DTG garments; the mug and any
      all-over product come back as flat pattern guides, so those use the drawn one. */
   if (p.noTpl) return;
+  /* A per-colour photo template has to be asked for by the variant the customer is
+     actually looking at. `curVariant` is not it: the colour list arrives over the network
+     after the product switch, so for the first frames it still holds the PREVIOUS
+     product's variant -- which is how a black jogger came back as the navy photograph.
+     Resolve it from the loaded palette instead, and if that has not arrived yet, do
+     nothing: applyPalette() ends in render(), which calls straight back here. */
+  var vid = p.vid;
+  if (p.tplByColor) {
+    if (p.id !== product || !palettes[p.id]) return;
+    var ce = colorEntry();
+    vid = (ce && (ce.ids[size] || ce.ids[Object.keys(ce.ids)[0]])) || p.vid;
+  }
   if (tplCache[key]) { if (product === p.id) render(); return; }
   /* render() calls this whenever the template is missing, and the spinner keeps rendering,
      so without this guard one product switch fires a burst of identical requests. */
