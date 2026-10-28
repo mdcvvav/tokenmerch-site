@@ -380,6 +380,17 @@ var palettes = {};        /* product id -> { sizes, colors } from Printful */
 var chartRange = 'm5', chartShown = null, chartData = null, chartTimer = null;
 var chartCache = {}, chartPending = {}, chartHoverX = -1;
 var CHART_TTL = 30000;   /* GeckoTerminal edge-caches on-chain data for 30 s */
+/* When GeckoTerminal throttles us it answers WITHOUT an Access-Control-Allow-Origin
+   header, so the browser reports a CORS failure and fetch rejects with a bare
+   "Failed to fetch" -- the status never reaches us. Testing a message for 429 misses
+   it entirely, so the old code read a throttle as a hiccup and stepped down to a finer
+   candle, spending another call while already rate limited. Both now back off. */
+var CHART_COOLDOWN = 90000;
+var chartBlockedUntil = 0;
+function chartThrottled(e) {
+  var m = (e && e.message) || '';
+  return /429/.test(m) || /failed to fetch|networkerror|load failed/i.test(m);
+}
 
 var canvas, ctx, logoImg = null, logoReady = false;
 var modelImgs = {};
@@ -2385,6 +2396,11 @@ function loadChart(stepKey) {
      window only spends rate limit. Toggling between sizes is free. */
   var hit = chartCache[ck];
   if (hit && Date.now() - hit.t < CHART_TTL) { showCandles(r.key, hit.rows); return; }
+  /* still inside a back-off: asking again only deepens it */
+  if (Date.now() < chartBlockedUntil) {
+    if (!chartData) chartMsg('Chart busy, one moment');
+    return;
+  }
   if (chartPending[ck]) return;                 /* already asking for this one */
   chartPending[ck] = true;
 
@@ -2417,8 +2433,11 @@ function loadChart(stepKey) {
     showCandles(r.key, rows);
   }).catch(function (e) {
     delete chartPending[ck];
-    if (/429/.test(e.message)) {
-      /* rate limited: stepping finer would only spend another call */
+    if (chartThrottled(e)) {
+      /* Rate limited, or blocked in a way that looks like it. Stepping to a finer
+         candle or on to the next pool would only spend more calls, so stop and sit
+         out the cool-down. */
+      chartBlockedUntil = Date.now() + CHART_COOLDOWN;
       if (!chartData) chartMsg('Chart busy, one moment');
       return;
     }
