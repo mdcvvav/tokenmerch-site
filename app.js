@@ -419,7 +419,14 @@ function fromPairs(pairs, mint) {
     price: isQuote ? 'n/a' : fmtPrice(p.priceUsd),
     change: isQuote ? '0%' : fmtChange(p.priceChange && p.priceChange.h24),
     img: (!isQuote && p.info && p.info.imageUrl) || '',
-    pair: p.pairAddress || ''
+    pair: p.pairAddress || '',
+    /* every pool, richest first. The chart provider does not index all of them -- a
+       pool quoted in something other than SOL or a stablecoin is often missing -- so
+       the chart walks this list rather than giving up on the top one. */
+    pools: pairs.map(function (x) { return x.pairAddress; }).filter(Boolean),
+    /* DexScreener's own 24 h volume, used only to tell "nobody is trading this" apart
+       from "our chart provider has no data for this pool" */
+    vol24: (p.volume && p.volume.h24) || 0
   };
 }
 function fromJupiter(mint) {
@@ -2259,19 +2266,31 @@ function showCandles(key, rows) {
   drawChart();
 }
 
+/* Which pool the chart is currently asking about: index into token.pools, advanced
+   when a pool turns out to have no candles. */
+var poolIdx = 0, poolIdxCa = '';
+function chartPool() {
+  var ps = token.pools || [];
+  return ps[poolIdx] || token.pair || '';
+}
+
 function loadChart(stepKey) {
   var key = stepKey || chartRange;
   if (!stepKey) {
     chartData = null;
     chartShown = null;
+    /* only rewind on a NEW token: the 30 s refresh calls through here too, and
+       re-walking past a dead pool every cycle just spends rate limit */
+    if (poolIdxCa !== token.ca) { poolIdx = 0; poolIdxCa = token.ca; }
     drawChart();
     paintRangeButtons();
     if (!token.pair) { chartMsg('No pool for this token yet'); return; }
     chartMsg('Loading chart...');
   }
-  if (!token.pair) return;
+  var pool = chartPool();
+  if (!pool) return;
   var r = RANGES[rangeIndex(key)];
-  var ck = token.pair + '|' + r.key;
+  var ck = pool + '|' + r.key;
 
   /* GeckoTerminal edge-caches these for 30 s, so re-asking inside that
      window only spends rate limit. Toggling between sizes is free. */
@@ -2280,18 +2299,28 @@ function loadChart(stepKey) {
   if (chartPending[ck]) return;                 /* already asking for this one */
   chartPending[ck] = true;
 
-  var url = 'https://api.geckoterminal.com/api/v2/networks/solana/pools/' + token.pair +
+  var url = 'https://api.geckoterminal.com/api/v2/networks/solana/pools/' + pool +
     '/ohlcv/' + r.path + '?aggregate=' + r.aggregate + '&limit=' + r.limit + '&currency=usd';
-  var want = token.pair + '|' + chartRange;
+  var want = pool + '|' + chartRange;
   getJson(url).then(function (d) {
     delete chartPending[ck];
-    if (want !== token.pair + '|' + chartRange) return;   /* a newer request won */
+    if (want !== chartPool() + '|' + chartRange) return;   /* a newer request won */
     var list = (d && d.data && d.data.attributes && d.data.attributes.ohlcv_list) || [];
     if (list.length < 2) {
       var i = rangeIndex(key);
       if (i > 0) { loadChart(RANGES[i - 1].key); return; }  /* step to a finer candle */
       if (list.length === 1) { showCandles(r.key, toCandles(list)); return; }
-      chartMsg('No trades yet');
+      /* this pool has nothing at any candle size -- try the next one down the list */
+      if (poolIdx + 1 < (token.pools || []).length) {
+        poolIdx++;
+        loadChart(chartRange);
+        return;
+      }
+      /* Out of pools. "No trades yet" is only true if nobody is trading it: a pool
+         quoted in something exotic (ZILLIONS/ZEC, say) can carry real volume that
+         GeckoTerminal has simply never indexed, and telling that owner their token is
+         dead is worse than admitting the chart is missing. */
+      chartMsg(token.vol24 > 0 ? 'Chart unavailable for this pool' : 'No trades yet');
       return;
     }
     var rows = toCandles(list);
