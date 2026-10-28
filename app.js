@@ -34,7 +34,7 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
    collar, the tank 4.11 in -- so anchoring to the collar puts the same mark at
    very different heights on the body. See claude/print-placement.md.
 
-   Back print is deliberately limited to the two hoodies -- it is the only
+   Back print is deliberately limited to the men's hoodie -- it is the only
    garment it looks right on. */
 var PRODUCTS = [
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee', shTop: 3.59,
@@ -43,15 +43,28 @@ var PRODUCTS = [
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
   { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee', shTop: 2.90,
     print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
-  /* the hoodies' DTG front is smaller than the DTF one they used to use -- 11x11 and
-     12x12 against 15x12 -- but it is the area the mockup template actually shows */
-  { id: 'hoodie',    label: 'HOODIE',          pid: 602, vid: 15577, price: 92,  shape: 'tee', shTop: 3.20,
-    print: { w: 11, h: 11, dpi: 150, tech: 'DTG', placement: 'front' },
-    back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
-  { id: 'premium',   label: 'PREMIUM HOODIE',  pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
+  /* One hoodie per cut. The women's is Bella + Canvas 7502, a cropped raw-hem fleece
+     with a dropped shoulder -- 10x10 DTG front, S-2XL, four colours. The men's is
+     Cotton Heritage M2580, the one Printful titles "Unisex Premium Pullover Hoodie";
+     that "premium" is Printful's marketing word, not a cost tier, which is exactly why
+     the old lineup looked wrong -- the slot labelled plain HOODIE was the Independent
+     SS4500 at a $45.75 blank against the M2580's $39.75. Two near-identical pullovers
+     $12 apart, the dearer one named as though it were the cheaper. The SS4500 is gone.
+
+     Both DTG fronts are smaller than the DTF areas they could use (10x10 and 12x12
+     against 15x12) but they are the areas the mockup templates actually show.
+
+     No back print on the cropped hoodie. Printful serves its back template as a
+     pre-coloured positioning image (ghost/back/positioning/..._hood_<colour>.png)
+     rather than the colour-independent _base_whitebg ghost every other garment gives,
+     so our colour fill would double up on it -- and a raw hem is the wrong canvas for
+     a 10 in graphic anyway. */
+  { id: 'womens',    label: "WOMEN'S HOODIE",  pid: 317, vid: 9633,  price: 99,  shape: 'tee', shTop: 2.86,
+    print: { w: 10, h: 10, dpi: 150, tech: 'DTG', placement: 'front' } },
+  { id: 'mens',      label: "MEN'S HOODIE",    pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
     print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' },
     back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
-  /* Cotton Heritage M2480 -- the crewneck sibling of the M2580 premium hoodie just
+  /* Cotton Heritage M2480 -- the crewneck sibling of the M2580 men's hoodie just
      above, so the fabric and the fit are known quantities. Ghost laydown template on
      both sides, 19 colours, S-3XL, and the same 12x16 DTG front area as the tees.
      Replaced the all-over windbreaker, whose printed panels never read cleanly. No
@@ -366,7 +379,7 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '<div class="flex items-center justify-between border-b border-brand-border pb-3"><h3 class="text-lg font-bold text-white font-mono flex items-center gap-2"><i class="fa-solid fa-network-wired text-brand-accent"></i> How TokenMerch Works</h3><button id="closeArchBtn" class="text-slate-400 hover:text-white p-1 text-xl">&times;</button></div>',
 '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">',
 '<div class="bg-brand-bg p-4 rounded-xl border border-brand-border space-y-2"><div class="text-brand-solana font-bold text-sm">1. Token lookup</div><p class="text-slate-400">You paste a Solana contract address. We read the token name, ticker and artwork from DexScreener, falling back to Jupiter.</p></div>',
-'<div class="bg-brand-bg p-4 rounded-xl border border-brand-border space-y-2"><div class="text-brand-cyber font-bold text-sm">2. Print file</div><p class="text-slate-400">The design is rendered server-side as a 1800 x 1800 px transparent PNG, the exact print size Printful wants for this hoodie.</p></div>',
+'<div class="bg-brand-bg p-4 rounded-xl border border-brand-border space-y-2"><div class="text-brand-cyber font-bold text-sm">2. Print file</div><p class="text-slate-400">The design is rendered server-side as a 1800 x 1800 px transparent PNG, the exact print size Printful wants for this garment.</p></div>',
 '<div class="bg-brand-bg p-4 rounded-xl border border-brand-border space-y-2"><div class="text-brand-accent font-bold text-sm">3. Print on demand</div><p class="text-slate-400">Your order goes to Printful with that print file attached, and they print and ship it.</p></div>',
 '</div></div></div>',
 
@@ -851,7 +864,7 @@ function paintStyleOptions() {
    SHOULDER LINE, which is the same on every garment: a crew tee's collar sits
    2.28 in below it, so "3 in below the collar" is 5.3-5.5 in below the shoulder.
    Nothing can print above Printful's print area, so where the area starts too
-   low (the premium hoodie at 4.94 in, the tank at 6.34 in) the mark is clamped
+   low (the men's hoodie at 4.94 in, the tank at 6.34 in) the mark is clamped
    to the top of the area and sits lower than the standard asks. */
 var PLACE = {
   /* 2.6 in is deliberately under the published 3-4 in left-chest range. At a true
