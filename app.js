@@ -222,6 +222,13 @@ var CSS = [
 '.tm-qty{width:20px;height:20px;border-radius:6px;border:1px solid #272d3f;background:#161a26;color:#cbd5e1;font-size:12px;line-height:1;cursor:pointer;padding:0}',
 '.tm-qty:hover{border-color:#9945FF;color:#fff}',
 '.tm-rm{background:none;border:0;cursor:pointer;line-height:1;font-size:15px;padding:0 2px}',
+'.tm-cartbtn{font-family:"JetBrains Mono",monospace;font-size:10px;line-height:1;padding:7px 9px;border-radius:8px;border:1px solid #272d3f;background:#161a26;color:#cbd5e1;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;transition:all .15s}',
+'.tm-cartbtn:hover{border-color:#9945FF;color:#fff}',
+'.tm-cartbtn--warn:hover{border-color:#f87171;color:#fecaca}',
+/* The theme colours its own links, and on a page template that colour is BLACK, which blanked
+   the wordmark out until it was hovered. Pinned here, id + class so it outranks the theme, to
+   the same slate the storefront header already resolves to -- hover still brightens it. */
+'#tokenmerch-root .tm-wordmark{color:#e2e8f0}',
 '#tmWeightRow{transition:opacity .15s ease}',
 '@keyframes tmspin{to{transform:rotate(360deg)}}',
 '.tm-spinner{width:34px;height:34px;border-radius:9999px;border:3px solid rgba(255,255,255,.12);border-top-color:#9945FF;animation:tmspin .8s linear infinite}',
@@ -2328,6 +2335,10 @@ function buildControls() {
   });
 
   document.getElementById('tmAddBtn').addEventListener('click', addToCart);
+  document.getElementById('tmCart').addEventListener('click', function (e) {
+    var b = e.target.closest('#tmEmptyBtn');
+    if (b) { e.preventDefault(); emptyCart(b); }
+  });
 
   document.getElementById('tmCheckoutBtn').addEventListener('click', function () {
     if (cartState.ready && cartState.count > 0) window.location.href = '/pages/cart';
@@ -2438,7 +2449,8 @@ function renderCart(c) {
   if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = 'block';
   el.innerHTML =
-    '<a href="/pages/cart" class="flex items-center gap-2 bg-brand-bg rounded-xl border border-brand-border hover:border-brand-accent transition-colors p-2 overflow-x-auto" style="scrollbar-width:none">' +
+    '<div class="flex items-center gap-2 bg-brand-bg rounded-xl border border-brand-border p-2">' +
+    '<a href="/pages/cart" class="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto" style="scrollbar-width:none">' +
     items.map(function (it) {
       var pr = it.properties || {};
       var src = thumbUrl(it);
@@ -2450,8 +2462,31 @@ function renderCart(c) {
           'style="right:1px;bottom:1px;padding:0 3px;line-height:12px">' + it.quantity + '</span>' : '') +
       '</span>';
     }).join('') +
-    '<span class="ml-auto shrink-0 pl-2 text-[10px] font-mono text-brand-accent">VIEW CART \u203a</span>' +
-    '</a>';
+    '</a>' +
+    '<div class="shrink-0 flex items-center gap-1.5">' +
+      '<a href="/pages/cart" class="tm-cartbtn">VIEW CART</a>' +
+      '<button id="tmEmptyBtn" class="tm-cartbtn tm-cartbtn--warn" data-armed="0">EMPTY CART</button>' +
+    '</div>' +
+    '</div>';
+}
+
+/* Emptying throws away designs that cannot be got back by clicking again, so it asks -- but
+   with the button itself rather than a browser dialog, which on a storefront reads as a fault.
+   The second click inside four seconds is the one that counts. */
+function emptyCart(btn) {
+  if (btn.getAttribute('data-armed') !== '1') {
+    btn.setAttribute('data-armed', '1');
+    btn.innerText = 'SURE?';
+    setTimeout(function () {
+      if (btn.getAttribute('data-armed') === '1') { btn.setAttribute('data-armed', '0'); btn.innerText = 'EMPTY CART'; }
+    }, 4000);
+    return;
+  }
+  btn.innerText = 'EMPTYING';
+  fetch('/cart/clear.js', { method: 'POST', headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.json(); })
+    .then(applyCart)
+    .catch(function () { cartMsg('Could not empty the cart.'); refreshCart(); });
 }
 
 /* ---------------- page two: the cart ----------------
@@ -2472,7 +2507,7 @@ var CART_MARKUP = [
 '</div></header>',
 '<main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 w-full flex-grow">',
 '<h1 class="text-2xl font-extrabold text-white">Your cart</h1>',
-'<p class="text-xs font-mono text-slate-400 mt-1 mb-6">This is the artwork that will be printed. Check it, then continue to payment.</p>',
+'<p class="text-xs font-mono text-slate-400 mt-1 mb-6">These are the items in your cart, please review carefully before checkout</p>',
 '<div id="tmLines" class="space-y-3"></div>',
 '<div id="tmEmpty" class="glass-panel rounded-2xl p-10 text-center" style="display:none">',
 '<p class="text-sm text-slate-300 mb-5">Nothing in the cart yet.</p>',
@@ -2502,11 +2537,11 @@ function renderCartPage(c) {
   if (summary) summary.style.display = items.length ? 'block' : 'none';
   var sub = document.getElementById('tmSubtotal');
   if (sub) sub.innerText = money((c && c.total_price) || 0);
-  wrap.innerHTML = items.map(function (it) {
+  wrap.innerHTML = items.map(function (it, i) {
     var pr = it.properties || {};
     var src = thumbUrl(it);
     return '<div class="glass-panel rounded-2xl p-4 flex gap-4">' +
-      '<div class="shrink-0 rounded-xl overflow-hidden flex items-center justify-center" ' +
+      '<div id="tmArt' + i + '" class="shrink-0 rounded-xl overflow-hidden flex items-center justify-center" ' +
         'style="width:96px;height:96px;background:' + (pr._hex || '#1b1b1c') + '">' +
         (src ? '<img src="' + src + '" alt="" loading="lazy" style="max-width:100%;max-height:100%;object-fit:contain">' : '') +
       '</div>' +
@@ -2533,6 +2568,46 @@ function renderCartPage(c) {
       '</div>' +
     '</div>';
   }).join('');
+  items.forEach(function (it, i) { lineArt(it, document.getElementById('tmArt' + i)); });
+}
+
+/* The cart shows the GARMENT, not the print area on its own -- the print file dropped into the
+   template's print rectangle and the ghost laid over it, which is the same three steps the
+   customiser's preview takes. Everything it needs is already on the line: the Printful product
+   and variant, the placement, and the colour.
+
+   Products with no template -- the mug, the poster, the stickers -- keep the flat artwork that
+   is already in the box, because for a poster or a sheet of stickers that IS the product. */
+function lineArt(it, box) {
+  if (!box) return;
+  var pr = it.properties || {};
+  var P = productById(pr._slot);
+  var src = thumbUrl(it);
+  if (!src || !P || P.noTpl || !pr._printful_product || !pr._printful_variant) return;
+  getJson(API + '/api/template?product=' + encodeURIComponent(pr._printful_product) +
+    '&variant=' + encodeURIComponent(pr._printful_variant) +
+    '&placement=' + encodeURIComponent(pr._placement || 'front')).then(function (t) {
+    if (!t || !t.image_url) return;
+    var tpl = new Image(), art = new Image(), left = 2;
+    function draw() {
+      if (--left) return;
+      var C = 192, c = document.createElement('canvas');
+      c.width = C; c.height = C;
+      c.style.width = '100%'; c.style.height = '100%';
+      var g = c.getContext('2d'), k = C / t.template_width;
+      g.fillStyle = pr._hex || '#1b1b1c';
+      g.fillRect(0, 0, C, C);
+      g.drawImage(art, t.print_area_left * k, t.print_area_top * k,
+        t.print_area_width * k, t.print_area_height * k);
+      g.drawImage(tpl, 0, 0, C, C);
+      box.innerHTML = '';
+      box.appendChild(c);
+    }
+    tpl.onload = draw; art.onload = draw;
+    tpl.onerror = function () { left = 99; }; art.onerror = function () { left = 99; };
+    tpl.src = t.image_url;
+    art.src = src;
+  }).catch(function () { /* the flat artwork already in the box stays */ });
 }
 
 function startCartPage() {
