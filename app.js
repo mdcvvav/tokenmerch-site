@@ -365,7 +365,18 @@ var MARKUP = [
 '<div><span class="text-[10px] text-slate-400 font-mono block uppercase">Total Price</span><span id="priceUsd" class="text-2xl font-black text-white font-mono">$68.00</span></div>',
 '<div class="text-right"><span class="text-[10px] text-slate-400 font-mono block uppercase">Crypto Approx.</span><span id="priceSol" class="text-xs font-mono text-brand-solana font-bold">-</span></div>',
 '</div>',
-'<button id="checkoutBtn" class="w-full bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber hover:opacity-95 text-slate-950 font-extrabold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 text-sm"><i class="fa-solid fa-cart-shopping text-base"></i><span>ADD TO SHOPIFY CART</span></button>',
+/* Two bars, not one. The first is the action you take from the customiser and carries
+   what is already in the cart; the second leaves for Shopify's checkout and carries what
+   that cart costs. The checkout bar stays inert until there is something to check out. */
+'<button id="tmAddBtn" class="w-full bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber hover:opacity-95 text-slate-950 font-extrabold py-3 rounded-xl shadow-lg transition-all flex items-center justify-between px-4 text-sm">',
+'<span class="flex items-center space-x-2"><i class="fa-solid fa-cart-plus text-base"></i><span id="tmAddLabel">ADD TO CART</span></span>',
+'<span id="tmCartCount" class="text-[11px] font-mono font-bold opacity-80">EMPTY</span>',
+'</button>',
+'<button id="tmCheckoutBtn" class="w-full border border-brand-border bg-brand-bg text-slate-500 font-extrabold py-3 rounded-xl transition-all flex items-center justify-between px-4 text-sm" disabled>',
+'<span class="flex items-center space-x-2"><i class="fa-solid fa-lock text-xs"></i><span>CHECKOUT</span></span>',
+'<span id="tmCartTotal" class="text-[11px] font-mono font-bold">$0.00</span>',
+'</button>',
+'<div id="tmCartMsg" class="text-[10px] font-mono text-slate-400 text-center" style="display:none"></div>',
 '</div></div>',
 
 /* right column: preview */
@@ -2309,8 +2320,147 @@ function buildControls() {
     arch.classList.add('hidden'); arch.classList.remove('flex');
   });
 
-  document.getElementById('checkoutBtn').addEventListener('click', function () {
-    alert('Checkout is not connected yet. Next step: Shopify Cart API + the Printful order webhook.');
+  document.getElementById('tmAddBtn').addEventListener('click', addToCart);
+  document.getElementById('tmCheckoutBtn').addEventListener('click', function () {
+    if (cartState.ready && cartState.count > 0) window.location.href = '/checkout';
+  });
+  refreshCart();
+}
+
+/* ---------------- Shopify cart ----------------
+
+   The storefront serves this page, so the cart is Shopify's own AJAX cart on the same
+   origin: no Storefront API token, no CORS, no second source of truth for what is in it.
+   /cart/add.js takes the line, /cart.js reports the count and the total, /checkout hands
+   over to Shopify's hosted checkout, which is where the address and the card are entered.
+   That page cannot be ours -- a non-Plus plan does not let anyone else take the payment,
+   and it should not.
+
+   One Shopify product per slot, one variant per size, and everything else -- colour,
+   token, placement, fonts, the print file -- rides along as line item properties. The
+   ones the customer should read are named plainly; the ones only the fulfiller needs
+   start with an underscore, which hides them from the cart and the confirmation while
+   keeping them on the order.
+
+   `_design` is the whole resolved snapshot, the same object the print renderer is handed.
+   That is print-path step 2: what the customer approved is recorded on the order rather
+   than re-derived later from inputs that may have moved. */
+
+var cartState = { count: 0, total: 0, ready: false };
+var shopVariants = {};   /* handle -> { normalised size -> variant id } | null */
+
+function onShopify() { return !!(window.Shopify && window.Shopify.shop); }
+function shopHandle(p) { return p.shopHandle || ('tokenmerch-' + p.id); }
+/* '11 oz', '2XL', '11″×14″' -- Shopify will not always keep the typography,
+   so sizes are matched on letters and digits alone. */
+function sizeKey(z) { return String(z || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+function cartMsg(t) {
+  var el = document.getElementById('tmCartMsg');
+  if (!el) return;
+  el.innerText = t || '';
+  el.style.display = t ? 'block' : 'none';
+}
+
+function money(cents) { return '$' + (Math.round(cents) / 100).toFixed(2); }
+
+function paintCart() {
+  var n = document.getElementById('tmCartCount');
+  var t = document.getElementById('tmCartTotal');
+  var b = document.getElementById('tmCheckoutBtn');
+  if (!n || !t || !b) return;
+  n.innerText = !cartState.ready ? 'PREVIEW'
+    : cartState.count === 0 ? 'EMPTY'
+    : cartState.count + (cartState.count === 1 ? ' ITEM' : ' ITEMS');
+  t.innerText = money(cartState.total);
+  var live = cartState.ready && cartState.count > 0;
+  b.disabled = !live;
+  b.className = 'w-full font-extrabold py-3 rounded-xl transition-all flex items-center justify-between px-4 text-sm ' +
+    (live ? 'bg-white text-slate-950 hover:opacity-90 shadow-lg'
+          : 'border border-brand-border bg-brand-bg text-slate-500 cursor-not-allowed');
+}
+
+function refreshCart() {
+  if (!onShopify()) { cartState.ready = false; paintCart(); return; }
+  getJson('/cart.js').then(function (c) {
+    cartState.ready = true;
+    cartState.count = c.item_count || 0;
+    cartState.total = c.total_price || 0;
+    paintCart();
+  }).catch(function () { cartState.ready = false; paintCart(); });
+}
+
+function loadVariants(p, cb) {
+  var h = shopHandle(p);
+  if (shopVariants[h] !== undefined) { cb(shopVariants[h]); return; }
+  getJson('/products/' + h + '.js').then(function (d) {
+    var m = {};
+    (d.variants || []).forEach(function (v) {
+      m[sizeKey(v.option1 || v.title)] = v.id;
+    });
+    shopVariants[h] = m;
+    cb(m);
+  }).catch(function () { shopVariants[h] = null; cb(null); });
+}
+
+function shortCa(ca) {
+  var t = String(ca || '');
+  return t.length > 12 ? t.slice(0, 4) + '…' + t.slice(-4) : t;
+}
+
+function styleLabel(p, v) {
+  var lbl = (p.styleLabels || {})[v];
+  if (lbl) return lbl;
+  for (var i = 0; i < STYLE_OPTS.length; i++) if (STYLE_OPTS[i][0] === v) return STYLE_OPTS[i][1];
+  return v;
+}
+
+function cartProps(p) {
+  var props = {
+    'Token': (token.ticker ? '$' + cleanTicker(token.ticker) + '  ' : '') + shortCa(token.ca),
+    'Placement': styleLabel(p, style),
+    'Colour': colorName || (p.color ? 'White' : '')
+  };
+  props['_ca'] = token.ca || '';
+  props['_slot'] = p.id;
+  props['_size'] = size || '';
+  props['_printful_product'] = String(p.pid);
+  props['_printful_variant'] = String(curVariant || p.vid);
+  props['_placement'] = (printFor(p) || {}).placement || '';
+  props['_print_file'] = printUrl(p, 'front');
+  if (twoSided() && p.backPrint) props['_print_file_back'] = printUrl(p, 'back');
+  props['_design'] = JSON.stringify(printParams(p, 'front'));
+  return props;
+}
+
+function addToCart() {
+  var p = productById(product);
+  var btn = document.getElementById('tmAddBtn');
+  var lbl = document.getElementById('tmAddLabel');
+  if (!onShopify()) { cartMsg('The cart only works on the shop itself, not this preview.'); return; }
+  if (!token.ca) { cartMsg('Paste a contract address first.'); return; }
+  cartMsg('');
+  loadVariants(p, function (m) {
+    var vid = m && (m[sizeKey(size)] || (Object.keys(m).length === 1 ? m[Object.keys(m)[0]] : 0));
+    if (!vid) {
+      cartMsg('“' + p.label + '” is not set up in Shopify yet, so it cannot be added.');
+      return;
+    }
+    if (btn) btn.disabled = true;
+    if (lbl) lbl.innerText = 'ADDING…';
+    fetch('/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ items: [{ id: vid, quantity: 1, properties: cartProps(p) }] })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.status && d.status !== 200) throw new Error(d.description || d.message || 'Shopify said no');
+      if (lbl) lbl.innerText = 'ADDED';
+      setTimeout(function () { if (lbl) lbl.innerText = 'ADD TO CART'; }, 1400);
+      refreshCart();
+    }).catch(function (e) {
+      if (lbl) lbl.innerText = 'ADD TO CART';
+      cartMsg(e.message || 'Could not add that to the cart.');
+    }).then(function () { if (btn) btn.disabled = false; });
   });
 }
 
