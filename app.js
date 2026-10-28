@@ -219,6 +219,9 @@ var CSS = [
 '#tmWeight::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
 '#tmWeight::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#9945FF;border:2px solid #0d0f17;box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:pointer}',
 '#tmWeight:disabled{cursor:not-allowed}',
+'.tm-qty{width:20px;height:20px;border-radius:6px;border:1px solid #272d3f;background:#161a26;color:#cbd5e1;font-size:12px;line-height:1;cursor:pointer;padding:0}',
+'.tm-qty:hover{border-color:#9945FF;color:#fff}',
+'.tm-rm{background:none;border:0;cursor:pointer;line-height:1;font-size:15px;padding:0 2px}',
 '#tmWeightRow{transition:opacity .15s ease}',
 '@keyframes tmspin{to{transform:rotate(360deg)}}',
 '.tm-spinner{width:34px;height:34px;border-radius:9999px;border:3px solid rgba(255,255,255,.12);border-top-color:#9945FF;animation:tmspin .8s linear infinite}',
@@ -372,11 +375,14 @@ var MARKUP = [
 '<span class="flex items-center space-x-2"><i class="fa-solid fa-cart-plus text-base"></i><span id="tmAddLabel">ADD TO CART</span></span>',
 '<span id="tmCartCount" class="text-[11px] font-mono font-bold opacity-80">EMPTY</span>',
 '</button>',
+'<div id="tmCartMsg" class="text-[10px] font-mono text-slate-400 text-center" style="display:none"></div>',
+/* What is in the cart, between the two bars: add above it, check out below it. Each line
+   carries the design it was ordered with, not a stand-in -- see renderCart(). */
+'<div id="tmCart" class="space-y-2" style="display:none"></div>',
 '<button id="tmCheckoutBtn" class="w-full border border-brand-border bg-brand-bg text-slate-500 font-extrabold py-3 rounded-xl transition-all flex items-center justify-between px-4 text-sm" disabled>',
 '<span class="flex items-center space-x-2"><i class="fa-solid fa-lock text-xs"></i><span>CHECKOUT</span></span>',
 '<span id="tmCartTotal" class="text-[11px] font-mono font-bold">$0.00</span>',
 '</button>',
-'<div id="tmCartMsg" class="text-[10px] font-mono text-slate-400 text-center" style="display:none"></div>',
 '</div></div>',
 
 /* right column: preview */
@@ -2321,6 +2327,11 @@ function buildControls() {
   });
 
   document.getElementById('tmAddBtn').addEventListener('click', addToCart);
+  document.getElementById('tmCart').addEventListener('click', function (e) {
+    var q = e.target.closest('.tm-qty'), r = e.target.closest('.tm-rm');
+    if (q) changeLine(q.getAttribute('data-key'), parseInt(q.getAttribute('data-q'), 10));
+    else if (r) changeLine(r.getAttribute('data-key'), 0);
+  });
   document.getElementById('tmCheckoutBtn').addEventListener('click', function () {
     if (cartState.ready && cartState.count > 0) window.location.href = '/checkout';
   });
@@ -2380,14 +2391,96 @@ function paintCart() {
           : 'border border-brand-border bg-brand-bg text-slate-500 cursor-not-allowed');
 }
 
+function applyCart(c) {
+  cartState.ready = true;
+  cartState.count = c.item_count || 0;
+  cartState.total = c.total_price || 0;
+  paintCart();
+  renderCart(c);
+}
+
 function refreshCart() {
   if (!onShopify()) { cartState.ready = false; paintCart(); return; }
-  getJson('/cart.js').then(function (c) {
-    cartState.ready = true;
-    cartState.count = c.item_count || 0;
-    cartState.total = c.total_price || 0;
-    paintCart();
-  }).catch(function () { cartState.ready = false; paintCart(); });
+  getJson('/cart.js').then(applyCart)
+    .catch(function () { cartState.ready = false; paintCart(); });
+}
+
+/* The thumbnail is the PRINT FILE, not a second drawing of it. `_print_file` renders the
+   artwork the order will actually be made from, so the cart cannot drift from the preview
+   the way a separately-built thumbnail could.
+
+   It is asked for at a lower resolution than the print: w, h and dpi are all multiplied by
+   the same factor, which leaves inW = w / dpi / scale -- and therefore every inch-based
+   measurement in the layout -- untouched. Only the pixel count changes. 72 dpi is the
+   renderer's floor, so that sets the factor. /api/print caches for a day at the edge. */
+function thumbUrl(line) {
+  var raw = (line.properties || {})._print_file;
+  if (!raw) return '';
+  try {
+    var u = new URL(raw), q = u.searchParams;
+    var dpi = parseFloat(q.get('dpi')) || 150;
+    var f = Math.min(1, 72 / dpi);
+    if (f >= 1) return raw;
+    ['w', 'h'].forEach(function (k) {
+      var v = parseFloat(q.get(k));
+      if (v) q.set(k, String(Math.round(v * f)));
+    });
+    q.set('dpi', String(Math.round(dpi * f)));
+    return u.toString();
+  } catch (e) { return raw; }
+}
+
+function renderCart(c) {
+  var el = document.getElementById('tmCart');
+  if (!el) return;
+  var items = (c && c.items) || [];
+  if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'block';
+  el.innerHTML = items.map(function (it) {
+    var pr = it.properties || {};
+    var hex = pr._hex || '#1b1b1c';
+    var src = thumbUrl(it);
+    var meta = [it.variant_title || '', pr.Colour || ''].filter(Boolean).join(' \u00b7 ');
+    return '<div class="flex gap-2.5 bg-brand-bg rounded-xl border border-brand-border p-2">' +
+      '<div class="shrink-0 rounded-lg overflow-hidden flex items-center justify-center" ' +
+        'style="width:52px;height:52px;background:' + hex + '">' +
+        (src ? '<img src="' + src + '" alt="" loading="lazy" style="max-width:100%;max-height:100%;object-fit:contain">' : '') +
+      '</div>' +
+      '<div class="flex-1 min-w-0">' +
+        '<div class="text-[11px] font-bold text-white truncate">' + escapeHtml(it.product_title || it.title || '') + '</div>' +
+        '<div class="text-[10px] font-mono text-slate-400 truncate">' + escapeHtml(meta) + '</div>' +
+        '<div class="text-[10px] font-mono text-slate-500 truncate">' + escapeHtml(pr.Placement || '') + '</div>' +
+        '<div class="flex items-center justify-between mt-1.5">' +
+          '<div class="flex items-center gap-1">' +
+            '<button class="tm-qty" data-key="' + it.key + '" data-q="' + (it.quantity - 1) + '" aria-label="One fewer">\u2212</button>' +
+            '<span class="text-[11px] font-mono text-white text-center" style="width:18px">' + it.quantity + '</span>' +
+            '<button class="tm-qty" data-key="' + it.key + '" data-q="' + (it.quantity + 1) + '" aria-label="One more">+</button>' +
+          '</div>' +
+          '<span class="text-[11px] font-mono text-white">' + money(it.line_price) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<button class="tm-rm text-slate-500 hover:text-white shrink-0" data-key="' + it.key + '" title="Remove">\u00d7</button>' +
+    '</div>';
+  }).join('');
+}
+
+/* Quantity and removal are cart operations, which is exactly why they live here: Shopify's
+   checkout renders the quantity as a number and offers no way to change it. The line KEY is
+   used rather than the variant id, because two lines can share a variant and differ only in
+   their design. */
+function changeLine(key, qty) {
+  if (!onShopify() || !key) return;
+  cartMsg('');
+  fetch('/cart/change.js', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ id: key, quantity: Math.max(0, qty) })
+  }).then(function (r) { return r.json(); })
+    .then(function (c) {
+      if (c && c.status && c.status !== 200) throw new Error(c.description || c.message || 'Shopify said no');
+      applyCart(c);
+    })
+    .catch(function (e) { cartMsg(e.message || 'Could not update the cart.'); refreshCart(); });
 }
 
 function loadVariants(p, cb) {
@@ -2427,6 +2520,7 @@ function cartProps(p) {
   props['_printful_product'] = String(p.pid);
   props['_printful_variant'] = String(curVariant || p.vid);
   props['_placement'] = (printFor(p) || {}).placement || '';
+  props['_hex'] = substrateHex();
   props['_print_file'] = printUrl(p, 'front');
   if (twoSided() && p.backPrint) props['_print_file_back'] = printUrl(p, 'back');
   props['_design'] = JSON.stringify(printParams(p, 'front'));
