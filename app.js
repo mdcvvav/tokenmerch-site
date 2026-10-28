@@ -1780,8 +1780,13 @@ function paintDesc(id) {
 
   if (!d) { tEl.innerText = ''; bEl.innerText = 'Loading product details\u2026'; sEl.style.display = 'none'; gEl.style.display = 'none'; return; }
 
+  /* Printful's type_name usually already opens with the brand and model -- "Comfort
+     Colors 1717 | Adult Ringspun Cotton Tee" -- so printing both says it twice. Where
+     it does not lead with the name it is taxonomy ("Mug | Glossy | Ceramic | White"),
+     which tells a customer nothing, so the name alone wins. */
   var name = [d.brand, d.model].filter(Boolean).join(' ') || pr.label;
-  tEl.innerText = name + (d.type ? ' \u00b7 ' + d.type : '');
+  var full = d.type || '';
+  tEl.innerText = (full && full.toLowerCase().indexOf(name.toLowerCase()) === 0) ? full : name;
 
   var lines = String(d.description || '').split('\n');
   var intro = [], bullets = [];
