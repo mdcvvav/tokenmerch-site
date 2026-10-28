@@ -74,15 +74,21 @@ var PRODUCTS = [
      a $32.75 blank. The cost of that is a smaller range -- 4 colours, S-2XL -- and the
      template, below.
 
-     PHOTO TEMPLATE, NOT A GHOST. Every other product returns a `_whitebg` ghost laydown: a
-     semi-transparent overlay, colour-independent, that the preview fills a colour under. The
-     975MPR returns an opaque PHOTOGRAPH of a model, one per colour
-     (01_jerzees975mpr_onman_left_<colour>_whitebg.png). So this product sets `photoTpl`,
-     which puts the design ON TOP of the template instead of under it, and `tplByColor`,
-     which keys the template cache on the swatch and asks for the selected variant. Source-
-     over, not multiply: printed ink is opaque, and multiply would erase a white mark on
-     black fabric. The gallery therefore leads with a worn shot here and a flat laydown
-     everywhere else, which is a real inconsistency, accepted for the placement.
+     NO TEMPLATE AT ALL. Every other product returns a `_whitebg` ghost laydown: a
+     semi-transparent overlay, colour-independent, that the preview fills a colour under.
+     The 975MPR's templates are all opaque photographs of a model, which would have left
+     this one slot leading with a worn shot while the other nine lead with a flat laydown.
+     So the flat laydown is ours: Printful's mockup GENERATOR will render the flat front
+     view even though it publishes no flat template, and `pants/blanks.js` holds that
+     render -- one per colour, taken with a fully transparent print file so the garment
+     comes back blank -- together with the print rectangle, which was read off the same
+     render done with a magenta calibration sheet. `blankTpl` points at that file;
+     `loadBlankTemplate` synthesises a template object from it so the rest of the renderer
+     cannot tell the difference.
+
+     The photo is opaque either way, so `photoTpl` still applies: the design goes ON TOP of
+     it rather than under, source-over. Not multiply -- printed ink is opaque, and multiply
+     would erase a white mark on black fabric. `tplByColor` keys the cache on the swatch.
 
      The mark hangs `leg.top` inches DOWN from the top of the strip -- the thigh -- rather
      than up from its bottom, which is what the M7580 needed.
@@ -94,6 +100,7 @@ var PRODUCTS = [
      Cost: $32.75 blank (2XL $35.50) + a $7.95 leg surcharge that is always charged = $40.70. */
   { id: 'pants',     label: 'SWEATPANTS',      pid: 342, vid: 9927,  price: 84,  shape: 'tee',
     photoTpl: true, tplByColor: true,
+    blankTpl: { js: '/pants/blanks.js', global: 'TM_PANTS' },
     styles: ['badge-left', 'badge-right', 'square-left', 'square-right'],
     styleLabels: {
       'badge-left':  'IMAGE BADGE LEFT (CIRCULAR)',
@@ -2718,6 +2725,44 @@ function tplGet(side) {
   return tplCache[tplKey(productById(product), side)] || null;
 }
 
+/* A product whose flat laydown we made ourselves (the joggers; see pants/blanks.js) has no
+   Printful template to fetch. The photo and the print rectangle come out of that file, which
+   is pulled in the first time the product is opened, and a template object is built from them
+   in the shape the renderer already expects. */
+var blanksPending = false;
+function loadBlankTemplate(p, pl, key) {
+  var cfg = p.blankTpl;
+  var set = window[cfg.global];
+  if (!set) {
+    if (!blanksPending) {
+      blanksPending = true;
+      var sc = document.createElement('script');
+      sc.src = API + cfg.js;
+      sc.onload = function () { blanksPending = false; render(); };
+      sc.onerror = function () { blanksPending = false; tplFailed[key] = true; render(); };
+      document.head.appendChild(sc);
+    }
+    return;   /* the onload calls render(), which comes straight back here */
+  }
+  var src = set.img[slugify(colorName)];
+  var r = set.rect[pl];
+  if (!src || !r) { tplFailed[key] = true; return; }
+  tplPending[key] = true;
+  var img = new Image();
+  img.onload = function () {
+    tplPending[key] = false;
+    tplCache[key] = { img: img, t: {
+      image_url: src, background_color: null,
+      template_width: set.size, template_height: set.size,
+      print_area_left: r[0], print_area_top: r[1],
+      print_area_width: r[2], print_area_height: r[3]
+    } };
+    if (product === p.id) render();
+  };
+  img.onerror = function () { tplPending[key] = false; tplFailed[key] = true; render(); };
+  img.src = src;
+}
+
 function loadTemplate(id, side) {
   var p = productById(id || product);
   var pl = tplSide(p, side);
@@ -2741,6 +2786,7 @@ function loadTemplate(id, side) {
   /* render() calls this whenever the template is missing, and the spinner keeps rendering,
      so without this guard one product switch fires a burst of identical requests. */
   if (tplPending[key]) return;
+  if (p.blankTpl) { loadBlankTemplate(p, pl, key); return; }
   tplPending[key] = true;
   function give_up(why) {
     tplPending[key] = false;
