@@ -183,6 +183,8 @@ function productById(id) {
   return PRODUCTS[0];
 }
 /* shown on first load so the preview is never empty */
+/* Kept only because it is the address the input's placeholder is abbreviated from.
+   Nothing loads it any more -- the page opens empty. */
 var DEMO_CA = 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm';
 
 /* site logo, inlined so the banner never waits on a second request */
@@ -208,6 +210,17 @@ var CSS = [
    still live underneath and anything measuring an element gets a real answer. */
 '#tokenmerch-root{opacity:0}',
 '#tokenmerch-root.tm-ready{opacity:1;transition:opacity .18s ease}',
+/* The token slot before there is a token. The crate sits in the frame rather than an
+   empty square, and the line beside it says which of the three waits we are in:
+   nothing pasted, being checked, or refused. */
+'.tm-slot-note{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;font-weight:500;letter-spacing:.04em;color:#64748B;text-transform:lowercase}',
+'.tm-crate-busy{animation:tmCrate 1.3s ease-in-out infinite}',
+'@keyframes tmCrate{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.94)}}',
+'.tm-dots{display:inline-flex;gap:3px;margin-left:7px;vertical-align:middle}',
+'.tm-dots i{width:4px;height:4px;border-radius:9999px;background:#9945FF;display:block;animation:tmDot 1.1s ease-in-out infinite}',
+'.tm-dots i:nth-child(2){animation-delay:.15s}',
+'.tm-dots i:nth-child(3){animation-delay:.3s}',
+'@keyframes tmDot{0%,70%,100%{opacity:.25;transform:translateY(0)}35%{opacity:1;transform:translateY(-3px)}}',
 '.glass-panel{background:rgba(22,26,38,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08)}',
 '.glow-accent{box-shadow:0 0 25px -5px rgba(153,69,255,.35)}',
 /* The track used to carry a 1px white border, which is what showed through as a pale
@@ -687,8 +700,52 @@ function paintScreen(state, msg) {
   txt.innerHTML = msg;
 }
 
+/* The token slot has three resting states before a design exists, and all of them
+   show the crate rather than an empty frame: nothing pasted yet, being checked, or
+   refused. The line beside it is the only thing that changes. */
+function paintTokenSlot(state) {
+  var img = document.getElementById('tokenImgSidebar');
+  var nm = document.getElementById('tokenName');
+  var tk = document.getElementById('tokenTicker');
+  var cd = document.getElementById('tokenCaDisplay');
+  if (!img || !nm) return;
+  img.src = LOGO_SRC;
+  if (state === 'checking') img.classList.add('tm-crate-busy');
+  else img.classList.remove('tm-crate-busy');
+  if (tk) tk.innerText = '';
+  if (cd) cd.innerText = '';
+  nm.innerHTML = state === 'checking'
+    ? '<span class="tm-slot-note">clearing token for print</span>'
+      + '<span class="tm-dots"><i></i><i></i><i></i></span>'
+    : '<span class="tm-slot-note">awaiting ca</span>';
+}
+
+/* Pulls the artwork into the browser cache while the screening call is in flight.
+
+   It touches nothing: no globals, no canvas, the results are discarded. But by the
+   time the gate goes green, loadLogo's two image loads -- the probe and the resized
+   copy -- are already cached, and that is most of the wait between a cleared token
+   and a print file. Exactly the urls loadLogo will ask for, or it warms nothing. */
+function prewarmArtwork(t) {
+  if (!t || !t.img || t.placeholder) return;
+  try {
+    var probe = new Image();
+    probe.onload = function () {
+      var want = Math.max(1200, Math.min(3000, probe.naturalWidth || 0));
+      var full = new Image();
+      full.src = 'https://wsrv.nl/?url=' + encodeURIComponent(t.img)
+        + '&w=' + want + '&h=' + want + '&fit=cover&output=png';
+    };
+    probe.src = t.img;
+  } catch (e) { /* a warm cache is a nicety, never a requirement */ }
+}
+
 function screenToken(t) {
-  paintScreen('checking', 'Checking artwork against print guidelines\u2026');
+  /* The crate and its line carry the wait on their own. A second "checking" message
+     in the row underneath would just be the same sentence twice. */
+  paintScreen('hidden');
+  paintTokenSlot('checking');
+  prewarmArtwork(t);
   return fetch(API + '/api/screen', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -754,7 +811,7 @@ function fetchToken(raw, opts) {
     token = r.t;
     document.getElementById('caInput').value = token.ca;
     updateTokenUI();
-    paintScreen('pass', 'Artwork cleared for print');
+    paintScreen('pass', 'token cleared for print');
     return;
   }).catch(function (err) {
     if (stale()) return;
@@ -774,14 +831,7 @@ function refuseToken(code, silent) {
   token = { ca: '', name: '', ticker: 'TOKEN', price: '-', change: '-', img: '', pair: '' };
   logoImg = null; logoReady = false;
   authoNeed = [];
-  var img = document.getElementById('tokenImgSidebar');
-  if (img) img.removeAttribute('src');
-  var nm = document.getElementById('tokenName');
-  var tk = document.getElementById('tokenTicker');
-  var cd = document.getElementById('tokenCaDisplay');
-  if (nm) nm.innerHTML = '&nbsp;';
-  if (tk) tk.innerText = '';
-  if (cd) cd.innerText = '';
+  paintTokenSlot('idle');
   setStatus('');
   render();
   paintAddGate();
@@ -802,6 +852,8 @@ function refuseToken(code, silent) {
 }
 
 function updateTokenUI() {
+  var slot = document.getElementById('tokenImgSidebar');
+  if (slot) slot.classList.remove('tm-crate-busy');
   document.getElementById('tokenName').innerText = token.name;
   document.getElementById('tokenTicker').innerText = '$' + token.ticker;
   document.getElementById('tokenCaDisplay').innerText = token.ca;
@@ -1604,9 +1656,13 @@ function authoSync() {
   authoNeed = authoSides().map(function (side) { return authoSpec(p, side); });
   paintAddGate();
   if (authoTimer) clearTimeout(authoTimer);
+  /* 120 ms, not 400. The debounce is there so dragging through colours or sizes does
+     not fire a render per frame, and 120 is still far longer than any two real
+     keystrokes -- while 400 was most of a second of "PREPARING PRINT FILE..." on
+     every single token. */
   authoTimer = setTimeout(function () {
     authoNeed.forEach(function (sp) { authoFetch(sp.key, sp.src); });
-  }, 400);
+  }, 120);
 }
 
 function paintAddGate() {
@@ -3591,7 +3647,11 @@ function start() {
   ctx = canvas.getContext('2d');
   buildControls();
   loadTemplate(product, 'front');
-  fetchToken(DEMO_CA, { silent: true });
+  /* No demo token. The page opens on its empty state -- the crate in the token slot
+     and "awaiting ca" beside it -- so the one thing a visitor is meant to do is the
+     only thing on offer. It also means a cold page load no longer spends a screening
+     call on a token nobody asked for. */
+  paintTokenSlot('idle');
   startChartPolling();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 }
