@@ -196,10 +196,7 @@ async function observe(art, ticker, name) {
               + ' or token name. Use exactly this shape:\n' + SHAPE
           }
         ]
-      },
-      /* Prefilled so the reply opens mid-object and cannot preamble its way
-         out of being JSON. */
-      { role: 'assistant', content: '{' }
+      }
     ]
   };
 
@@ -226,7 +223,10 @@ async function observe(art, ticker, name) {
     throw new Error('model HTTP ' + r.status + ' ' + t.slice(0, 300));
   }
   const d = await r.json();
-  const text = '{' + ((d.content || []).filter((c) => c.type === 'text').map((c) => c.text).join(''));
+  /* No assistant prefill: Haiku 5.5 refuses a conversation that does not end
+     with a user message. parseJson takes the first { to the last }, so a
+     stray sentence either side of the object is harmless. */
+  const text = (d.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('');
   const obs = parseJson(text);
   if (!obs) throw new Error('model returned unparseable output: ' + text.slice(0, 300));
   obs._usage = d.usage || null;
