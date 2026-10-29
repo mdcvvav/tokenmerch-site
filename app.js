@@ -1103,14 +1103,16 @@ function printParams(pr, side) {
   return q;
 }
 
-function printUrl(pr, side) {
-  var q = printParams(pr, side), parts = [];
+function urlFromParams(q) {
+  var parts = [];
   Object.keys(q).forEach(function (k) {
     if (q[k] === '' || q[k] == null) return;
     parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(q[k]));
   });
   return API + '/api/print?' + parts.join('&');
 }
+
+function printUrl(pr, side) { return urlFromParams(printParams(pr, side)); }
 
 function updateQuality() {
   var box = document.getElementById('tmQualityWarn');
@@ -1318,10 +1320,178 @@ function drawDesign(p, W, side, inW) {
   }
 }
 
+/* ---------------- the authoritative preview ----------------
+   The preview used to be a second, independent drawing of the design: drawDesign here
+   in the browser, renderPrint on the server, kept in agreement by hand. Two renderers
+   means what the customer approves and what prints can drift apart, and no amount of
+   checking the print file afterwards catches that -- it would faithfully certify the
+   wrong picture.
+
+   So the preview shows the print file itself. drawDesign still runs: it is what keeps
+   the preview instant while a slider is moving, and it is what works out artIn. But
+   once the server's render of the same parameters lands it is laid over the top, and
+   Add to Cart stays shut until it has. What is on screen when that button is pressed
+   is the file Printful receives.
+
+   Lower resolution, not a different drawing. The renderer works in inches it derives
+   as w/dpi, so dividing w, h and dpi by one common factor leaves every measurement
+   exactly where it was and moves only the pixel count. The factor is a common divisor,
+   never a rounded ratio, so the preview is an exact scale of the print file rather than
+   an approximation of it. */
+var AUTHO_PX = 1200;      /* longest side requested: covers the print close-up at 1:1 */
+var AUTHO_KEEP = 40;      /* images held, so a long fiddling session cannot grow forever */
+var authoImgs = {};       /* full-res print url -> loaded Image */
+var authoFailed = {};     /* full-res print url -> attempts so far */
+var authoOrder = [];      /* keys oldest first */
+var authoPending = {};
+var authoNeed = [];       /* [{ side, key, src }] for the sides this order will print */
+var authoTimer = null;
+var addBusy = false;
+
+function gcd(a, b) { while (b) { var t = a % b; a = b; b = t; } return a; }
+
+/* Divide w, h and dpi by a COMMON DIVISOR, so all three stay whole numbers and w/dpi
+   comes out identical. A rounded ratio would leave the renderer working from an area a
+   fraction of an inch off and quietly shift the layout; a divisor cannot.
+
+   Pick the smallest divisor that brings the longest side within AUTHO_PX, which is the
+   most resolution that still fits. If no divisor does -- the sweatpants' 3.5 x 14.5 in
+   strip has none between the size cap and the renderer's 72 dpi floor -- fall back to
+   the largest that clears the dpi floor, which for the sweatpants is the full-size file
+   itself. A bigger download, and exact. */
+function authoScaled(q) {
+  var w = +q.w, h = +q.h, dpi = +q.dpi;
+  if (!w || !h || !dpi) return q;
+  var g = gcd(gcd(w, h), dpi), fits = [], any = [], long = Math.max(w, h);
+  for (var d = 1; d <= g; d++) {
+    if (g % d || dpi / d < 72) continue;
+    any.push(d);
+    if (long / d <= AUTHO_PX) fits.push(d);
+  }
+  var use = fits.length ? Math.min.apply(null, fits) : Math.max.apply(null, any);
+  if (use <= 1) return q;
+  var out = {};
+  Object.keys(q).forEach(function (k) { out[k] = q[k]; });
+  out.w = w / use;
+  out.h = h / use;
+  out.dpi = dpi / use;
+  return out;
+}
+
+/* printParams reads artIn, which drawDesign sets as a side effect, so a side that is
+   not the one on screen has to be drawn somewhere first. 64 px is enough: artIn comes
+   out in inches and does not depend on the canvas size. */
+function authoSpec(p, side) {
+  var saved = artIn;
+  try {
+    var scratch = document.createElement('canvas');
+    scratch.width = 64; scratch.height = 64;
+    var inches = (side === 'back' && p.back) ? p.back : printFor(p);
+    drawDesign(scratch.getContext('2d'), 64, side, placeInW(p, inches));
+  } catch (e) { /* keep the artIn we had */ }
+  var q = printParams(p, side);
+  artIn = saved;
+  /* keyed on the FULL resolution url -- the identity of the print file itself -- even
+     though what is fetched is the scaled one */
+  return { side: side, key: urlFromParams(q), src: urlFromParams(authoScaled(q)) };
+}
+
+function authoSides() {
+  var p = productById(product);
+  return (twoSided() && p.backPrint) ? ['front', 'back'] : ['front'];
+}
+
+function authoFor(side) {
+  for (var i = 0; i < authoNeed.length; i++) {
+    if (authoNeed[i].side === side) return authoImgs[authoNeed[i].key] || null;
+  }
+  return null;
+}
+
+/* No crossOrigin: nothing ever reads pixels back off these canvases, and asking for
+   CORS would mean a cached response without the header could fail the load and shut
+   the button for a reason the customer cannot act on. */
+function authoFetch(key, src) {
+  if (authoImgs[key] || authoPending[key]) return;
+  authoPending[key] = true;
+  var img = new Image();
+  img.onload = function () {
+    delete authoPending[key];
+    delete authoFailed[key];
+    authoImgs[key] = img;
+    authoOrder.push(key);
+    while (authoOrder.length > AUTHO_KEEP) {
+      var old = authoOrder.shift();
+      if (old !== key) delete authoImgs[old];
+    }
+    render();
+  };
+  img.onerror = function () {
+    delete authoPending[key];
+    var n = (authoFailed[key] || 0) + 1;
+    authoFailed[key] = n;
+    if (n < 5) setTimeout(function () { authoFetch(key, src); }, 2000 * n);
+    paintAddGate();
+  };
+  img.src = src;
+}
+
+/* Worked out before the frame is drawn, so designCanvas looks up this frame's keys and
+   never shows the previous design's file for an instant. */
+function authoSync() {
+  if (!canvas) return;
+  /* Nothing to render yet: no address means /api/print has no token to draw, and an
+     artwork still loading would be rendered as the fallback badge and then cached. */
+  if (!token.ca || !logoReady) {
+    authoNeed = [];
+    paintAddGate();
+    return;
+  }
+  var p = productById(product);
+  authoNeed = authoSides().map(function (side) { return authoSpec(p, side); });
+  paintAddGate();
+  if (authoTimer) clearTimeout(authoTimer);
+  authoTimer = setTimeout(function () {
+    authoNeed.forEach(function (sp) { authoFetch(sp.key, sp.src); });
+  }, 400);
+}
+
+function paintAddGate() {
+  var btn = document.getElementById('tmAddBtn');
+  var lbl = document.getElementById('tmAddLabel');
+  if (!btn || addBusy) return;
+  /* With no token there is nothing to print: leave the button alone so its own
+     "paste a contract address first" message is what the customer gets. */
+  if (!token.ca) {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    if (lbl) lbl.innerText = 'ADD TO CART';
+    return;
+  }
+  var ready = true, stuck = false;
+  for (var i = 0; i < authoNeed.length; i++) {
+    if (authoImgs[authoNeed[i].key]) continue;
+    ready = false;
+    if ((authoFailed[authoNeed[i].key] || 0) >= 5) stuck = true;
+  }
+  btn.disabled = !ready;
+  btn.style.opacity = ready ? '' : '.55';
+  if (lbl) lbl.innerText = ready ? 'ADD TO CART'
+    : (stuck ? 'PRINT FILE UNAVAILABLE' : 'PREPARING PRINT FILE…');
+}
+
 function designCanvas(W, H, side, inW) {
   var c = document.createElement('canvas');
   c.width = W; c.height = H || W;
-  drawDesign(c.getContext('2d'), W, side, inW);
+  var cx = c.getContext('2d');
+  /* Always drawn, even when it is about to be covered: this is what sets artIn, which
+     printParams then sends to the renderer. */
+  drawDesign(cx, W, side, inW);
+  var real = authoFor(side);
+  if (real) {
+    cx.clearRect(0, 0, c.width, c.height);
+    cx.drawImage(real, 0, 0, c.width, c.height);
+  }
   return c;
 }
 
@@ -1774,6 +1944,7 @@ function renderSheet(p, C, zoom) {
 }
 
 function render() {
+  authoSync();
   renderInner();
   updateQuality();
 }
@@ -2712,6 +2883,7 @@ function addToCart() {
       cartMsg('“' + p.label + '” is not set up in Shopify yet, so it cannot be added.');
       return;
     }
+    addBusy = true;
     if (btn) btn.disabled = true;
     if (lbl) lbl.innerText = 'ADDING…';
     fetch('/cart/add.js', {
@@ -2721,12 +2893,13 @@ function addToCart() {
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d && d.status && d.status !== 200) throw new Error(d.description || d.message || 'Shopify said no');
       if (lbl) lbl.innerText = 'ADDED';
-      setTimeout(function () { if (lbl) lbl.innerText = 'ADD TO CART'; }, 1400);
+      setTimeout(function () { addBusy = false; paintAddGate(); }, 1400);
       refreshCart();
     }).catch(function (e) {
+      addBusy = false;
       if (lbl) lbl.innerText = 'ADD TO CART';
       cartMsg(e.message || 'Could not add that to the cart.');
-    }).then(function () { if (btn) btn.disabled = false; });
+    }).then(function () { if (btn) btn.disabled = false; paintAddGate(); });
   });
 }
 
