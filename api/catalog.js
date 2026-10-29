@@ -59,6 +59,26 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    // ?printfiles=<catalog product id> -> the REAL print areas, in inches.
+    // The file objects on /products/{id} carry no dimensions for some products, and a
+    // mockup template only gives pixels inside its own arbitrary photo scale. This is
+    // the authoritative source: printfiles are pixels plus a dpi, so inches fall out.
+    const pfFor = Number(req.query.printfiles);
+    if (pfFor) {
+      const data = await pf('/mockup-generator/printfiles/' + pfFor);
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+      return res.status(200).json({
+        productId: data.product_id,
+        availablePlacements: data.available_placements || {},
+        printfiles: (data.printfiles || []).map((f) => ({
+          id: f.printfile_id, width: f.width, height: f.height, dpi: f.dpi,
+          fillMode: f.fill_mode, canRotate: f.can_rotate,
+          inches: +(f.width / f.dpi).toFixed(2) + ' x ' + +(f.height / f.dpi).toFixed(2)
+        })),
+        variantPrintfiles: (data.variant_printfiles || []).slice(0, 3)
+      });
+    }
+
     // ?placements=<catalog product id> -> what can be printed where, and what it adds
     const plFor = Number(req.query.placements);
     if (plFor) {
