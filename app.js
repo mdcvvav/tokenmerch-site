@@ -1093,6 +1093,12 @@ function printParams(pr, side) {
     q.legDia = pr.leg.dia;
     if (pr.leg.top != null) q.legTop = pr.leg.top; else q.legBottom = pr.leg.bottom;
   }
+  /* The sticker sheet is six cells, and the renderer had no idea -- it drew one centred
+     graphic on a blank A5. Sent as one compact field in the order tileRects reads. */
+  if (pr.tile) {
+    var t = pr.tile;
+    q.tile = [t.cols, t.rows, t.cell, t.art, t.artTop, t.gap, t.radius].join(',');
+  }
   if (a.top != null) q.artTop = a.top;
   if (a.tickerFirst) q.tickerFirst = '1';
   if (a.tickerCap) q.tickerCap = a.tickerCap;
@@ -1381,9 +1387,14 @@ function authoScaled(q) {
 function authoSpec(p, side) {
   var saved = artIn;
   try {
-    var scratch = document.createElement('canvas');
-    scratch.width = 64; scratch.height = 64;
     var inches = (side === 'back' && p.back) ? p.back : printFor(p);
+    var scratch = document.createElement('canvas');
+    /* The scratch has to carry the print area's ASPECT, not just its scale. drawDesign
+       asks wideArea() whether the canvas is wider than it is tall, and a square scratch
+       answered no for the mug's 9 x 3.5 in band -- so artIn came back as the 4.5 in
+       garment floor for an area 3.5 in tall, and that number went into the print url. */
+    scratch.width = 64;
+    scratch.height = Math.max(1, Math.round(64 * inches.h / inches.w));
     drawDesign(scratch.getContext('2d'), 64, side, placeInW(p, inches));
   } catch (e) { /* keep the artIn we had */ }
   var q = printParams(p, side);
