@@ -191,7 +191,17 @@ var LOGO_SRC = 'data:image/webp;base64,UklGRoYVAABXRUJQVlA4IHoVAADQUQCdASrAAMAAP
 /* ---------------- head assets ---------------- */
 
 var CSS = [
-'body{background-color:#0d0f17;color:#E2E8F0;font-family:"Inter",sans-serif}',
+/* The page background has to beat the theme's own `body{background:var(--color-background)}`
+   (which is #ffffff). Both are bare `body` selectors, so the winner is whichever the cascade
+   sees LAST -- and this stylesheet is appended to <head> at runtime while Horizon inserts its
+   own sheets asynchronously, so the order is a race. It was lost on a real 1920px Chrome and
+   won in testing, which is the worst way for a bug like this to behave.
+
+   `html` is the real fix: nothing in the theme sets a background on it, and the html
+   background is what paints the viewport canvas. The !important on body is there so the
+   element itself can never go white either. */
+'html{background-color:#0d0f17}',
+'body{background-color:#0d0f17 !important;color:#E2E8F0;font-family:"Inter",sans-serif}',
 '#tokenmerch-root{background-color:#0d0f17}',
 '.glass-panel{background:rgba(22,26,38,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08)}',
 '.glow-accent{box-shadow:0 0 25px -5px rgba(153,69,255,.35)}',
