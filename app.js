@@ -325,6 +325,13 @@ var MARKUP = [
 '<h2 class="text-lg font-bold text-white flex items-center gap-2 truncate"><span id="tokenName">&nbsp;</span><span id="tokenTicker" class="text-xs font-mono bg-brand-border px-2 py-0.5 rounded text-brand-solana"></span></h2>',
 '<p id="tokenCaDisplay" class="text-[11px] font-mono text-slate-400 mt-1 truncate max-w-[220px]"></p>',
 '</div></div>',
+
+/* The screening light. Hidden until an address has been dropped, then green or
+   red for the rest of that token's life on the page. */
+'<div id="tmScreenRow" class="mt-3 flex items-start gap-2 text-[11px] font-mono leading-snug" style="display:none">',
+'<span id="tmScreenDot" style="width:9px;height:9px;border-radius:9999px;background:#475569;flex:0 0 auto;margin-top:3px"></span>',
+'<span id="tmScreenText" class="text-slate-400"></span>',
+'</div>',
 '<div class="mt-4 pt-4 border-t border-brand-border">',
 '<div class="flex items-center justify-between mb-2">',
 '<span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Price chart</span>',
@@ -580,7 +587,12 @@ function lookup(raw) {
       return t;
     });
   }).then(function (t) {
-    if (t && !t.img) t.img = 'https://placehold.co/600x600/151922/14F195?text=' + encodeURIComponent(t.ticker);
+    if (t && !t.img) {
+      t.img = 'https://placehold.co/600x600/151922/14F195?text=' + encodeURIComponent(t.ticker);
+      /* Our own placard, not the deployer's artwork. Screening it would spend a
+         model call to be told it contains the ticker we just put there. */
+      t.placeholder = true;
+    }
     return t;
   });
 }
@@ -611,53 +623,182 @@ function measureImage(url, ms) {
   });
 }
 
-function useArtwork(ca, url) {
-  if (!token || token.ca !== ca || !url) return;
-  token.img = url;
-  var el = document.getElementById('tokenImgSidebar');
-  if (el) el.src = url;
-  loadLogo(url);
+/* useArtwork() lived here. Removed with upgradeArtwork(): a path that swapped
+   token.img after the fact is exactly how screened artwork and printed artwork
+   drift apart. resolveArtwork() settles it before the gate runs instead. */
+
+/* Settle the artwork BEFORE anything else looks at it.
+
+   This used to run in the background and swap the image in whenever Jupiter's
+   turned out to be sharper. That is fine for a picture on a page and quietly
+   wrong once there is a content filter: we would screen the DexScreener image
+   and then print the Jupiter one. So it is awaited now. It costs a second or
+   two on a cold token and removes a late visual swap as a side benefit.
+
+   Resolves to the same token object with `img` final. Never rejects. */
+function resolveArtwork(t) {
+  if (!t || !t.ca) return Promise.resolve(t);
+  var known = artBest[t.ca];
+  if (known) { t.img = known; return Promise.resolve(t); }
+  if (t.placeholder) { artBest[t.ca] = t.img; return Promise.resolve(t); }
+  return fromJupiter(t.ca).catch(function () { return null; }).then(function (j) {
+    if (!j || !j.img || j.img === t.img) { artBest[t.ca] = t.img; return t; }
+    return Promise.all([measureImage(t.img, 3000), measureImage(j.img, 2500)])
+      .then(function (r) {
+        if (r[1] > r[0]) t.img = j.img;
+        artBest[t.ca] = t.img;
+        return t;
+      });
+  }).catch(function () { artBest[t.ca] = t.img; return t; });
 }
 
-function upgradeArtwork(t) {
-  if (!t || !t.ca) return;
-  var known = artBest[t.ca];
-  if (known) {
-    /* Already decided for this token, so apply the answer instead of racing again.
-       This branch matters: every fresh lookup resets token.img to DexScreener's url,
-       so without it a second paste of the same address quietly lost the upgrade. */
-    if (known !== t.img) useArtwork(t.ca, known);
-    return;
-  }
-  artBest[t.ca] = t.img;            /* provisional -- what is on screen right now */
-  fromJupiter(t.ca).catch(function () { return null; }).then(function (j) {
-    if (!j || !j.img || j.img === t.img) return null;
-    return Promise.all([measureImage(t.img, 3000), measureImage(j.img, 2500)]).then(function (r) {
-      if (r[1] > r[0]) {
-        artBest[t.ca] = j.img;
-        useArtwork(t.ca, j.img);    /* no-ops if the customer has moved on */
-      }
-    });
+/* ---------------- the content gate ----------------------------------------
+   One call to /api/screen the moment an address resolves, before the token is
+   accepted. Pass and the preview comes up as normal; fail and the token is
+   discarded -- it never becomes `token`, so there is no print file, nothing to
+   add to the cart, and nothing for the order webhook to find.
+
+   Anything other than a clear pass is a refusal, including the endpoint being
+   down. That is deliberate: there is no manual review queue to fall back on, so
+   the only safe default is to lose the sale.
+
+   `screenReason` is a generic message on purpose. A customer-facing verdict is
+   an oracle -- naming the category would let anyone map exactly what the filter
+   blocks and work around it. */
+var SCREEN_LABEL = {
+  slur: 'blocked', brand: 'blocked', character: 'blocked',
+  hate_symbol: 'blocked', genitalia_or_sex_act: 'blocked', gore: 'blocked',
+  csam_or_minor_sexual: 'blocked', illegal_or_terror: 'blocked',
+  self_harm: 'blocked', real_person: 'blocked',
+  unavailable: 'unavailable', rate_limited: 'rate_limited'
+};
+
+function paintScreen(state, msg) {
+  var row = document.getElementById('tmScreenRow');
+  var dot = document.getElementById('tmScreenDot');
+  var txt = document.getElementById('tmScreenText');
+  if (!row || !dot || !txt) return;
+  if (state === 'hidden') { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  var colour = state === 'pass' ? '#14F195' : state === 'fail' ? '#F87171' : '#64748B';
+  dot.style.background = colour;
+  dot.className = state === 'checking' ? 'animate-ping' : '';
+  txt.style.color = state === 'fail' ? '#FCA5A5' : state === 'pass' ? '#14F195' : '#94A3B8';
+  txt.innerHTML = msg;
+}
+
+function screenToken(t) {
+  paintScreen('checking', 'Checking artwork against print guidelines\u2026');
+  return fetch(API + '/api/screen', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      ca: t.ca,
+      ticker: t.ticker || '',
+      name: t.name || '',
+      img: t.placeholder ? '' : (t.img || '')
+    })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    return (d && d.verdict === 'pass')
+      ? { ok: true }
+      : { ok: false, code: (d && d.code) || 'unavailable' };
+  }).catch(function () {
+    return { ok: false, code: 'unavailable' };
   });
 }
 
-function fetchToken(raw) {
+/* Every fetchToken call takes a ticket and only the newest one is allowed to
+   touch the page. The store auto-loads a demo token at boot, so there are two
+   of these in flight within the first second of every visit -- and now that one
+   of them can REFUSE a token and wipe `token`, a stale reply landing late would
+   clear the address the customer actually pasted, or worse, leave a refused
+   one's green light over it. */
+var fetchSeq = 0;
+
+/* `opts.silent` suppresses the popups. The store auto-loads a demo token at
+   boot, and without this a missing API key or a sleeping endpoint would greet
+   every single visitor with an alert box before they had typed anything. The
+   light still turns red, which is the diagnostic worth having. */
+function fetchToken(raw, opts) {
+  var silent = !!(opts && opts.silent);
+  var mine = ++fetchSeq;
+  var stale = function () { return mine !== fetchSeq; };
   var btn = document.getElementById('fetchBtnText');
   var spin = document.getElementById('fetchSpinner');
   btn.innerText = 'Loading...';
   spin.classList.remove('hidden');
+  paintScreen('hidden');
   return lookup(raw).then(function (t) {
-    if (!t) { alert('Could not find that token on DexScreener or Jupiter. Double-check the contract address.'); return; }
-    token = t;
-    document.getElementById('caInput').value = t.ca;
+    if (stale()) return null;
+    if (!t) {
+      alert('Could not find that token on DexScreener or Jupiter. Double-check the contract address.');
+      return null;
+    }
+    /* Artwork first, then screen it. Screening the provisional image and
+       printing the upgraded one would defeat the whole exercise. */
+    btn.innerText = 'Checking...';
+    return resolveArtwork(t).then(function (tt) {
+      if (stale()) return null;
+      return screenToken(tt).then(function (v) {
+        if (stale()) return null;
+        if (!v.ok) return { refused: v.code, t: tt };
+        return { t: tt };
+      });
+    });
+  }).then(function (r) {
+    if (!r || stale()) return;
+    if (r.refused) {
+      refuseToken(r.refused, silent);
+      return;
+    }
+    token = r.t;
+    document.getElementById('caInput').value = token.ca;
     updateTokenUI();
+    paintScreen('pass', 'Artwork cleared for print');
+    return;
   }).catch(function (err) {
+    if (stale()) return;
     console.error('Token lookup error:', err);
-    alert('Token lookup failed: ' + err.message);
+    if (!silent) alert('Token lookup failed: ' + err.message);
   }).then(function () {
+    if (stale()) return;
     btn.innerText = 'Drop';
     spin.classList.add('hidden');
   });
+}
+
+/* A refused token is dropped on the floor. Deliberately nothing is kept: the
+   preview, the print file and the cart all key off `token.ca`, so leaving it
+   empty means every one of them stays shut without needing its own check. */
+function refuseToken(code, silent) {
+  token = { ca: '', name: '', ticker: 'TOKEN', price: '-', change: '-', img: '', pair: '' };
+  logoImg = null; logoReady = false;
+  authoNeed = [];
+  var img = document.getElementById('tokenImgSidebar');
+  if (img) img.removeAttribute('src');
+  var nm = document.getElementById('tokenName');
+  var tk = document.getElementById('tokenTicker');
+  var cd = document.getElementById('tokenCaDisplay');
+  if (nm) nm.innerHTML = '&nbsp;';
+  if (tk) tk.innerText = '';
+  if (cd) cd.innerText = '';
+  setStatus('');
+  render();
+  paintAddGate();
+
+  if (code === 'unavailable') {
+    paintScreen('fail', 'Could not run the print-safety check just now. Try again in a moment.');
+    if (!silent) alert('We could not check this token against our print guidelines just now.\n\nNothing is wrong with the address \u2014 please press Drop again in a moment.');
+    return;
+  }
+  if (code === 'rate_limited') {
+    paintScreen('fail', 'Too many checks in a row. Give it a minute.');
+    if (!silent) alert('That is a lot of addresses in a short time. Please wait a minute and try again.');
+    return;
+  }
+  paintScreen('fail', 'This token\u2019s artwork or ticker failed our safe-to-print guidelines, so it cannot be printed.');
+  if (silent) return;
+  alert('Sorry \u2014 this token failed our safe-to-print guidelines.\n\nWe cannot print artwork or tickers that may infringe someone else\u2019s rights, or that our print partner will not accept. Try a different token.');
 }
 
 function updateTokenUI() {
@@ -667,7 +808,6 @@ function updateTokenUI() {
   document.getElementById('tokenImgSidebar').src = token.img;
   loadChart();
   loadLogo(token.img);
-  upgradeArtwork(token);
 }
 
 function loadLogo(url) {
@@ -3451,7 +3591,7 @@ function start() {
   ctx = canvas.getContext('2d');
   buildControls();
   loadTemplate(product, 'front');
-  fetchToken(DEMO_CA);
+  fetchToken(DEMO_CA, { silent: true });
   startChartPolling();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 }
