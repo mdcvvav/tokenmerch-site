@@ -62,48 +62,34 @@ var PRODUCTS = [
      rather than the colour-independent _base_whitebg ghost every other garment gives,
      so our colour fill would double up on it -- and a raw hem is the wrong canvas for
      a 10 in graphic anyway. */
-  /* Cotton Heritage M7580 joggers. The only product that does not print on a torso, so it
-     is also the only one with its own placement set: four leg marks and nothing else.
+  /* AS Colour 4062 Women's Crop Tee, in place of the Cotton Heritage M7580 joggers.
+     The joggers went for two reasons: DTG on fleece is the least predictable surface
+     Printful prints on, and the only placement they allowed was a leg strip starting
+     21 in below the waistband -- nothing prints on a jogger thigh, because the cross
+     pockets take that whole area. A mark down the shin was never the idea.
 
-     WHICH FACE OF THE LEG. This is the whole argument, and it cost a blank to learn. Every
-     sweatpant Printful carries gets the same 3.5 x 14.5 in leg strip, but the placement NAMES
-     differ and they are not decoration: the M7580 publishes `leg_front_left` / `leg_front_right`
-     and prints on the FRONT of the leg; the Jerzees 975MPR, which sat here for an afternoon,
-     publishes `leg_left` / `leg_right` and prints down the OUTER SIDE. The 975MPR's strip is
-     the higher of the two -- crotch to knee against the M7580's above-the-knee-to-ankle -- and
-     it was chosen for that, until a flat front render showed the strip hugging the silhouette
-     edge and spilling past it. Its own templates being side-view model shots was the tell.
-     A mark riding the side seam at crotch height reads as a misprint; a mark on the front of
-     the leg reads as a design, even lower down. Front won.
+     10 x 10 in front area. That number is read off Printful's PRINTFILE, not inferred
+     from the mockup template: the template's print rectangle is square (1406 x 1406 of
+     3000), and square is equally consistent with 10 x 10 and 12 x 12. Guessing would
+     have printed every graphic 20% too large. See /api/catalog?printfiles=636.
 
-     Nothing prints on the thigh. The M7580's cross pockets take up that whole area, and its
-     strip starts 21 in below the waistband. Its 4x4 in `embroidery_apparel_front` area IS at
-     thigh height, but embroidery cannot carry arbitrary token artwork. No Printful sweatpant
-     does a DTG thigh print; all six sit 55-62% of the way down the garment.
+     XS-2XL over ten colours. The pastels -- Hazy Pink, Bubblegum, Orchid, Pale Pink --
+     stop at XL; Black and the neutrals carry the 2XL. Blank $26.95 with no placement
+     surcharge, so the usual ~2x lands at $54.
 
-     The mark hangs `leg.top` inches DOWN from the top of the strip -- i.e. as high as the
-     garment allows -- rather than up from its bottom.
+     shTop is measured the way the other garments' were: the topmost row of the laydown
+     ghost down to the top of the print area. That method reproduces the tee (3.54 vs
+     3.59), the hoodie (4.92 vs 4.94) and the sweatshirt (3.31 vs 3.34), so 3.61 is
+     trustworthy here. It does NOT work on the tank, whose highest point is a strap
+     rather than a shoulder -- 7.71 measured against the 6.34 that is actually right.
+     That one stays hand-tuned.
 
-     left/right follow the same convention as the chest badge: LEFT is the WEARER's left,
-     which is Printful's leg_front_left and the right-hand leg of a front view. Each leg has
-     its own print rectangle on the same flat ghost photo, so the preview switches templates
-     with the style, not the side -- see tplSide().
-
-     Cost: $42.75 blank (2XL $45.50) + a $7.95 leg surcharge that is always charged = $50.70. */
-  { id: 'pants',     label: 'SWEATPANTS',      pid: 412, vid: 11266, price: 104, shape: 'tee',
-    styles: ['badge-left', 'badge-right', 'square-left', 'square-right'],
-    styleLabels: {
-      'badge-left':  'IMAGE BADGE LEFT (CIRCULAR)',
-      'badge-right': 'IMAGE BADGE RIGHT (CIRCULAR)',
-      'square-left': 'IMAGE BADGE LEFT (SQUARE)',
-      'square-right': 'IMAGE BADGE RIGHT (SQUARE)'
-    },
-    placementByStyle: {
-      'badge-left':  'leg_front_left',  'square-left':  'leg_front_left',
-      'badge-right': 'leg_front_right', 'square-right': 'leg_front_right'
-    },
-    leg: { dia: 2.6, top: 0.15 },
-    print: { w: 3.5, h: 14.5, dpi: 150, tech: 'DTG', placement: 'leg_front_left' } },
+     The leg rendering (PRODUCTS[].leg, the leg branch in drawDesign and renderPrint,
+     and pants/blanks.js) is now unused but left in place. It cost a blank and an
+     afternoon to get right, and nothing reaches it without a slot declaring `leg`. */
+  { id: 'crop',      label: "WOMEN'S CROP",    pid: 636, vid: 16095, price: 54,  shape: 'tee', shTop: 3.61,
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
+    print: { w: 10, h: 10, dpi: 150, tech: 'DTG', placement: 'front' } },
   /* Cotton Heritage M2580 -- the one Printful titles "Unisex Premium Pullover Hoodie".
      That "premium" is its marketing name, not a tier, and reading it as one is how the
      lineup ended up with the dearer Independent SS4500 ($45.75 blank against $39.75)
@@ -1355,10 +1341,11 @@ function gcd(a, b) { while (b) { var t = a % b; a = b; b = t; } return a; }
    fraction of an inch off and quietly shift the layout; a divisor cannot.
 
    Pick the smallest divisor that brings the longest side within AUTHO_PX, which is the
-   most resolution that still fits. If no divisor does -- the sweatpants' 3.5 x 14.5 in
-   strip has none between the size cap and the renderer's 72 dpi floor -- fall back to
-   the largest that clears the dpi floor, which for the sweatpants is the full-size file
-   itself. A bigger download, and exact. */
+   most resolution that still fits. If no divisor does, fall back to the largest that
+   clears the dpi floor -- possibly the full-size file itself. A bigger download, and
+   exact. Every area in the current lineup has an exact divisor under the cap, so that
+   fallback is unused today; the sweatpants' 3.5 x 14.5 in strip was the one that needed
+   it, and it is kept because the next odd print area will need it again. */
 function authoScaled(q) {
   var w = +q.w, h = +q.h, dpi = +q.dpi;
   if (!w || !h || !dpi) return q;
