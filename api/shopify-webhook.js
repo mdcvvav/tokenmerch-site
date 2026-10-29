@@ -11,6 +11,11 @@
 //   _placement          Printful placement id ('front', 'leg_front_left', ...)
 // A line without _print_file is not ours and is skipped.
 //
+// Every print file is fetched and inspected before the draft is created, so a URL
+// that 404s, returns the wrong size, or quietly lost its token artwork can never
+// reach a print job. The sha256 of the bytes goes into each item's external_id, which
+// Printful keeps, so what was sent to print stays provable after the fact.
+//
 // Env:
 //   PRINTFUL_API_TOKEN       required
 //   PRINTFUL_STORE_ID        optional (only for multi-store tokens)
@@ -94,7 +99,7 @@ function itemsFrom(order) {
     if (pr._print_file_back) files.push({ type: 'back', url: pr._print_file_back });
 
     items.push({
-      external_id: 'shopify-' + order.id + '-' + line.id,
+      lineId: line.id,
       variant_id: variant,
       quantity: Math.max(1, Number(line.quantity) || 1),
       name: line.title + (line.variant_title ? ' / ' + line.variant_title : ''),
@@ -103,6 +108,62 @@ function itemsFrom(order) {
     });
   });
   return { items, skipped };
+}
+
+/* ---------- artwork provenance ---------- */
+
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/* Width and height live in the IHDR chunk, right after the 8-byte signature. */
+function pngSize(buf) {
+  if (buf.length < 24 || !buf.subarray(0, 8).equals(PNG_MAGIC)) return null;
+  if (buf.subarray(12, 16).toString('latin1') !== 'IHDR') return null;
+  return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+}
+
+/* The print URL carries the pixel size it was asked for, so the file can be checked
+   against its own request without consulting anything else. */
+function askedSize(url) {
+  try {
+    const q = new URL(url).searchParams;
+    const w = parseInt(q.get('w'), 10), h = parseInt(q.get('h'), 10);
+    return (w && h) ? { w, h } : null;
+  } catch (e) { return null; }
+}
+
+async function inspectArtwork(url) {
+  let r;
+  try {
+    r = await fetch(url, { headers: { accept: 'image/png' } });
+  } catch (err) {
+    return { ok: false, why: 'fetch failed: ' + err.message };
+  }
+  if (!r.ok) return { ok: false, why: 'HTTP ' + r.status };
+
+  const art = r.headers.get('x-tm-art') || '';
+  // 'none' is the designed fallback for a token that has no image at all, and the
+  // customer saw the same thing in the preview. 'missing' means the image URL was
+  // there and did not load, which would print a green placeholder badge instead of
+  // the token. That must never go out.
+  if (art === 'missing') return { ok: false, why: 'token artwork failed to load' };
+
+  const buf = Buffer.from(await r.arrayBuffer());
+  const size = pngSize(buf);
+  if (!size) return { ok: false, why: 'not a PNG' };
+
+  const want = askedSize(url);
+  if (want && (want.w !== size.w || want.h !== size.h)) {
+    return { ok: false, why: 'size ' + size.w + 'x' + size.h + ', asked ' + want.w + 'x' + want.h };
+  }
+
+  return {
+    ok: true,
+    bytes: buf.length,
+    size: size.w + 'x' + size.h,
+    art: art || 'unknown',
+    source: r.headers.get('x-tm-art-source') || '',
+    sha256: crypto.createHash('sha256').update(buf).digest('hex')
+  };
 }
 
 async function printful(path, init) {
@@ -213,6 +274,37 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Fetch and inspect every print file BEFORE anything is created. A draft is only
+  // worth having if its artwork is real, so this fails the whole order rather than
+  // sending one good item and one broken one.
+  const provenance = [];
+  for (const item of items) {
+    for (const f of item.files) {
+      const got = await inspectArtwork(f.url);
+      if (!got.ok) {
+        console.error('webhook: artwork rejected on ' + external_id +
+          ' line ' + item.lineId + ' (' + f.type + '): ' + got.why + ' -- ' + f.url);
+        // 500 so Shopify retries: a flaky fetch heals itself, and a genuinely broken
+        // file exhausts the retries and shows up as a failed webhook instead of
+        // becoming a print job nobody checked.
+        res.status(500).json({ ok: false, created: false, reason: 'artwork failed inspection',
+          line: item.lineId, placement: f.type, detail: got.why });
+        return;
+      }
+      provenance.push({ line: item.lineId, placement: f.type, bytes: got.bytes,
+        size: got.size, art: got.art, source: got.source, sha256: got.sha256 });
+      console.log('webhook artwork ' + external_id + ' line ' + item.lineId +
+        ' ' + f.type + ' ' + got.size + ' ' + got.bytes + 'B art=' + got.art +
+        (got.source ? '/' + got.source : '') + ' sha256=' + got.sha256);
+    }
+    // The hash of the front file rides along in the item reference Printful stores,
+    // so the order itself records which artwork it was built from.
+    const headSha = (provenance.find((p) => p.line === item.lineId) || {}).sha256 || '';
+    item.external_id = 'shopify-' + order.id + '-' + item.lineId +
+      (headSha ? '-' + headSha.slice(0, 12) : '');
+    delete item.lineId;
+  }
+
   const draft = {
     external_id,
     shipping: 'STANDARD',
@@ -229,7 +321,7 @@ export default async function handler(req, res) {
 
   if (process.env.TM_WEBHOOK_DRYRUN === '1') {
     console.log('webhook DRY RUN, would create:', JSON.stringify(draft));
-    res.status(200).json({ ok: true, created: false, reason: 'dry run', draft });
+    res.status(200).json({ ok: true, created: false, reason: 'dry run', draft, provenance });
     return;
   }
 
@@ -239,7 +331,7 @@ export default async function handler(req, res) {
   if (r.ok) {
     const id = (r.body.result || {}).id;
     console.log('webhook: created Printful draft', id, 'for', external_id);
-    res.status(200).json({ ok: true, created: true, printful_order: id, skipped });
+    res.status(200).json({ ok: true, created: true, printful_order: id, skipped, provenance });
     return;
   }
 
