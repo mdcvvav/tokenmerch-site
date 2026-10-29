@@ -203,6 +203,11 @@ var CSS = [
 'html{background-color:#0d0f17}',
 'body{background-color:#0d0f17 !important;color:#E2E8F0;font-family:"Inter",sans-serif}',
 '#tokenmerch-root{background-color:#0d0f17}',
+/* Held back until the stylesheet that gives the markup meaning has arrived -- see
+   reveal() near the bottom. Opacity rather than visibility or display so the layout is
+   still live underneath and anything measuring an element gets a real answer. */
+'#tokenmerch-root{opacity:0}',
+'#tokenmerch-root.tm-ready{opacity:1;transition:opacity .18s ease}',
 '.glass-panel{background:rgba(22,26,38,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08)}',
 '.glow-accent{box-shadow:0 0 25px -5px rgba(153,69,255,.35)}',
 /* The track used to carry a 1px white border, which is what showed through as a pale
@@ -3439,6 +3444,7 @@ function start() {
     document.body.appendChild(root);
   }
   root.className = 'min-h-screen flex flex-col justify-between selection:bg-brand-accent selection:text-white';
+  if (revealed) root.classList.add('tm-ready');
   if (onCartPage()) { root.innerHTML = CART_MARKUP; startCartPage(); return; }
   root.innerHTML = MARKUP;
   canvas = document.getElementById('mockupCanvas');
@@ -3450,10 +3456,44 @@ function start() {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 }
 
+/* ---------------- first paint ----------------
+   The markup is 223 Tailwind utility attributes and it goes into the page the moment
+   app.js finishes, at about 570 ms. cdn.tailwindcss.com does not answer until about
+   1040 ms and then still has to compile; Font Awesome and the web fonts land around
+   900 ms. So for roughly half a second the entire page sat on screen with none of its
+   styling: stacked text, unsized images, square icons where the glyphs should be.
+
+   The root is therefore held at opacity 0 until the CSS that gives it meaning exists,
+   which leaves the dark background and nothing else -- which is what was asked for.
+   REVEAL_MAX is the backstop: if a CDN never answers, an ugly page is still better
+   than a blank one, so the content appears regardless. */
+var REVEAL_MAX = 2600;   /* ms, absolute longest the page may stay blank */
+var FONT_GRACE = 700;    /* ms, how long fonts may hold a page that is otherwise ready */
+var revealed = false;
+
+function reveal() {
+  if (revealed) return;
+  revealed = true;
+  var root = document.getElementById('tokenmerch-root');
+  if (root) root.classList.add('tm-ready');
+}
+
+/* Tailwind is in. Give the web fonts a moment so the type does not reflow in front of
+   the customer, but never let them hold the page on their own. */
+function revealWhenDressed() {
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(reveal);
+    setTimeout(reveal, FONT_GRACE);
+  } else {
+    reveal();
+  }
+}
+
 function boot() {
   addHead();
-  addTailwind(function () {});
+  addTailwind(revealWhenDressed);
   start();
+  setTimeout(reveal, REVEAL_MAX);
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
