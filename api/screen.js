@@ -160,6 +160,8 @@ const SYSTEM = [
   '  instructing serious crime.',
   '- self_harm: true for imagery depicting or encouraging suicide or self-injury.',
   '- visible_text: every piece of text legible in the image, verbatim.',
+  '- description: ONE short sentence, twenty words at most. It is a sanity check',
+  '  for a human reading the log later, not a caption.',
   '',
   'Reply with one JSON object and nothing else.'
 ].join('\n');
@@ -177,7 +179,7 @@ const SHAPE = [
   '  "illegal_or_terror": boolean,',
   '  "self_harm": boolean,',
   '  "visible_text": string,',
-  '  "description": string',
+  '  "description": string   // one short sentence, 20 words max',
   '}'
 ].join('\n');
 
@@ -192,7 +194,10 @@ function parseJson(text) {
 async function observe(art, ticker, name) {
   const body = {
     model: MODEL,
-    max_tokens: 700,
+    /* Generous, because a truncated reply is unparseable and an unparseable
+       reply is a refused sale. 700 was not enough: the description ran long
+       and the JSON was cut off mid-string. */
+    max_tokens: 1500,
     /* No `temperature`: Haiku 5.5 rejects it outright ("`temperature` is
        deprecated for this model"), and a 400 here is a refused sale. */
     system: SYSTEM,
