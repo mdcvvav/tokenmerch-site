@@ -181,7 +181,8 @@ async function observe(art, ticker, name) {
   const body = {
     model: MODEL,
     max_tokens: 700,
-    temperature: 0,
+    /* No `temperature`: Haiku 5.5 rejects it outright ("`temperature` is
+       deprecated for this model"), and a 400 here is a refused sale. */
     system: SYSTEM,
     messages: [
       {
