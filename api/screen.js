@@ -89,12 +89,20 @@ function rateLimited(ip) {
    guarantees a media type the API accepts. Direct fetch is the fallback. */
 const ACCEPT = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
+/* Every attempt gets its own deadline. Without one, a resizer that accepts the
+   connection and then never answers holds the whole function until Vercel kills
+   it at maxDuration -- which is a 30-second wait and then a refused sale, for
+   an image that the direct fetch would have returned in under a second. */
+const ART_TIMEOUT_MS = 7000;
+
 async function fetchArtwork(url) {
   const via = 'https://wsrv.nl/?url=' + encodeURIComponent(url)
     + '&w=512&h=512&fit=inside&output=jpg&q=82';
   for (const [tag, u] of [['wsrv', via], ['direct', url]]) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), ART_TIMEOUT_MS);
     try {
-      const r = await fetch(u, { headers: { accept: 'image/*' } });
+      const r = await fetch(u, { headers: { accept: 'image/*' }, signal: ctl.signal });
       if (!r.ok) continue;
       let type = (r.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
       const buf = Buffer.from(await r.arrayBuffer());
@@ -108,7 +116,7 @@ async function fetchArtwork(url) {
         else continue;
       }
       return { b64: buf.toString('base64'), type, source: tag, bytes: buf.length };
-    } catch (e) { /* try the next one */ }
+    } catch (e) { /* try the next one */ } finally { clearTimeout(timer); }
   }
   return null;
 }
@@ -128,7 +136,11 @@ const SYSTEM = [
   '- characters: fictional characters, mascots, or creatures owned by someone --',
   '  cartoon, film, game, comic, anime, or a well-known internet character such as',
   '  Pepe the Frog or Wojak. A restyled or redrawn version still counts. A generic',
-  '  animal, person, or object invented for this token does NOT count.',
+  '  animal, person, or object invented for this token does NOT count, and neither',
+  '  does a PHOTOGRAPH of a real animal, person, or object. The token having a name',
+  '  is not evidence that its artwork is someone else\'s character: report a',
+  '  character only when you recognise the depicted character from somewhere other',
+  '  than this token. If you are hedging, say so with a low confidence.',
   '- brands: company names, logos, wordmarks, or distinctive trade dress visible in',
   '  the image. Name the company.',
   '- real_people: real, identifiable individuals, living or dead. Name them. An',
@@ -201,7 +213,9 @@ async function observe(art, ticker, name) {
   };
 
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 20000);
+  /* 15 s, not 20: two 7 s artwork attempts can precede this and the function
+     dies at 30. A deadline that outlives its own budget is not a deadline. */
+  const timer = setTimeout(() => ctl.abort(), 15000);
   let r;
   try {
     r = await fetch('https://api.anthropic.com/v1/messages', {
