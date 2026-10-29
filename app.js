@@ -1084,6 +1084,11 @@ function printParams(pr, side) {
     tickerFont: tickerFont,
     weight: textWeight,
     img: token.img || '',
+    // The ticker and image the customer actually saw, sent instead of the contract
+    // address alone. /api/print?pin=1 then draws from these and never re-queries
+    // DexScreener, whose pair ranking can move between checkout and print.
+    ticker: cleanTicker(token.ticker || ''),
+    pin: '1',
     srcW: srcW || 0,
     artIn: +artIn.toFixed(4),
     caMin: ART.caMinIn
