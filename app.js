@@ -302,6 +302,10 @@ var MARKUP = [
 '<div class="shrink-0 flex items-center gap-1.5 sm:gap-2">',
 '<a id="tmXLink" href="#" target="_blank" rel="noopener" title="TokenMerch on X" aria-label="TokenMerch on X" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-brands fa-x-twitter"></i></a>',
 '<a id="tmMailLink" href="#" title="Email TokenMerch" aria-label="Email TokenMerch" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-solid fa-envelope"></i></a>',
+/* The guidelines slot. Inert for now, on purpose -- the panel it opens is the next
+   piece of work, and a button that pops up an empty box is worse than one that
+   waits. The click handler goes on #tmLegalBtn. */
+'<button id="tmLegalBtn" type="button" title="Printing guidelines" aria-label="Printing guidelines" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-solid fa-scale-balanced"></i></button>',
 '</div>',
 '</div></header>',
 
@@ -849,9 +853,9 @@ function refuseToken(code, silent) {
     if (!silent) alert('That is a lot of addresses in a short time. Please wait a minute and try again.');
     return;
   }
-  paintScreen('fail', 'This token\u2019s artwork or ticker failed our safe-to-print guidelines, so it cannot be printed.');
+  paintScreen('fail', 'this token\u2019s artwork or ticker failed our safe-to-print guidelines, so it cannot be printed.');
   if (silent) return;
-  alert('Sorry \u2014 this token failed our safe-to-print guidelines.\n\nWe cannot print artwork or tickers that may infringe someone else\u2019s rights, or that our print partner will not accept. Try a different token.');
+  alert('TOKEN DENIED\n\nunfortunately this token does not meet our printing guidelines, please try a different CA');
 }
 
 function updateTokenUI() {
