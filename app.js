@@ -712,7 +712,10 @@ function paintTokenSlot(state) {
   img.src = LOGO_SRC;
   if (state === 'checking') img.classList.add('tm-crate-busy');
   else img.classList.remove('tm-crate-busy');
-  if (tk) tk.innerText = '';
+  /* Hidden, not just emptied: the ticker pill carries its own background and
+     padding, so an empty one shows up as a small grey tab floating next to the
+     line. */
+  if (tk) { tk.innerText = ''; tk.style.display = 'none'; }
   if (cd) cd.innerText = '';
   nm.innerHTML = state === 'checking'
     ? '<span class="tm-slot-note">clearing token for print</span>'
@@ -854,6 +857,8 @@ function refuseToken(code, silent) {
 function updateTokenUI() {
   var slot = document.getElementById('tokenImgSidebar');
   if (slot) slot.classList.remove('tm-crate-busy');
+  var pill = document.getElementById('tokenTicker');
+  if (pill) pill.style.display = '';
   document.getElementById('tokenName').innerText = token.name;
   document.getElementById('tokenTicker').innerText = '$' + token.ticker;
   document.getElementById('tokenCaDisplay').innerText = token.ca;
