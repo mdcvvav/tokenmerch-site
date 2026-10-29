@@ -2527,6 +2527,7 @@ function buildControls() {
   document.getElementById('tmCheckoutBtn').addEventListener('click', function () {
     if (cartState.ready && cartState.count > 0) window.location.href = '/pages/cart';
   });
+  seedCart();
   refreshCart();
 }
 
@@ -2592,10 +2593,36 @@ function applyCart(c) {
   renderCartPage(c);
 }
 
+/* The two bars are correct on FIRST PAINT when Liquid has put the cart in the page,
+   rather than after a round trip. Measured on a reload with three items: the html
+   lands at ~350 ms, app.js at ~520, and /cart.js does not answer until ~830 -- so the
+   checkout bar sat reading EMPTY / $0.00 with its button greyed out for about half a
+   second after the page was already on screen, then popped. Nothing was wrong; it is
+   just that the cart was being asked for over the network when the page that rendered
+   it already knew.
+
+   To use it, in the Custom Liquid block that loads this script:
+
+     <script>window.TM_CART = {{ cart | json }};</script>
+
+   Entirely optional -- without it this behaves exactly as it did. refreshCart() still
+   runs either way, because the seed is only as fresh as the page render and the cart
+   may have changed in another tab since. */
+function seedCart() {
+  var seed = window.TM_CART;
+  if (!seed || !seed.items || !onShopify()) return false;
+  applyCart(seed);
+  return true;
+}
+
 function refreshCart() {
   if (!onShopify()) { cartState.ready = false; paintCart(); return; }
   getJson('/cart.js').then(applyCart)
-    .catch(function () { cartState.ready = false; paintCart(); });
+    .catch(function () {
+      /* A seeded cart is still better than falling back to PREVIEW, so only blank the
+         bars if nothing has populated them. */
+      if (!cartState.ready) { cartState.ready = false; paintCart(); }
+    });
 }
 
 /* The thumbnail is the PRINT FILE, not a second drawing of it. `_print_file` renders the
@@ -2806,6 +2833,10 @@ function startCartPage() {
   document.getElementById('tmPayBtn').addEventListener('click', function () {
     window.location.href = '/checkout';
   });
+  /* Same two steps as the storefront: draw from the page's own copy of the cart if
+     Liquid left one, then confirm over the network. This page is nothing BUT the cart,
+     so the round trip is the whole wait here. */
+  seedCart();
   refreshCart();
 }
 
