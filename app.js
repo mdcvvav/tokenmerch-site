@@ -2655,9 +2655,37 @@ function updateSpecs() {
   if (dp) dp.innerText = pr.dpi + ' DPI';
 }
 
+/* ---------------- price ----------------------------------------------------
+   PRODUCTS carries a CAD number, which is the right answer only in the Canadian
+   market. Shopify converts per market -- the $45 CAD tee presents as $33.00 USD --
+   so a hardcoded number showed a US visitor $45.00 against a $33.00 checkout.
+
+   /products/<handle>.js reports the CONVERTED price, so the store is the source of
+   truth rather than a rate we apply ourselves. Converting here would also mean
+   reproducing the market's rounding rule, which is a second thing to keep in step
+   and would disagree the first time it drifted. */
+var shopPrices = {};     /* handle -> { bySize: {key: cents}, min: cents } | null */
+
+function currencyCode() {
+  var c = window.Shopify && window.Shopify.currency;
+  return (c && c.active) || 'CAD';
+}
+function moneyCur(cents) { return money(cents) + ' ' + currencyCode(); }
+
+/* Per size as well as per product: nothing charges a size upcharge today, but Shopify
+   prices variants, not products, so the day a 2XL costs more this already follows. */
+function priceCents(p) {
+  var e = shopPrices[shopHandle(p)];
+  if (e) {
+    var k = sizeKey(size);
+    if (e.bySize[k] != null) return e.bySize[k];
+    if (e.min != null) return e.min;
+  }
+  return p.price * 100;   /* not on Shopify, or the lookup failed: the CAD list price */
+}
+
 function updatePrice() {
-  var base = productById(product).price;
-  document.getElementById('priceUsd').innerText = '$' + base + '.00';
+  document.getElementById('priceUsd').innerText = moneyCur(priceCents(productById(product)));
 }
 function updateZoomUI() {
   var p = productById(product);
@@ -2747,7 +2775,7 @@ function buildControls() {
     size = b.getAttribute('data-size');
     /* the mug's print area and its shape both depend on the size, so this is a real
        re-render now, not just a variant id swap */
-    paintSizes(); updateVariant(); updateSpecs(); render();
+    paintSizes(); updateVariant(); updateSpecs(); updatePrice(); render();
   });
   cw.addEventListener('click', function (e) {
     var b = e.target.closest('.tm-color');
@@ -2869,6 +2897,17 @@ function buildControls() {
   });
   seedCart();
   refreshCart();
+  preloadPrices();
+}
+
+/* Ten small fetches, fired once at startup so the panel is right on its first paint
+   rather than correcting itself a moment later. loadVariants caches, so the add-to-cart
+   path finds them already there. */
+function preloadPrices() {
+  if (!onShopify()) return;
+  PRODUCTS.forEach(function (pr) {
+    loadVariants(pr, function () { if (pr.id === product) updatePrice(); });
+  });
 }
 
 /* ---------------- Shopify cart ----------------
@@ -3210,13 +3249,20 @@ function loadVariants(p, cb) {
   var h = shopHandle(p);
   if (shopVariants[h] !== undefined) { cb(shopVariants[h]); return; }
   getJson('/products/' + h + '.js').then(function (d) {
-    var m = {};
+    var m = {}, pz = { bySize: {}, min: null };
     (d.variants || []).forEach(function (v) {
-      m[sizeKey(v.option1 || v.title)] = v.id;
+      var k = sizeKey(v.option1 || v.title);
+      m[k] = v.id;
+      var c = +v.price;
+      if (c > 0) {
+        pz.bySize[k] = c;
+        if (pz.min === null || c < pz.min) pz.min = c;
+      }
     });
     shopVariants[h] = m;
+    shopPrices[h] = pz;
     cb(m);
-  }).catch(function () { shopVariants[h] = null; cb(null); });
+  }).catch(function () { shopVariants[h] = null; shopPrices[h] = null; cb(null); });
 }
 
 function shortCa(ca) {
