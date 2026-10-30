@@ -391,8 +391,8 @@ var MARKUP = [
 /* text under logo */
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">TEXT</label>',
 '<div class="space-y-3 bg-brand-bg p-3 rounded-xl border border-brand-border text-xs font-mono">',
-'<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">Contract address</span><input id="tmShowCA" type="checkbox" class="w-4 h-4 accent-purple-500"></label>',
-'<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">$TICKER</span><input id="tmShowTicker" type="checkbox" class="w-4 h-4 accent-purple-500"></label>',
+'<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">Contract address</span><input id="tmShowCA" type="checkbox" class="w-4 h-4 accent-purple-500" checked></label>',
+'<label class="flex items-center justify-between cursor-pointer"><span class="text-slate-300">$TICKER</span><input id="tmShowTicker" type="checkbox" class="w-4 h-4 accent-purple-500" checked></label>',
 '<div id="tmColorRow" class="pt-3 border-t border-brand-border space-y-2">',
 '<div class="flex items-center justify-between gap-2"><span class="text-slate-400 shrink-0">Address font</span><select id="tmCaFont" class="bg-brand-card text-slate-200 border border-brand-border rounded-lg px-2 py-1 text-[11px] font-mono focus:outline-none focus:border-brand-accent"></select></div>',
 '<div class="flex items-center justify-between gap-2"><span class="text-slate-400 shrink-0">Ticker font</span><select id="tmTkFont" class="bg-brand-card text-slate-200 border border-brand-border rounded-lg px-2 py-1 text-[11px] font-mono focus:outline-none focus:border-brand-accent"></select></div>',
@@ -512,7 +512,7 @@ var curVariant = 0;
 var style = 'centered';
 var size = '';
 var view = 0;            /* index into viewsFor(product) */
-var showCA = false, showTicker = false, textColor = '#FFFFFF', textWeight = 700;
+var showCA = true, showTicker = true, textColor = '#FFFFFF', textWeight = 700;
 var inkTouched = false;   /* has the customer moved the colour slider themselves? */
 var caFont = 'archivo', tickerFont = 'archivo';
 var palettes = {};        /* product id -> { sizes, colors } from Printful */
@@ -2161,33 +2161,53 @@ function sheetComposite(pr, C) {
   return { canvas: c, box: b };
 }
 
-function renderSheet(p, C, zoom) {
-  var pr = productById(product);
-  var r = sheetComposite(pr, C);
-  setLoading(false);
-  if (!zoom) { p.drawImage(r.canvas, 0, 0); return; }
-  /* close-up on the printed block, so the address can be read */
-  var b = r.box, a = pr.art || {};
+/* Where the close-up crops, in the coordinate space of a composite built at size C.
+   Every length in sheetComposite scales linearly with C, which is what makes it safe to
+   re-render the whole sheet larger and crop the same region out of it. */
+function sheetZoomBox(pr, C) {
+  var b = sheetBox(pr, C, 0.075);
   var perIn = b.w / b.inches.w;
-  var size, top, box, cx, cy;
   if (pr.tile) {
     /* one sticker, not the whole sheet */
     var one = tileRects(pr.tile, b.inches.w, b.inches.h)[0];
-    box = one.s * perIn * 1.18;
-    cx = b.x + (one.x + one.s / 2) * perIn;
-    cy = b.y + (one.y + one.s / 2) * perIn;
-    p.fillStyle = pr.backing || '#ffffff';
-    p.fillRect(0, 0, C, C);
-    p.drawImage(r.canvas, cx - box / 2, cy - box / 2, box, box, 0, 0, C, C);
+    return {
+      box: one.s * perIn * 1.18,
+      cx: b.x + (one.x + one.s / 2) * perIn,
+      cy: b.y + (one.y + one.s / 2) * perIn
+    };
+  }
+  var a = pr.art || {};
+  var size = (a.size || 0.55 * b.inches.w) * perIn;
+  var top = (a.top != null ? a.top : 0.9) * perIn;
+  return { box: size * 1.5, cx: b.x + b.w / 2, cy: b.y + top + size * 0.78 };
+}
+
+function renderSheet(p, C, zoom) {
+  var pr = productById(product);
+  if (!zoom) {
+    var full = sheetComposite(pr, C);
+    setLoading(false);
+    p.drawImage(full.canvas, 0, 0);
     return;
   }
-  size = (a.size || 0.55 * b.inches.w) * perIn;
-  top = (a.top != null ? a.top : 0.9) * perIn;
-  box = size * 1.5;
-  cx = b.x + b.w / 2; cy = b.y + top + size * 0.78;
-  p.fillStyle = '#ffffff';
+  /* close-up on the printed block, so the address can be read.
+     This used to crop the C-sized composite and blow the crop up to fill the frame. On
+     the sticker sheet that is a 3.5x bitmap upscale: a cell's 1.14 in artwork was
+     rasterised at about 120 px and then displayed at 420, so it looked soft however
+     large the token image was. The garment close-up has always re-derived its design
+     canvas at the zoom factor (see the `k = C / cw` branch in renderInner); this brings
+     the flat products in line. Work out the magnification, build the composite that much
+     bigger, and crop the same region so every output pixel is a rendered one. */
+  var k = C / sheetZoomBox(pr, C).box;
+  /* capped: the sheet's design canvas grows with it, and past about 4x there is nothing
+     left to resolve -- the print file itself is only 300 DPI */
+  var CZ = Math.min(3600, Math.round(C * Math.max(1, Math.min(4, k))));
+  var r = sheetComposite(pr, CZ);
+  var g = sheetZoomBox(pr, CZ);
+  setLoading(false);
+  p.fillStyle = pr.backing || '#ffffff';
   p.fillRect(0, 0, C, C);
-  p.drawImage(r.canvas, cx - box / 2, cy - box / 2, box, box, 0, 0, C, C);
+  p.drawImage(r.canvas, g.cx - g.box / 2, g.cy - g.box / 2, g.box, g.box, 0, 0, C, C);
 }
 
 function render() {
