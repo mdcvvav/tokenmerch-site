@@ -351,7 +351,7 @@ var MARKUP = [
 '</div>',
 '<div class="mt-4 pt-4 border-t border-brand-border">',
 '<div class="flex items-center justify-between mb-2">',
-'<span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Price chart</span>',
+'<span id="tmChartLabel" class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Chart</span>',
 '<div id="tmRanges" class="flex items-center gap-1"></div>',
 '</div>',
 '<div class="relative bg-brand-bg/80 rounded-xl border border-brand-border overflow-hidden h-24 lg:h-[200px]">',
@@ -561,6 +561,15 @@ function fromPairs(pairs, mint) {
     change: isQuote ? '0%' : fmtChange(p.priceChange && p.priceChange.h24),
     img: (!isQuote && p.info && p.info.imageUrl) || '',
     pair: p.pairAddress || '',
+    /* Circulating supply, derived rather than fetched: DexScreener gives us the market
+       cap and the price, and supply is the ratio. It is what turns a price series into
+       a market-cap series, and for these tokens it is a constant -- mint authority is
+       almost always revoked -- so one number per token is enough. marketCap first, fdv
+       as the fallback, and if neither is there the chart quietly stays on price. */
+    supply: (function () {
+      var px = +p.priceUsd, cap = +(p.marketCap || p.fdv || 0);
+      return (isQuote || !(px > 0) || !(cap > 0)) ? 0 : cap / px;
+    })(),
     /* every pool, richest first. The chart provider does not index all of them -- a
        pool quoted in something other than SOL or a stablecoin is often missing -- so
        the chart walks this list rather than giving up on the top one. */
@@ -3223,6 +3232,11 @@ function niceStep(range, target) {
 }
 
 function axisPrice(v, step) {
+  if (chartSupply()) {
+    var u = v >= 1e9 ? [1e9, 'B'] : v >= 1e6 ? [1e6, 'M'] : v >= 1e3 ? [1e3, 'K'] : [1, ''];
+    var s = step / u[0];
+    return (v / u[0]).toFixed(s >= 1 ? 0 : s >= 0.1 ? 1 : 2) + u[1];
+  }
   var d = Math.max(0, Math.min(12, -Math.floor(Math.log10(step))));
   return v.toFixed(d);
 }
@@ -3255,7 +3269,7 @@ function drawChart() {
      memecoin writes out far more of them than a dollar token */
   var step = niceStep(hi - lo, Math.max(2, Math.round(H / (46 * S))));
   g.font = TAGF;
-  var tagTxt = fmtPrice(last.c);
+  var tagTxt = fmtChartVal(last.c);
   var tagW = g.measureText(tagTxt).width + 10 * S;
   g.font = AXIS;
   var gridW = Math.max(g.measureText(axisPrice(hi, step)).width,
@@ -3406,8 +3420,8 @@ function drawChart() {
     g.restore();
 
     g.font = AXIS;
-    var lines = [hhmm(hr.t), 'O ' + fmtPrice(hr.o), 'H ' + fmtPrice(hr.h),
-                 'L ' + fmtPrice(hr.l), 'C ' + fmtPrice(hr.c)];
+    var lines = [hhmm(hr.t), 'O ' + fmtChartVal(hr.o), 'H ' + fmtChartVal(hr.h),
+                 'L ' + fmtChartVal(hr.l), 'C ' + fmtChartVal(hr.c)];
     var bw = 0;
     for (i = 0; i < lines.length; i++) bw = Math.max(bw, g.measureText(lines[i]).width);
     bw += 12 * S;
@@ -3431,15 +3445,38 @@ function drawChart() {
   }
 }
 
+/* Everything the chart draws comes through here, so this is the one place the price
+   series becomes a market-cap series. Volume is already in dollars and is left alone.
+
+   Worth being clear about what this does and does not fix: supply is a constant, so
+   every candle moves by the same factor and the SHAPE of the chart is identical. This
+   is a readability change -- $541K instead of 0.0005572 -- not a data-quality one. */
+function chartSupply() { return token.supply > 0 ? token.supply : 0; }
+
 function toCandles(list) {
+  var k = chartSupply() || 1;
   return list.slice().reverse().map(function (row) {
-    return { t: row[0], o: row[1], h: row[2], l: row[3], c: row[4], v: row[5] };
+    return { t: row[0], o: row[1] * k, h: row[2] * k, l: row[3] * k, c: row[4] * k, v: row[5] };
   });
 }
+
+/* $541K rather than $540,703: nobody in this market quotes a market cap to the dollar,
+   and the axis has about forty pixels to say it in. */
+function fmtCap(v) {
+  if (!isFinite(v) || v <= 0) return '-';
+  if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+  if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K';
+  return '$' + v.toFixed(0);
+}
+
+function fmtChartVal(v) { return chartSupply() ? fmtCap(v) : fmtPrice(v); }
 
 function showCandles(key, rows) {
   chartShown = key;
   chartData = rows;
+  var lab = document.getElementById('tmChartLabel');
+  if (lab) lab.innerText = chartSupply() ? 'Market cap' : 'Price chart';
   chartMsg('');
   paintRangeButtons();
   drawChart();
