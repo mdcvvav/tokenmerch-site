@@ -1575,8 +1575,12 @@ function drawDesign(p, W, side, inW) {
    exactly where it was and moves only the pixel count. The factor is a common divisor,
    never a rounded ratio, so the preview is an exact scale of the print file rather than
    an approximation of it. */
-var AUTHO_PX = 1200;      /* longest side requested: covers the print close-up at 1:1 */
+var AUTHO_PX = 1200;      /* longest side requested WHEN the close-up shows the whole area */
+var AUTHO_MAX = 2600;     /* ceiling, however much the close-up magnifies */
 var AUTHO_KEEP = 40;      /* images held, so a long fiddling session cannot grow forever */
+var AUTHO_KEEP_PX = 60e6; /* ...and a pixel budget, because a sheet at full resolution is
+                             4 MP where a garment preview is 1 */
+var authoPx = {};         /* key -> decoded pixels, for the budget above */
 var authoImgs = {};       /* full-res print url -> loaded Image */
 var authoFailed = {};     /* full-res print url -> attempts so far */
 var authoOrder = [];      /* keys oldest first */
@@ -1597,14 +1601,15 @@ function gcd(a, b) { while (b) { var t = a % b; a = b; b = t; } return a; }
    exact. Every area in the current lineup has an exact divisor under the cap, so that
    fallback is unused today; the sweatpants' 3.5 x 14.5 in strip was the one that needed
    it, and it is kept because the next odd print area will need it again. */
-function authoScaled(q) {
+function authoScaled(q, cap) {
+  cap = cap || AUTHO_PX;
   var w = +q.w, h = +q.h, dpi = +q.dpi;
   if (!w || !h || !dpi) return q;
   var g = gcd(gcd(w, h), dpi), fits = [], any = [], long = Math.max(w, h);
   for (var d = 1; d <= g; d++) {
     if (g % d || dpi / d < 72) continue;
     any.push(d);
-    if (long / d <= AUTHO_PX) fits.push(d);
+    if (long / d <= cap) fits.push(d);
   }
   var use = fits.length ? Math.min.apply(null, fits) : Math.max.apply(null, any);
   if (use <= 1) return q;
@@ -1614,6 +1619,27 @@ function authoScaled(q) {
   out.h = h / use;
   out.dpi = dpi / use;
   return out;
+}
+
+/* How much the print close-up magnifies this product's print area. A garment's close-up
+   frames the print area itself, so 1. A flat sheet's frames one PART of it: the sticker
+   sheet shows a single 2.35 in cell out of a 5.83 in sheet (3.5x) and the poster shows
+   the artwork block (1.8x).
+
+   AUTHO_PX assumed 1 for everything, and the sticker sheet is where that bit. Its
+   w/h/dpi share a gcd of only 3, so there is no middle option -- either 300 dpi or 100 --
+   and a 1200 px cap forced the 100: a 583 x 827 sheet whose 1.14 in artwork carried
+   **114 real pixels**, displayed about 490 px wide. A 4.3x upscale, which is exactly what
+   it looked like. The poster degraded gracefully to 450 px only because its gcd is 300.
+   So scale the request by what the zoom asks for rather than assuming it asks for 1. */
+function authoZoom(p) {
+  if (!p || !p.sheet) return 1;
+  var g = sheetZoomBox(p, 1000);
+  return (g && g.box > 0) ? 1000 / g.box : 1;
+}
+
+function authoCapFor(p) {
+  return Math.min(AUTHO_MAX, Math.round(AUTHO_PX * authoZoom(p)));
 }
 
 /* printParams reads artIn, which drawDesign sets as a side effect, so a side that is
@@ -1636,7 +1662,7 @@ function authoSpec(p, side) {
   artIn = saved;
   /* keyed on the FULL resolution url -- the identity of the print file itself -- even
      though what is fetched is the scaled one */
-  return { side: side, key: urlFromParams(q), src: urlFromParams(authoScaled(q)) };
+  return { side: side, key: urlFromParams(q), src: urlFromParams(authoScaled(q, authoCapFor(p))) };
 }
 
 function authoSides() {
@@ -1662,10 +1688,20 @@ function authoFetch(key, src) {
     delete authoPending[key];
     delete authoFailed[key];
     authoImgs[key] = img;
+    authoPx[key] = (img.naturalWidth || 0) * (img.naturalHeight || 0);
     authoOrder.push(key);
-    while (authoOrder.length > AUTHO_KEEP) {
+    /* Count alone is not enough now that a sheet comes back at full resolution: forty
+       1749 x 2481 images is 170 MP of decoded bitmap. Evict on whichever limit bites
+       first, but never the one just loaded. */
+    var held = 0;
+    for (var pk in authoPx) if (authoImgs[pk]) held += authoPx[pk];
+    while (authoOrder.length > 1 &&
+           (authoOrder.length > AUTHO_KEEP || held > AUTHO_KEEP_PX)) {
       var old = authoOrder.shift();
-      if (old !== key) delete authoImgs[old];
+      if (old === key) { authoOrder.push(old); break; }
+      held -= authoPx[old] || 0;
+      delete authoImgs[old];
+      delete authoPx[old];
     }
     render();
   };
