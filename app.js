@@ -222,8 +222,12 @@ var CSS = [
    do not. A lighter tint of the same accent keeps it secondary to the green button
    without hiding it. Its own class rather than a utility so it cannot depend on the
    Tailwind build having picked the colour up. */
-'.tm-keep{color:#C9A9FF}',
-'.tm-keep:hover{color:#FFFFFF}',
+/* Scoped to the root id, because the Horizon theme ships `.page-content a{color:
+   currentcolor}` and a bare `.tm-keep` loses to it on specificity -- (0,1,1) beats
+   (0,1,0) -- which left the link inheriting black on a near-black card. Same cascade
+   race as the white gutters: the theme is not later, it is more specific. */
+'#tokenmerch-root .tm-keep{color:#C9A9FF !important}',
+'#tokenmerch-root .tm-keep:hover{color:#FFFFFF !important}',
 /* The token slot before there is a token. The crate sits in the frame rather than an
    empty square, and the line beside it says which of the three waits we are in:
    nothing pasted, being checked, or refused. */
