@@ -160,6 +160,9 @@ var PRODUCTS = [
     /* Printful lists 33 sizes for this product; the store sells one. Same allow-list
        the mug uses -- Printful stays the source of truth for the variant ids. */
     sizes: ['11\u2033\u00d714\u2033'],
+    /* Printful's own bullets never state the finished size, and for a poster that is
+       the first thing anyone wants to know. */
+    specLead: '11\u2033 \u00d7 14\u2033 finished size',
     art: { fixed: true, size: 6, top: 2.53, tickerFirst: true, tickerCap: 0.155 },
     print: { w: 11, h: 14, dpi: 300, tech: 'Digital', placement: 'default' } },
   /* Kiss Cut Sheet (505), A5, the one size it comes in. Printful cuts around each
@@ -172,6 +175,10 @@ var PRODUCTS = [
   { id: 'sticker',   label: 'STICKERS',        pid: 505, vid: 12917, price: 15,  shape: 'flat',
     noTpl: true, sheet: true, backing: '#eceef2', minDpi: 100,
     sizes: ['5.83\u2033\u00d78.27\u2033'], styles: ['centered'],
+    /* The VALUE stays the sheet, because that is the Printful variant we buy. Only the
+       label changes: a customer reading "5.83 x 8.27" on a SIZE bar reads it as the
+       size of a sticker, and it is the size of the sheet six of them arrive on. */
+    sizeLabel: { '5.83\u2033\u00d78.27\u2033': '2.35\u2033 \u00d7 2.35\u2033 (each sticker)' },
     tile: { cols: 2, rows: 3, cell: 2.35, art: 1.14, artTop: 0.15, gap: 0.09, radius: 0.16 },
     /* The print FILE is the whole A5 sheet, which is a production detail. What the
        customer is buying is a 2.35 in sticker, so that is what the spec line says. */
@@ -397,7 +404,7 @@ var MARKUP = [
 
 '<div class="glass-panel rounded-2xl p-5 space-y-4">',
 '<div class="flex items-center justify-between">',
-'<div><span class="text-[10px] text-slate-400 font-mono block uppercase">Total Price</span><span id="priceUsd" class="text-2xl font-black text-white font-mono">$68.00</span></div>',
+'<div><span class="text-[10px] text-slate-400 font-mono block uppercase">Price</span><span id="priceUsd" class="text-2xl font-black text-white font-mono">$68.00</span></div>',
 '<div class="text-right"><span class="text-[10px] text-slate-400 font-mono block uppercase">Crypto Approx.</span><span id="priceSol" class="text-xs font-mono text-brand-solana font-bold">-</span></div>',
 '</div>',
 /* Two bars, not one. The first is the action you take from the customiser and carries
@@ -2369,6 +2376,7 @@ function paintDesc(id) {
   tEl.innerText = (full && full.toLowerCase().indexOf(name.toLowerCase()) === 0) ? full : name;
 
   var bullets = [];
+  if (pr.specLead) bullets.push(pr.specLead);
   String(d.description || '').split('\n').forEach(function (ln) {
     var t = ln.trim();
     if (t.charAt(0) !== '\u2022') return;
@@ -2437,10 +2445,17 @@ function buildPalette() {
     return '<button class="tm-color" data-color="' + c.name + '" title="' + c.name +
       '" style="background:' + (c.code || '#888') + ';width:26px;height:26px;border-radius:9999px;flex:0 0 auto"></button>';
   }).join('');
-  sw.innerHTML = sizesFor(productById(product), d.sizes).map(function (z) {
-    return '<button class="tm-size" data-size="' + z + '">' + z + '</button>';
+  var pz = productById(product);
+  var list = sizesFor(pz, d.sizes);
+  /* One size means one button in a five-column grid, which leaves the purple covering a
+     fifth of its own label. A lone size spans the row instead. */
+  var span = list.length === 1 ? ';grid-column:1/-1' : '';
+  sw.innerHTML = list.map(function (z) {
+    var lab = (pz.sizeLabel && pz.sizeLabel[z]) || z;
+    return '<button class="tm-size" data-size="' + escapeHtml(z) + '" style="min-width:0' + span + '">'
+      + escapeHtml(lab) + '</button>';
   }).join('');
-  paintColors(); paintSizes(); updateVariant();
+  paintColors(); paintSizes(); updateVariant(); loadSizeGuide();
 }
 
 function colorEntry() {
@@ -2482,12 +2497,25 @@ function trim(v) {
 function paintSizeGuide() {
   var box = document.getElementById('tmSizeGuide');
   if (!box) return;
+  var wrap = document.getElementById('tmSizeGuideWrap');
   var d = sizeGuides[product];
-  if (!d) { box.innerHTML = '<div class="text-slate-400">Loading...</div>'; return; }
-  if (d.failed || !(d.tables || []).length) {
-    box.innerHTML = '<div class="text-slate-400">No size guide for this item.</div>';
+  /* Hidden rather than offering a link that opens "no size guide for this item". Which
+     products have one is not guessable: the mug and the poster have none, and neither
+     does the TANK, which is a garment where a customer would reasonably expect one. So
+     the answer comes from the data, which is why the guide is fetched on every product
+     change rather than on hover. */
+  if (!d) {
+    if (wrap) wrap.style.display = 'none';
+    box.innerHTML = '';
     return;
   }
+  if (d.failed || !(d.tables || []).length) {
+    if (wrap) wrap.style.display = 'none';
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  if (wrap) wrap.style.display = 'inline-block';
   var t = null;
   d.tables.forEach(function (x) { if (!t && x.type === 'product_measure') t = x; });
   if (!t) t = d.tables[0];
