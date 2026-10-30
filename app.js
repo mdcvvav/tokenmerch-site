@@ -217,6 +217,13 @@ var CSS = [
    still live underneath and anything measuring an element gets a real answer. */
 '#tokenmerch-root{opacity:0}',
 '#tokenmerch-root.tm-ready{opacity:1;transition:opacity .18s ease}',
+/* The way back from the cart. It was brand-accent purple at 11 px on a dark card,
+   which is legible once you already know it is there and close to invisible if you
+   do not. A lighter tint of the same accent keeps it secondary to the green button
+   without hiding it. Its own class rather than a utility so it cannot depend on the
+   Tailwind build having picked the colour up. */
+'.tm-keep{color:#C9A9FF}',
+'.tm-keep:hover{color:#FFFFFF}',
 /* The token slot before there is a token. The crate sits in the frame rather than an
    empty square, and the line beside it says which of the three waits we are in:
    nothing pasted, being checked, or refused. */
@@ -2991,7 +2998,7 @@ var CART_MARKUP = [
 '</div></header>',
 '<main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 w-full flex-grow">',
 '<h1 class="text-2xl font-extrabold text-white">Your cart</h1>',
-'<p class="text-xs font-mono text-slate-400 mt-1 mb-6">These are the items in your cart, please review carefully before checkout</p>',
+'<p class="text-xs font-mono text-slate-400 mt-1 mb-6">these are the items in your cart, please review carefully before payment</p>',
 '<div id="tmLines" class="space-y-3"></div>',
 '<div id="tmEmpty" class="glass-panel rounded-2xl p-10 text-center" style="display:none">',
 '<p class="text-sm text-slate-300 mb-5">Nothing in the cart yet.</p>',
@@ -3002,9 +3009,10 @@ var CART_MARKUP = [
 '<span class="text-[10px] font-mono text-slate-400 uppercase">Subtotal</span>',
 '<span id="tmSubtotal" class="text-2xl font-black text-white font-mono">$0.00</span>',
 '</div>',
-'<p class="text-[10px] font-mono text-slate-500 leading-relaxed">Shipping and any taxes are worked out on the next page, where the address and payment are entered.</p>',
-'<button id="tmPayBtn" class="w-full bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber hover:opacity-95 text-slate-950 font-extrabold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm"><i class="fa-solid fa-lock text-xs"></i><span>CONTINUE TO PAYMENT</span></button>',
-'<a href="/" class="block text-center text-[11px] font-mono text-brand-accent hover:text-white transition-colors">KEEP CUSTOMISING</a>',
+/* The shipping-and-tax sentence lived here. The button says where you are going now,
+   which is the same promise in the place a person is already looking. */
+'<button id="tmPayBtn" class="w-full bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber hover:opacity-95 text-slate-950 font-extrabold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm"><i class="fa-solid fa-lock text-xs"></i><span>CONTINUE TO PAYMENT &amp; SHIPPING</span></button>',
+'<a href="/" class="tm-keep block text-center text-[11px] font-mono transition-colors">KEEP CUSTOMISING</a>',
 '<div id="tmCartMsg" class="text-[10px] font-mono text-slate-400 text-center" style="display:none"></div>',
 '</div>',
 '</main>',
