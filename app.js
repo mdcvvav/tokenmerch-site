@@ -38,14 +38,17 @@ var PRINTFUL_VARIANT = 9229;            // Bella+Canvas 3719, Black / L
    garment it looks right on. */
 var PRODUCTS = [
   { id: 'tee',       label: 'T-SHIRT',         pid: 586, vid: 15114, price: 45,  shape: 'tee', shTop: 3.59,
-    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right', 'back-badge', 'back-ticker'],
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   { id: 'oversized', label: 'OVERSIZED T',     pid: 823, vid: 21000, price: 62,  shape: 'tee', shTop: 3.55,
-    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right', 'back-badge', 'back-ticker'],
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   { id: 'ribbed',    label: 'RIBBED NECK',     pid: 818, vid: 20716, price: 46,  shape: 'tee', shTop: 2.90,
-    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right', 'back-badge', 'back-ticker'],
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   /* One hoodie per cut. The women's is Bella + Canvas 7502, a cropped raw-hem fleece
      with a dropped shoulder -- 10x10 DTG front, S-2XL, four colours. The men's is
      Cotton Heritage M2580, the one Printful titles "Unisex Premium Pullover Hoodie";
@@ -88,13 +91,14 @@ var PRODUCTS = [
      and pants/blanks.js) is now unused but left in place. It cost a blank and an
      afternoon to get right, and nothing reaches it without a slot declaring `leg`. */
   { id: 'crop',      label: "WOMEN'S CROP",    pid: 636, vid: 16095, price: 54,  shape: 'tee', shTop: 3.61,
-    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
-    print: { w: 10, h: 10, dpi: 150, tech: 'DTG', placement: 'front' } },
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right', 'back-badge', 'back-ticker'],
+    print: { w: 10, h: 10, dpi: 150, tech: 'DTG', placement: 'front' },
+    /* 10x10 on the back too, not the 12x16 the tees get -- it is a cropped body */
+    back: { w: 10, h: 10, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   /* Cotton Heritage M2580 -- the one Printful titles "Unisex Premium Pullover Hoodie".
      That "premium" is its marketing name, not a tier, and reading it as one is how the
      lineup ended up with the dearer Independent SS4500 ($45.75 blank against $39.75)
-     sitting in the slot labelled plain HOODIE. Neither word survives: one hoodie, and
-     the only garment that offers a back print. */
+     sitting in the slot labelled plain HOODIE. Neither word survives. */
   { id: 'hoodie',    label: 'HOODIE',          pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
     styles: ['centered', 'centered-small', 'badge-left', 'badge-right', 'back-badge', 'back-ticker'],
     print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' },
@@ -102,18 +106,21 @@ var PRODUCTS = [
   /* Cotton Heritage M2480 -- the crewneck sibling of the M2580 men's hoodie just
      above, so the fabric and the fit are known quantities. Ghost laydown template on
      both sides, 19 colours, S-3XL, and the same 12x16 DTG front area as the tees.
-     Replaced the all-over windbreaker, whose printed panels never read cleanly. No
-     back print: it costs +$7.95 and, like the tank, it only looks right on a hood. */
+     Replaced the all-over windbreaker, whose printed panels never read cleanly. */
   { id: 'crew',      label: 'SWEATSHIRT',      pid: 411, vid: 11255, price: 70,  shape: 'tee', shTop: 3.34,
-    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
-    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right', 'back-badge', 'back-ticker'],
+    print: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
+    back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   /* Comfort Colors 9360 heavyweight garment-dyed tank -- same line as the 1717 tee.
      Chosen over the Cotton Heritage MC1790 because its mockup template is a ghost
      laydown on BOTH sides, so the tank composites match every other garment instead
      of leading with a worn torso. 31 colours, XS-3XL, and the back print is free. */
   { id: 'tank',      label: 'TANK TOP',        pid: 907, vid: 23282, price: 48,  shape: 'tee', shTop: 6.34,
-    styles: ['centered', 'centered-small', 'badge-left', 'badge-right'],
-    print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' } },
+    styles: ['centered', 'centered-small', 'badge-left', 'badge-right', 'back-badge', 'back-ticker'],
+    print: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'front' },
+    /* The only garment whose back print Printful does not charge for, so the tank has
+       no `Print` option in Shopify and no upcharge -- one variant per size, as before. */
+    back: { w: 14, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   /* Printful lists three capacities (11 / 15 / 20 oz); the store sells the first two,
      so the mug carries a `sizes` allow-list. It also carries a `styles` one: a mug has
      no chest and no back, so the badge and two-sided styles are meaningless on it and
@@ -1163,8 +1170,13 @@ function paintStyleOptions() {
   var lbl = p.styleLabels || {};
   var list = STYLE_OPTS.filter(function (o) { return styleAllowed(p, o[0]); });
   if (!list.length) list = [['centered', 'CENTERED GRAPHIC IMAGE']];
+  var add = backDelta(p);
   sel.innerHTML = list.map(function (o) {
-    return '<option value="' + o[0] + '">' + (lbl[o[0]] || o[1]) + '</option>';
+    var txt = lbl[o[0]] || o[1];
+    /* Priced from the live variants, so it reads +$11.00 in Canada and +$8.00 in the US
+       and says nothing at all on the tank, where the back print is free. */
+    if (add > 0 && (o[0] === 'back-badge' || o[0] === 'back-ticker')) txt += '  +' + money(add);
+    return '<option value="' + o[0] + '">' + txt + '</option>';
   }).join('');
   /* if the style we arrived on is not offered here, fall back to the first that is */
   if (!styleAllowed(p, style)) { style = list[0][0]; view = 0; }
@@ -2664,7 +2676,16 @@ function updateSpecs() {
    truth rather than a rate we apply ourselves. Converting here would also mean
    reproducing the market's rounding rule, which is a second thing to keep in step
    and would disagree the first time it drifted. */
-var shopPrices = {};     /* handle -> { bySize: {key: cents}, min: cents } | null */
+var shopPrices = {};     /* handle -> { byKey: {varKey: cents}, min: cents } | null */
+
+/* Back print is a Shopify OPTION, not a line-item property, because Shopify prices
+   VARIANTS -- there is no way to charge for a property. The six garments that charge for
+   it carry a second option, `Print`: "Front only" / "Front + back". The tank does not:
+   Printful gives it a back print free, so it still has one variant per size. Anything
+   with no sizes at all (poster, stickers) has one variant full stop. varKey has to work
+   for all three shapes, which is what the fallbacks in variantFor/priceCents are for. */
+function printSide(p) { return (twoSided() && p && p.backPrint) ? 'BACK' : 'FRONT'; }
+function varKey(p, z) { return sizeKey(z) + '|' + printSide(p); }
 
 function currencyCode() {
   var c = window.Shopify && window.Shopify.currency;
@@ -2677,11 +2698,36 @@ function moneyCur(cents) { return money(cents) + ' ' + currencyCode(); }
 function priceCents(p) {
   var e = shopPrices[shopHandle(p)];
   if (e) {
-    var k = sizeKey(size);
-    if (e.bySize[k] != null) return e.bySize[k];
+    var k = e.byKey[varKey(p, size)];
+    if (k != null) return k;
+    var f = e.byKey[sizeKey(size) + '|FRONT'];   /* product with no Print option */
+    if (f != null) return f;
     if (e.min != null) return e.min;
   }
   return p.price * 100;   /* not on Shopify, or the lookup failed: the CAD list price */
+}
+
+/* What the back print adds, read from the two real variants rather than a constant, so
+   it is right in every market without converting anything here: +$11.00 CAD, +$8.00 USD.
+   Zero on the tank and on any product with no Print option, which is the honest answer
+   there -- those back prints cost the customer nothing. */
+function backDelta(p) {
+  var e = shopPrices[shopHandle(p)];
+  if (!e || !p || !p.backPrint) return 0;
+  var k = sizeKey(size);
+  var f = e.byKey[k + '|FRONT'], b = e.byKey[k + '|BACK'];
+  /* A product switch paints the menu before applyPalette has picked a size for the new
+     product, so the current size key can belong to the product we just left. Fall back to
+     any matching pair -- the upcharge is the same on every size. */
+  if (f == null || b == null) {
+    var keys = Object.keys(e.byKey);
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].indexOf('|BACK') < 0) continue;
+      var mate = keys[i].replace('|BACK', '|FRONT');
+      if (e.byKey[mate] != null) { b = e.byKey[keys[i]]; f = e.byKey[mate]; break; }
+    }
+  }
+  return (f != null && b != null && b > f) ? b - f : 0;
 }
 
 function updatePrice() {
@@ -2775,7 +2821,7 @@ function buildControls() {
     size = b.getAttribute('data-size');
     /* the mug's print area and its shape both depend on the size, so this is a real
        re-render now, not just a variant id swap */
-    paintSizes(); updateVariant(); updateSpecs(); updatePrice(); render();
+    paintSizes(); updateVariant(); updateSpecs(); updatePrice(); paintStyleOptions(); render();
   });
   cw.addEventListener('click', function (e) {
     var b = e.target.closest('.tm-color');
@@ -2792,7 +2838,7 @@ function buildControls() {
     style = e.target.value;
     view = 0;
     if (twoSided()) loadTemplate(product, 'back');
-    updateZoomUI(); updateSpecs(); render();
+    updateZoomUI(); updateSpecs(); updatePrice(); render();
   });
 
   function textUpdate() {
@@ -2906,7 +2952,11 @@ function buildControls() {
 function preloadPrices() {
   if (!onShopify()) return;
   PRODUCTS.forEach(function (pr) {
-    loadVariants(pr, function () { if (pr.id === product) updatePrice(); });
+    loadVariants(pr, function () {
+      if (pr.id !== product) return;
+      updatePrice();
+      paintStyleOptions();   /* the back-print upcharge is only known once prices land */
+    });
   });
 }
 
@@ -3249,13 +3299,16 @@ function loadVariants(p, cb) {
   var h = shopHandle(p);
   if (shopVariants[h] !== undefined) { cb(shopVariants[h]); return; }
   getJson('/products/' + h + '.js').then(function (d) {
-    var m = {}, pz = { bySize: {}, min: null };
+    var m = {}, pz = { byKey: {}, min: null };
     (d.variants || []).forEach(function (v) {
-      var k = sizeKey(v.option1 || v.title);
+      /* option2 is the Print option where there is one; absent, every variant is a
+         front-only one, which is what the FRONT fallbacks then find. */
+      var k = sizeKey(v.option1 || v.title) +
+              (/back/i.test(String(v.option2 || '')) ? '|BACK' : '|FRONT');
       m[k] = v.id;
       var c = +v.price;
       if (c > 0) {
-        pz.bySize[k] = c;
+        pz.byKey[k] = c;
         if (pz.min === null || c < pz.min) pz.min = c;
       }
     });
@@ -3263,6 +3316,18 @@ function loadVariants(p, cb) {
     shopPrices[h] = pz;
     cb(m);
   }).catch(function () { shopVariants[h] = null; shopPrices[h] = null; cb(null); });
+}
+
+/* Same three shapes as priceCents: the exact size+side variant, else the front-only one
+   for a product with no Print option, else the single variant of a product with neither. */
+function variantFor(m, p) {
+  if (!m) return 0;
+  var hit = m[varKey(p, size)];
+  if (hit) return hit;
+  var front = m[sizeKey(size) + '|FRONT'];
+  if (front) return front;
+  var keys = Object.keys(m);
+  return keys.length === 1 ? m[keys[0]] : 0;
 }
 
 function shortCa(ca) {
@@ -3304,7 +3369,7 @@ function addToCart() {
   if (!token.ca) { cartMsg('Paste a contract address first.'); return; }
   cartMsg('');
   loadVariants(p, function (m) {
-    var vid = m && (m[sizeKey(size)] || (Object.keys(m).length === 1 ? m[Object.keys(m)[0]] : 0));
+    var vid = variantFor(m, p);
     if (!vid) {
       cartMsg('“' + p.label + '” is not set up in Shopify yet, so it cannot be added.');
       return;
