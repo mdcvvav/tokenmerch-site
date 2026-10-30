@@ -405,7 +405,9 @@ var MARKUP = [
 '<div class="glass-panel rounded-2xl p-5 space-y-4">',
 '<div class="flex items-center justify-between">',
 '<div><span class="text-[10px] text-slate-400 font-mono block uppercase">Price</span><span id="priceUsd" class="text-2xl font-black text-white font-mono">$68.00</span></div>',
-'<div class="text-right"><span class="text-[10px] text-slate-400 font-mono block uppercase">Crypto Approx.</span><span id="priceSol" class="text-xs font-mono text-brand-solana font-bold">-</span></div>',
+/* The SOL equivalent lived here. Taken out until there is actually a crypto rail to
+   pay through -- quoting a token price next to a card checkout promises something the
+   store does not do yet. */
 '</div>',
 /* Two bars, not one. The first is the action you take from the customiser and carries
    what is already in the cart; the second leaves for Shopify's checkout and carries what
@@ -2523,12 +2525,37 @@ function paintSizeGuide() {
   var head = '<tr><th style="text-align:left"></th>' + sizes.map(function (z) {
     return '<th style="padding:0 3px;color:#cbd5e1;font-weight:600">' + z + '</th>';
   }).join('') + '</tr>';
+  /* Printful labels the tank's flat-measurement rows "A" and "B" -- they key a diagram
+     we do not show, so on their own they say nothing. Rather than hardcode a guess, the
+     real name is borrowed from the SAME product's other table, which lists the identical
+     numbers as "Body Length" and "Chest Width". Only if that fails do we fall back to
+     Printful's diagram convention. Every other product already arrives properly named. */
+  var LETTER_FALLBACK = { A: 'Length', B: 'Width', C: 'Sleeve length', D: 'Sleeve opening' };
+  function sameNumbers(x, y) {
+    if (!x || !y || x.length !== y.length) return false;
+    for (var k = 0; k < x.length; k++) if (String(x[k].value) !== String(y[k].value)) return false;
+    return true;
+  }
+  function rowLabel(m) {
+    var lab = String(m.label || '').trim();
+    if (!/^[A-Z]$/.test(lab)) return lab;
+    var found = '';
+    (d.tables || []).forEach(function (other) {
+      if (other === t || found) return;
+      (other.measurements || []).forEach(function (om) {
+        if (found || !om.label || /^[A-Z]$/.test(String(om.label).trim())) return;
+        if (sameNumbers(m.values, om.values)) found = String(om.label).trim();
+      });
+    });
+    return found || LETTER_FALLBACK[lab] || lab;
+  }
+
   var rows = t.measurements.map(function (m) {
     var by = {};
     m.values.forEach(function (v) {
       by[v.size] = v.value || (v.min && v.max ? trim(v.min) + '-' + trim(v.max) : (v.min || v.max || ''));
     });
-    return '<tr><td style="color:#94a3b8;padding-right:6px;white-space:nowrap">' + m.label + '</td>' +
+    return '<tr><td style="color:#94a3b8;padding-right:6px;white-space:nowrap">' + escapeHtml(rowLabel(m)) + '</td>' +
       sizes.map(function (z) {
         return '<td style="padding:0 3px;text-align:center;color:#e2e8f0">' + (by[z] ? trim(by[z]) : '-') + '</td>';
       }).join('') + '</tr>';
@@ -2564,7 +2591,6 @@ function updateSpecs() {
 function updatePrice() {
   var base = productById(product).price;
   document.getElementById('priceUsd').innerText = '$' + base + '.00';
-  document.getElementById('priceSol').innerText = '~ ' + (base / 155).toFixed(2) + ' SOL';
 }
 function updateZoomUI() {
   var p = productById(product);
@@ -3594,9 +3620,14 @@ function loadChart(stepKey) {
 
 function startChartPolling() {
   if (chartTimer) clearInterval(chartTimer);
+  /* 30 s, which is the floor worth asking for: GeckoTerminal edge-caches on-chain data
+     for 30 s, so polling faster returns the same candles. One visitor's chart costs
+     about two calls a minute against a public limit of 30 per minute, and the calls go
+     straight from their browser rather than from us, so the budget is per visitor
+     rather than shared across the store. */
   chartTimer = setInterval(function () {
     if (!document.hidden && token.pair) loadChart();
-  }, 60000);
+  }, 30000);
 }
 
 /* ---------------- Printful garment template ---------------- */
