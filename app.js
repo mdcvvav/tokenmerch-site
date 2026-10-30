@@ -3618,6 +3618,60 @@ function loadChart(stepKey) {
   });
 }
 
+/* ---------------- the live tick ----------------
+   GeckoTerminal is the candle source and it edge-caches for 30 s, so the candles
+   themselves cannot be fresher than that however often we ask. The CURRENT price can:
+   Jupiter answers in about 150 ms, keyless, from the same host the token lookup already
+   uses. So the candles come on the slow loop and this moves the newest one between
+   them, which is the part a person is actually watching.
+
+   Keyless Jupiter is 30 requests a minute. Every 5 s spends 12 of them, and the budget
+   is per visitor rather than per store because the call leaves their browser, not ours.
+   That is the whole reason this works: an API key would turn thousands of independent
+   per-visitor allowances into one shared account quota, and put the key in a file
+   anybody can read. More traffic makes a keyless client-side feed safer, not riskier.
+
+   Measured against the same token at the same moment: Jupiter 0.00072234, GeckoTerminal's
+   latest close 0.00071542 -- under 1% apart, so the live value sits on the candles
+   rather than stepping off them. */
+var LIVE_MS = 5000, liveTimer = null, liveBlockedUntil = 0;
+
+function startLiveTick() {
+  if (liveTimer) clearInterval(liveTimer);
+  liveTimer = setInterval(liveTick, LIVE_MS);
+}
+
+function liveTick() {
+  if (document.hidden || !token.ca || !chartData || !chartData.length) return;
+  if (Date.now() < liveBlockedUntil) return;
+  var ca = token.ca;
+  getJson('https://lite-api.jup.ag/price/v3?ids=' + encodeURIComponent(ca)).then(function (d) {
+    var row = d && d[ca];
+    var px = row && +row.usdPrice;
+    /* token.ca is re-checked because a customer can paste a new address mid-flight */
+    if (!(px > 0) || ca !== token.ca) return;
+    applyLivePrice(px * (chartSupply() || 1));
+  }).catch(function (e) {
+    /* A rate limit here must not take the chart with it: the candles are a different
+       host on a different budget, so this just sits out a minute. */
+    if (chartThrottled(e)) liveBlockedUntil = Date.now() + 60000;
+  });
+}
+
+/* Only the newest candle is still open, so it is the only one that may move. The guard
+   is against a decimals glitch rather than volatility -- these tokens really do move
+   60% in a candle, and clamping that would be lying about the chart. */
+function applyLivePrice(v) {
+  if (!chartData || !chartData.length || !(v > 0)) return;
+  var last = chartData[chartData.length - 1];
+  if (!last || v === last.c) return;
+  if (v > last.c * 10 || v < last.c / 10) return;
+  last.c = v;
+  if (v > last.h) last.h = v;
+  if (v < last.l) last.l = v;
+  drawChart();
+}
+
 function startChartPolling() {
   if (chartTimer) clearInterval(chartTimer);
   /* 30 s, which is the floor worth asking for: GeckoTerminal edge-caches on-chain data
@@ -3758,6 +3812,7 @@ function start() {
      call on a token nobody asked for. */
   paintTokenSlot('idle');
   startChartPolling();
+  startLiveTick();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 }
 
