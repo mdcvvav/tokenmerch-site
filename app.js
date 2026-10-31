@@ -356,6 +356,65 @@ function addTailwind(done) {
 
 /* ---------------- markup ---------------- */
 
+/* ---------------- printing guidelines ------------------------------------
+   The panel behind the scales button in the header. Kept as data rather than
+   markup so the wording can be edited without touching any HTML, and so the
+   same copy can be reused later on a real /policies page if one is ever added.
+   [heading, ...paragraphs]. A leading '!' on a paragraph marks it as the one
+   the customer most needs to notice and renders it in white. */
+var LEGAL_SECTIONS = [
+  ['Made to order, so sales are final',
+   'Nothing here exists until you order it. Your token\u2019s artwork is printed onto a blank the moment the order is placed, which is why there is nothing to restock and nothing to resell.',
+   '!All sales are final. We cannot accept returns or exchanges, including for the wrong size \u2014 please check the size guide before you order.',
+   'That does not cover us being wrong. If your order arrives damaged, defective, or materially different from what you approved on screen, email us within 30 days with a photo and we will reprint it or refund it.'],
+
+  ['What we will not print',
+   'Every contract address is screened before you are allowed to order it. The screen reads the token\u2019s artwork, name and ticker, and refuses slurs and hate symbols, sexual content involving minors, explicit sexual imagery, gore, content encouraging self-harm, content promoting terrorism or illegal activity, and artwork or tickers that copy a recognisable brand or character.',
+   'No automated screen is perfect in either direction. It will occasionally refuse a token that would have been fine, and it may let through something that should have been caught. We review orders as well and may refuse one the screen allowed. If we refuse your order you are refunded in full.'],
+
+  ['Your artwork, your responsibility',
+   'By ordering you confirm you have the right to have that artwork printed on merchandise.',
+   'Memecoin art is very often copied \u2014 characters, company logos, photographs, the likeness of real people \u2014 and a contract address tells us nothing about who owns what. The responsibility for that sits with the person placing the order, not with us.',
+   'If you hold the rights to something being printed here, use the mail button in the header. We will take it down and block the address from being ordered again.'],
+
+  ['We can refuse or cancel any order',
+   'We reserve the right to refuse or cancel any order, at any time, under our own guidelines or those of the companies we depend on.',
+   'Printful print and ship every item, and they screen for intellectual property too \u2014 they can reject a design after you have ordered it. Everything sold here is also subject to Shopify\u2019s Acceptable Use Policy. A cancelled order is always refunded in full.'],
+
+  ['What the printed item will look like',
+   '!The preview is the print file. The image on screen when you press Add to Cart is the exact file sent to the printer \u2014 not a mock-up of it, not an approximation.',
+   'Printing is still a physical process. Colour shifts between a backlit screen and ink on cloth, particularly on dark garments; placement carries a small tolerance; and garment-dyed cotton, glazed ceramic and poster paper all take ink differently.',
+   'Token artwork comes from the token itself, and some of it is low resolution. Where that would print poorly we say so before you order \u2014 but if you order anyway, we print what the token gives us.'],
+
+  ['Shipping',
+   'Orders are printed and shipped by Printful from the facility nearest you. Production usually takes 2\u20137 business days, and transit is on top of that.',
+   'We currently ship to Canada and the United States only. Any duties or import taxes that do apply are the recipient\u2019s responsibility.'],
+
+  ['We are not affiliated with any token',
+   'Printing a token\u2019s artwork is not an endorsement of it. TokenMerch is not affiliated with, endorsed by or connected to any token, project or team whose artwork appears here, nor with Solana.',
+   'The chart is public market data shown for context. It is not financial advice and nothing on this site is a recommendation to buy or sell anything.'],
+
+  ['Your information',
+   'We keep your email and shipping address to fulfil the order, and we store the contract address and design settings alongside it so the exact file you approved can be reproduced if there is ever a question about it.',
+   'Payment is handled entirely by Shopify \u2014 we never see your card details. We do not sell your information.'],
+
+  ['Contact',
+   'Use the mail button in the header for anything at all: order problems, rights takedowns, or a token you think the screen got wrong.',
+   'TokenMerch operates from Ontario, Canada, and these guidelines are governed by the laws of Ontario.']
+];
+
+function legalHtml() {
+  return LEGAL_SECTIONS.map(function (sec) {
+    var body = sec.slice(1).map(function (t) {
+      var strong = t.charAt(0) === '!';
+      if (strong) t = t.slice(1);
+      return '<p class="' + (strong ? 'text-slate-100 font-medium' : 'text-slate-400') + '">' + t + '</p>';
+    }).join('');
+    return '<section class="space-y-2"><h4 class="font-mono text-sm font-bold text-brand-solana uppercase tracking-wide">' +
+           sec[0] + '</h4>' + body + '</section>';
+  }).join('');
+}
+
 var MARKUP = [
 '<header class="border-b border-brand-border/80 bg-brand-bg/90 sticky top-0 z-40 backdrop-blur-md">',
 '<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-24 flex items-center gap-2 sm:gap-4 relative">',
@@ -548,6 +607,17 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '<div class="bg-brand-bg p-4 rounded-xl border border-brand-border space-y-2"><div class="text-brand-cyber font-bold text-sm">2. Print file</div><p class="text-slate-400">The design is rendered server-side as a 1800 x 1800 px transparent PNG, the exact print size Printful wants for this garment.</p></div>',
 '<div class="bg-brand-bg p-4 rounded-xl border border-brand-border space-y-2"><div class="text-brand-accent font-bold text-sm">3. Print on demand</div><p class="text-slate-400">Your order goes to Printful with that print file attached, and they print and ship it.</p></div>',
 '</div></div></div>',
+
+/* printing guidelines, opened by the scales button in the header */
+'<div id="tmLegalModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">',
+'<div class="glass-panel max-w-2xl w-full rounded-2xl p-6 space-y-5 max-h-[88vh] overflow-y-auto border border-brand-border">',
+'<div class="flex items-start justify-between border-b border-brand-border pb-3 sticky -top-6 bg-brand-card/95 backdrop-blur-sm -mx-6 px-6 -mt-6 pt-6 z-10">',
+'<h3 class="text-lg font-bold text-white font-mono flex items-center gap-2"><i class="fa-solid fa-scale-balanced text-brand-accent"></i> Printing Guidelines</h3>',
+'<button id="tmLegalClose" aria-label="Close" class="text-slate-400 hover:text-white p-1 text-xl leading-none">&times;</button>',
+'</div>',
+'<div class="space-y-5 text-sm leading-relaxed">' + legalHtml() + '</div>',
+'<p class="text-[11px] font-mono text-slate-500 border-t border-brand-border pt-3">These guidelines may change. The version shown here applies to orders placed today.</p>',
+'</div></div>',
 
 '<footer class="border-t border-brand-border py-4 text-center text-xs font-mono text-slate-500"><p>TokenMerch - powered by Solana and Printful</p></footer>'
 ].join('');
@@ -2973,6 +3043,25 @@ function buildControls() {
   });
   document.getElementById('closeArchBtn').addEventListener('click', function () {
     arch.classList.add('hidden'); arch.classList.remove('flex');
+  });
+
+  /* Printing guidelines. A panel rather than a page: there is one route into this
+     app and adding a second Shopify page for it would mean another template, another
+     Custom Liquid block and a navigation item, for something read once. */
+  var legal = document.getElementById('tmLegalModal');
+  function legalOpen(on) {
+    legal.classList.toggle('hidden', !on);
+    legal.classList.toggle('flex', on);
+    /* the panel scrolls inside itself, so stop the page behind it scrolling too */
+    document.body.style.overflow = on ? 'hidden' : '';
+    if (on) legal.scrollTop = 0;
+  }
+  document.getElementById('tmLegalBtn').addEventListener('click', function () { legalOpen(true); });
+  document.getElementById('tmLegalClose').addEventListener('click', function () { legalOpen(false); });
+  /* clicking the backdrop closes it; clicking the panel does not */
+  legal.addEventListener('click', function (e) { if (e.target === legal) legalOpen(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !legal.classList.contains('hidden')) legalOpen(false);
   });
 
   document.getElementById('tmAddBtn').addEventListener('click', addToCart);
