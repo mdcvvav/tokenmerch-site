@@ -576,8 +576,22 @@ var MARKUP = [
 '</button>',
 '</div></div>',
 
-/* right column: preview */
-'<div class="tm-col lg:col-span-7 lg:sticky lg:top-24">',
+/* right column: preview.
+
+   NOT sticky, deliberately. It was `lg:sticky lg:top-24` until Oct 31, and that was a bug
+   dressed as a feature: measured at 1440x900, this column is 1024 px tall and the sticky
+   offset is 96, so it needed 1120 px of viewport and overflowed the bottom by 220. Once the
+   pin engaged there was no way to scroll to the bottom of it -- the lower edge of the preview
+   and the spec lines under it were simply unreachable on a laptop.
+
+   It also meant the two columns moved at different rates while the left one (1370 px) kept
+   scrolling, so nothing in the customiser could be lined up with the preview beside it.
+   Michele: "the parallax when you scroll is pretty brutal, you cant line up the merch
+   customizer with the image preview."
+
+   Both columns now scroll together. If the preview is ever wanted pinned again, it has to be
+   made shorter than `100vh - 6rem` first, or it will go back to hiding its own bottom. */
+'<div class="tm-col lg:col-span-7">',
 
 /* product slots, above the preview */
 '<div class="tm-pane tm-pane-product glass-panel rounded-2xl p-5 mb-6">',
