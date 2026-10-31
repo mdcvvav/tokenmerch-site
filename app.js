@@ -276,6 +276,49 @@ var CSS = [
 '.tm-dots i:nth-child(3){animation-delay:.3s}',
 '@keyframes tmDot{0%,70%,100%{opacity:.25;transform:translateY(0)}35%{opacity:1;transform:translateY(-3px)}}',
 '.glass-panel{background:rgba(22,26,38,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08)}',
+
+/* ---- the header links sit hard right ----------------------------------------
+   This used to be done with a `hidden sm:block flex-1` spacer between the wordmark
+   and the links, and it never worked: the spacer measured 0 px wide at every width,
+   so the links sat tight against the logo instead of at the right-hand end of the bar.
+
+   The cause is a specificity-free collision. Tailwind's own sheet defines BOTH
+   `.hidden{display:none}` and, inside @media(min-width:640px), `.sm\:block{display:block}`
+   -- and Horizon's base.css ALSO defines `.hidden{display:none}`. All three are a single
+   class, so they tie on specificity and the last one in document order wins. The theme's
+   stylesheet loads after the Tailwind CDN's injected <style>, so `.hidden` won at every
+   width and `sm:block` never got a look in. (This is the same thing the inline-style
+   comments elsewhere in this file are working around.)
+
+   So: no spacer, and an auto margin from OUR stylesheet, which is ID-scoped and beats
+   both. It needs no media query -- below sm the wordmark is an in-flow `flex-1` child
+   that eats all the free space, and the flexbox algorithm resolves flexible lengths
+   before auto margins, so there is nothing left for this one to take. Verified at 390. */
+'#tokenmerch-root .tm-headlinks{margin-left:auto}',
+
+/* ---- which way the size guide opens -----------------------------------------
+   Up by default, down on desktop, and that difference is load-bearing rather than
+   decorative.
+
+   DOWN is what Michele asked for -- the left column is 140 px shorter than the right
+   since the cart pane moved across, so there is empty space under the customizer and
+   the panel may as well use it instead of covering the size chips you are reading it
+   for.
+
+   UP has to stay below lg. On a phone the panes are grid items of one column, every
+   .glass-panel is a stacking context (backdrop-filter makes one), and the cart pane
+   comes after the customizer in paint order. Measured at 390 with the panel flipped
+   down: elementFromPoint through the middle and bottom of the panel returned
+   .tm-pane-cart, not the panel -- only the top tenth, the part still over the
+   customizer, stayed visible. Opening up it overlays the preview pane, which is
+   EARLIER in paint order, so it wins.
+
+   Both live here rather than in the element's style attribute so neither needs
+   !important to beat the other. */
+'#tokenmerch-root #tmSizeGuide{bottom:100%;margin-bottom:8px}',
+'@media (min-width:1024px){',
+'#tokenmerch-root #tmSizeGuide{top:100%;bottom:auto;margin-top:8px;margin-bottom:0}',
+'}',
 /* ---- the running order on a phone -------------------------------------------
    Below lg the grid is a single column, so the page reads in DOM order: chart,
    customizer, cart, product, preview. That is not the order the job is done in --
@@ -452,10 +495,10 @@ var MARKUP = [
 /* wordmark. On a phone it is a flex child between the logo and the links, so it
    physically cannot overlap them; the absolute centring that did overlap them is
    kept for sm+, where the bar is wide enough for it. */
-'<div class="hidden sm:block flex-1"></div>',
 '<div class="flex-1 min-w-0 flex items-center justify-center sm:flex-none sm:absolute sm:inset-0 pointer-events-none"><a href="/" class="tm-wordmark pointer-events-auto text-white whitespace-nowrap sm:text-4xl lg:text-5xl">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
-/* links, right */
-'<div class="shrink-0 flex items-center gap-1 sm:gap-2">',
+/* links, hard right -- see .tm-headlinks in the stylesheet for why the margin is
+   there rather than a flex spacer here */
+'<div class="tm-headlinks shrink-0 flex items-center gap-1 sm:gap-2">',
 '<a id="tmXLink" href="#" target="_blank" rel="noopener" title="TokenMerch on X" aria-label="TokenMerch on X" class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-brands fa-x-twitter"></i></a>',
 '<a id="tmMailLink" href="#" title="Email TokenMerch" aria-label="Email TokenMerch" class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-solid fa-envelope"></i></a>',
 /* The guidelines slot. Inert for now, on purpose -- the panel it opens is the next
@@ -546,7 +589,7 @@ var MARKUP = [
 '<div id="tmSizes" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.375rem"></div>',
 '<div id="tmSizeGuideWrap" class="mt-2 text-[10px] font-mono" style="position:relative;display:inline-block">',
 '<button id="tmSizeGuideBtn" class="text-brand-accent hover:text-white transition-colors" style="background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px">SIZE GUIDE</button>',
-'<div id="tmSizeGuide" class="rounded-xl border border-brand-border bg-brand-card shadow-2xl" style="display:none;position:absolute;z-index:60;left:0;bottom:100%;margin-bottom:8px;width:392px;max-width:88vw;max-height:260px;overflow:auto;padding:12px"></div>',
+'<div id="tmSizeGuide" class="rounded-xl border border-brand-border bg-brand-card shadow-2xl" style="display:none;position:absolute;z-index:60;left:0;width:392px;max-width:88vw;max-height:260px;overflow:auto;padding:12px"></div>',
 '</div></div>',
 '</div>',
 '</div>',
