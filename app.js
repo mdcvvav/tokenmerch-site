@@ -99,8 +99,37 @@ var PRODUCTS = [
      That "premium" is its marketing name, not a tier, and reading it as one is how the
      lineup ended up with the dearer Independent SS4500 ($45.75 blank against $39.75)
      sitting in the slot labelled plain HOODIE. Neither word survives. */
+  /* The one garment whose centred FRONT graphic does not follow PLACE. Everything else
+     hangs the artwork from artTopDrop -- 5.30 in below the shoulder line, the industry
+     full-front standard -- and on the hoodie that standard puts it in the wrong place,
+     for a reason the standard does not know about: the kangaroo pocket.
+
+     The hoodie's print area starts 4.94 in below the shoulder, so the standard drop
+     leaves only 0.36 in of slack and the design is pinned to the very top of a 12 in
+     area. Measured on the real print file: ink ran 0.36 -> 6.33 in, with 5.67 in of
+     empty area underneath. The area bottom (16.94 in below the shoulder) sits about
+     3 in above the pocket on a size L, so what the wearer actually sees is a graphic
+     high on the chest and eight inches of bare fleece between it and the pocket seam.
+
+     So this slot overrides both numbers for its front:
+       top  2.30 in -- 1.94 in lower than the standard, closing most of that gap
+       size 7.20 in -- up from the default 0.55 x 12 = 6.60 in ceiling
+
+     Checked against the server renderer rather than reasoned about: at the 7.20 ceiling
+     with the worst-case caption (a short ticker, which hits the 0.22 cap instead of
+     being fitted to width) the block bottoms out at 11.49 in, leaving 0.51 in inside
+     the area. Nothing clips.
+
+     The resolution guard is untouched: artSizeIn still shrinks the graphic when the
+     token's artwork cannot carry the size at ART.targetDpi, so 7.20 in is a ceiling for
+     tokens with the pixels and not a promise. A 500 px token still prints 4.55 in here,
+     sharp, just lower down. Buying size with DPI on the $80 garment is a trade to make
+     deliberately, not as a side effect of a placement fix.
+
+     `art` describes the FRONT area only -- see the guard in printParams. */
   { id: 'hoodie',    label: 'HOODIE',          pid: 380, vid: 10779, price: 80,  shape: 'tee', shTop: 4.94,
     styles: ['centered', 'centered-small', 'badge-left', 'badge-right', 'back-badge', 'back-ticker'],
+    art: { size: 7.20, top: 2.30 },
     print: { w: 12, h: 12, dpi: 150, tech: 'DTG', placement: 'front' },
     back: { w: 12, h: 16, dpi: 150, tech: 'DTG', placement: 'back' }, backPrint: true, },
   /* Cotton Heritage M2480 -- the crewneck sibling of the M2580 men's hoodie just
@@ -1423,7 +1452,13 @@ function minDpiFor(pr) {
    two drifted apart. It now receives resolved numbers and renders them. */
 function printParams(pr, side) {
   var inches = (side === 'back' && pr.back) ? pr.back : printFor(pr);
-  var a = pr.art || {};
+  /* `art` is a FRONT-area override. The hoodie's lower, larger centred graphic is tuned
+     to its 12 x 12 front; the back is a different 12 x 16 area that drawDesign lays out
+     from the shared shoulder drop and never consults `art` for. Sending artTop on a back
+     render would move the back print too -- and only in the server's copy, since the
+     browser preview would still draw it at the drop. That is exactly the preview/print
+     drift the authoritative preview exists to prevent, so the override stops at the front. */
+  var a = (side === 'back' && pr.back) ? {} : (pr.art || {});
   var q = {
     ca: token.ca || '',
     style: style,
@@ -1649,7 +1684,12 @@ function drawDesign(p, W, side, inW) {
       var H2 = p.canvas.height;
       var s2 = wideArea(p) ? 0.45 * H2 : artSizeIn(productById(product), inW, true) * IN;
       var x2 = (W - s2) / 2;
-      var y2 = wideArea(p) ? Math.max(0, (H2 - s2 * 1.5) / 2) : top;
+      /* same `art.top` override as the big graphic below, and for the same reason: the
+         server renderer reads artTop for BOTH centred styles, so leaving this one on the
+         shared drop would print the small graphic 2 in lower than the preview drew it. */
+      var pr2 = productById(product);
+      var y2 = wideArea(p) ? Math.max(0, (H2 - s2 * 1.5) / 2)
+             : ((pr2.art && pr2.art.top != null) ? pr2.art.top * IN : top);
       artIn = s2 / IN;
       p.drawImage(logoImg, x2, y2, s2, s2);
       drawCaption(p, W / 2, s2, s2, y2 + s2, 2, null, IN);
