@@ -247,6 +247,33 @@ var CSS = [
 '.tm-dots i:nth-child(3){animation-delay:.3s}',
 '@keyframes tmDot{0%,70%,100%{opacity:.25;transform:translateY(0)}35%{opacity:1;transform:translateY(-3px)}}',
 '.glass-panel{background:rgba(22,26,38,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08)}',
+/* ---- the running order on a phone -------------------------------------------
+   Below lg the grid is a single column, so the page reads in DOM order: chart,
+   customizer, cart, product, preview. That is not the order the job is done in --
+   you end up customising a product you have not chosen yet and scrolling back up
+   to see it.
+
+   `display:contents` dissolves the two desktop columns at this width, so all five
+   panels become grid items in their own right and `order` can sequence them across
+   what used to be two containers. Nothing about the desktop layout changes.
+
+   Their wrappers' vertical spacing has to go with them: the grid's own gap-6 spaces
+   the panels now, and the columns' space-y-5 / mb-6 would stack on top of it. */
+'@media (max-width:1023px){',
+'#tokenmerch-root .tm-col{display:contents}',
+'#tokenmerch-root .tm-col>*{margin-top:0 !important;margin-bottom:0 !important}',
+'#tokenmerch-root .tm-pane-chart{order:1}',
+'#tokenmerch-root .tm-pane-product{order:2}',
+'#tokenmerch-root .tm-pane-preview{order:3}',
+'#tokenmerch-root .tm-pane-custom{order:4}',
+'#tokenmerch-root .tm-pane-cart{order:5}',
+'}',
+/* The wordmark scales with the bar rather than sitting at one size: at 390 px it
+   comes out about 16 px, and it keeps shrinking on narrower phones instead of
+   crowding the buttons. */
+'@media (max-width:639px){',
+'#tokenmerch-root .tm-wordmark{font-size:clamp(13px,4.3vw,19px)}',
+'}',
 '.glow-accent{box-shadow:0 0 25px -5px rgba(153,69,255,.35)}',
 /* The track used to carry a 1px white border, which is what showed through as a pale
    sliver where the rounded cap met the black end. The outline is now a faint slate ring
@@ -317,20 +344,22 @@ function addTailwind(done) {
 
 var MARKUP = [
 '<header class="border-b border-brand-border/80 bg-brand-bg/90 sticky top-0 z-40 backdrop-blur-md">',
-'<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 sm:h-24 flex items-center gap-3 sm:gap-4 relative">',
+'<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-24 flex items-center gap-2 sm:gap-4 relative">',
 /* logo square, left */
-'<a href="/" class="shrink-0 block w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-brand-card border border-brand-border/70 shadow-lg shadow-brand-accent/10"><img src="' + LOGO_SRC + '" alt="TokenMerch" width="64" height="64" class="w-full h-full object-cover"></a>',
-/* wordmark, centered */
-'<div class="flex-1"></div>',
-'<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><a href="/" class="tm-wordmark pointer-events-auto text-xl sm:text-4xl lg:text-5xl text-white whitespace-nowrap">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
+'<a href="/" class="shrink-0 block w-11 h-11 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-brand-card border border-brand-border/70 shadow-lg shadow-brand-accent/10"><img src="' + LOGO_SRC + '" alt="TokenMerch" width="64" height="64" class="w-full h-full object-cover"></a>',
+/* wordmark. On a phone it is a flex child between the logo and the links, so it
+   physically cannot overlap them; the absolute centring that did overlap them is
+   kept for sm+, where the bar is wide enough for it. */
+'<div class="hidden sm:block flex-1"></div>',
+'<div class="flex-1 min-w-0 flex items-center justify-center sm:flex-none sm:absolute sm:inset-0 pointer-events-none"><a href="/" class="tm-wordmark pointer-events-auto text-white whitespace-nowrap sm:text-4xl lg:text-5xl">tokenmerch<span class="text-brand-accent">.xyz</span></a></div>',
 /* links, right */
-'<div class="shrink-0 flex items-center gap-1.5 sm:gap-2">',
-'<a id="tmXLink" href="#" target="_blank" rel="noopener" title="TokenMerch on X" aria-label="TokenMerch on X" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-brands fa-x-twitter"></i></a>',
-'<a id="tmMailLink" href="#" title="Email TokenMerch" aria-label="Email TokenMerch" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-solid fa-envelope"></i></a>',
+'<div class="shrink-0 flex items-center gap-1 sm:gap-2">',
+'<a id="tmXLink" href="#" target="_blank" rel="noopener" title="TokenMerch on X" aria-label="TokenMerch on X" class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-brands fa-x-twitter"></i></a>',
+'<a id="tmMailLink" href="#" title="Email TokenMerch" aria-label="Email TokenMerch" class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-solid fa-envelope"></i></a>',
 /* The guidelines slot. Inert for now, on purpose -- the panel it opens is the next
    piece of work, and a button that pops up an empty box is worse than one that
    waits. The click handler goes on #tmLegalBtn. */
-'<button id="tmLegalBtn" type="button" title="Printing guidelines" aria-label="Printing guidelines" class="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-solid fa-scale-balanced"></i></button>',
+'<button id="tmLegalBtn" type="button" title="Printing guidelines" aria-label="Printing guidelines" class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-brand-card hover:bg-brand-cardHover text-slate-300 hover:text-white border border-brand-border transition-all text-base sm:text-lg"><i class="fa-solid fa-scale-balanced"></i></button>',
 '</div>',
 '</div></header>',
 
@@ -359,8 +388,8 @@ var MARKUP = [
 '<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">',
 
 /* left column */
-'<div class="lg:col-span-5 flex flex-col space-y-5">',
-'<div class="glass-panel rounded-2xl p-5 relative">',
+'<div class="tm-col lg:col-span-5 flex flex-col space-y-5">',
+'<div class="tm-pane tm-pane-chart glass-panel rounded-2xl p-5 relative">',
 '<div class="flex items-center space-x-4">',
 '<img id="tokenImgSidebar" referrerpolicy="no-referrer" alt="Token" class="w-14 h-14 rounded-2xl ring-2 ring-brand-accent/50 shadow-md object-cover bg-brand-bg">',
 '<div class="overflow-hidden">',
@@ -384,7 +413,7 @@ var MARKUP = [
 '<div id="tmChartMsg" class="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-slate-500 pointer-events-none"></div>',
 '</div></div></div>',
 
-'<div class="glass-panel rounded-2xl p-5 space-y-4 uppercase">',
+'<div class="tm-pane tm-pane-custom glass-panel rounded-2xl p-5 space-y-4 uppercase">',
 '<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 flex items-center justify-between"><span><i class="fa-solid fa-sliders text-brand-accent mr-2"></i> Merch Customizer</span></h3>',
 
 '<div><label class="block text-xs font-mono text-slate-400 mb-2">COLOR <span id="tmColorName" class="text-slate-500"></span></label>',
@@ -420,7 +449,7 @@ var MARKUP = [
 '</div>',
 
 
-'<div class="glass-panel rounded-2xl p-5 space-y-4">',
+'<div class="tm-pane tm-pane-cart glass-panel rounded-2xl p-5 space-y-4">',
 '<div class="flex items-center justify-between">',
 '<div><span class="text-[10px] text-slate-400 font-mono block uppercase">Price</span><span id="priceUsd" class="text-2xl font-black text-white font-mono">$68.00</span></div>',
 /* The SOL equivalent lived here. Taken out until there is actually a crypto rail to
@@ -446,10 +475,10 @@ var MARKUP = [
 '</div></div>',
 
 /* right column: preview */
-'<div class="lg:col-span-7 lg:sticky lg:top-24">',
+'<div class="tm-col lg:col-span-7 lg:sticky lg:top-24">',
 
 /* product slots, above the preview */
-'<div class="glass-panel rounded-2xl p-5 mb-6">',
+'<div class="tm-pane tm-pane-product glass-panel rounded-2xl p-5 mb-6">',
 '<h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold border-b border-brand-border pb-2 mb-4 flex items-center justify-between"><span><i class="fa-solid fa-shirt text-brand-accent mr-2"></i> Product</span></h3>',
 '<div id="tmProductGrid" class="font-mono text-xs" style="display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.5rem">',
 PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' + p.id + '">' + p.label + '</button>'; }).join(''),
@@ -461,7 +490,7 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '</div>',
 '</div>',
 
-'<div class="glass-panel rounded-2xl p-6 relative flex flex-col items-center justify-center min-h-[520px]">',
+'<div class="tm-pane tm-pane-preview glass-panel rounded-2xl p-6 relative flex flex-col items-center justify-center min-h-[520px]">',
 '<div class="w-full flex items-center justify-between mb-4 text-xs font-mono border-b border-brand-border pb-3">',
 '<div class="flex items-center space-x-2"><span class="w-2.5 h-2.5 rounded-full bg-brand-solana animate-ping"></span><span class="text-slate-300 font-bold uppercase tracking-wider">Preview</span></div>',
 '</div>',
