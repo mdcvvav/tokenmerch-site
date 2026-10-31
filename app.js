@@ -549,32 +549,7 @@ var MARKUP = [
 '<div id="tmSizeGuide" class="rounded-xl border border-brand-border bg-brand-card shadow-2xl" style="display:none;position:absolute;z-index:60;left:0;bottom:100%;margin-bottom:8px;width:392px;max-width:88vw;max-height:260px;overflow:auto;padding:12px"></div>',
 '</div></div>',
 '</div>',
-
-
-'<div class="tm-pane tm-pane-cart glass-panel rounded-2xl p-5 space-y-4">',
-'<div class="flex items-center justify-between">',
-'<div><span class="text-[10px] text-slate-400 font-mono block uppercase">Price</span><span id="priceUsd" class="text-2xl font-black text-white font-mono">$68.00</span></div>',
-/* The SOL equivalent lived here. Taken out until there is actually a crypto rail to
-   pay through -- quoting a token price next to a card checkout promises something the
-   store does not do yet. */
 '</div>',
-/* Two bars, not one. The first is the action you take from the customiser and carries
-   what is already in the cart; the second leaves for Shopify's checkout and carries what
-   that cart costs. The checkout bar stays inert until there is something to check out. */
-'<button id="tmAddBtn" class="w-full bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber hover:opacity-95 text-slate-950 font-extrabold py-3 rounded-xl shadow-lg transition-all flex items-center justify-between px-4 text-sm">',
-'<span class="flex items-center space-x-2"><i class="fa-solid fa-cart-plus text-base"></i><span id="tmAddLabel">ADD TO CART</span></span>',
-'<span id="tmCartCount" class="text-[11px] font-mono font-bold opacity-80">EMPTY</span>',
-'</button>',
-'<div id="tmCartMsg" class="text-[10px] font-mono text-slate-400 text-center" style="display:none"></div>',
-/* The third strip: what is in the cart so far, as the artwork itself, building up between
-   the two bars. The detail -- sizes, quantities, prices -- lives on /pages/cart, which this
-   strip opens. */
-'<div id="tmCart" style="display:none"></div>',
-'<button id="tmCheckoutBtn" class="w-full border border-brand-border bg-brand-bg text-slate-500 font-extrabold py-3 rounded-xl transition-all flex items-center justify-between px-4 text-sm" disabled>',
-'<span class="flex items-center space-x-2"><i class="fa-solid fa-lock text-xs"></i><span>CHECKOUT</span></span>',
-'<span id="tmCartTotal" class="text-[11px] font-mono font-bold">$0.00</span>',
-'</button>',
-'</div></div>',
 
 /* right column: preview.
 
@@ -637,7 +612,48 @@ PRODUCTS.map(function (p) { return '<button class="tm-product" data-product="' +
 '<div id="tmQualityWarn" class="w-full mt-2 text-[11px] font-mono rounded-lg px-3 py-2" style="display:none;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.35);color:#fbbf24">',
 '<i class="fa-solid fa-triangle-exclamation mr-1"></i><span id="tmQualityText"></span>',
 '</div>',
-'</div></div>',
+'</div>',
+
+/* price, add to cart and checkout -- under the preview rather than under the customiser.
+   Michele, Oct 31: "move the check/cart section over and under the preview to fill that
+   empty space and square the site." The two columns were 1370 and 1024 px at 1440x900,
+   so the right one ran out 346 px early and left a hole beside the customiser. Moving the
+   214 px cart pane across splits that: roughly 1136 against 1262.
+
+   It also reads better. The buy controls now sit directly under the image of the thing
+   being bought, which is where a product page puts them; the size picker stays with the
+   rest of the options on the left, and price already follows it through updatePrice().
+
+   Mobile is unaffected by the move. Below lg both .tm-col wrappers are display:contents,
+   so the panes are grid items of the page grid and the explicit order (cart: 5) decides
+   the running order, not which wrapper the markup happens to sit in. `mt-6` is zeroed
+   there by the existing .tm-col > * margin reset. */
+'<div class="tm-pane tm-pane-cart glass-panel rounded-2xl p-5 space-y-4 mt-6">',
+'<div class="flex items-center justify-between">',
+'<div><span class="text-[10px] text-slate-400 font-mono block uppercase">Price</span><span id="priceUsd" class="text-2xl font-black text-white font-mono">$68.00</span></div>',
+/* The SOL equivalent lived here. Taken out until there is actually a crypto rail to
+   pay through -- quoting a token price next to a card checkout promises something the
+   store does not do yet. */
+'</div>',
+/* Two bars, not one. The first is the action you take once the preview above shows what
+   you want, and carries what is already in the cart; the second leaves for Shopify's
+   checkout and carries what that cart costs. The checkout bar stays inert until there is
+   something to check out. */
+'<button id="tmAddBtn" class="w-full bg-gradient-to-r from-brand-solana via-emerald-400 to-brand-cyber hover:opacity-95 text-slate-950 font-extrabold py-3 rounded-xl shadow-lg transition-all flex items-center justify-between px-4 text-sm">',
+'<span class="flex items-center space-x-2"><i class="fa-solid fa-cart-plus text-base"></i><span id="tmAddLabel">ADD TO CART</span></span>',
+'<span id="tmCartCount" class="text-[11px] font-mono font-bold opacity-80">EMPTY</span>',
+'</button>',
+'<div id="tmCartMsg" class="text-[10px] font-mono text-slate-400 text-center" style="display:none"></div>',
+/* The third strip: what is in the cart so far, as the artwork itself, building up between
+   the two bars. The detail -- sizes, quantities, prices -- lives on /pages/cart, which this
+   strip opens. */
+'<div id="tmCart" style="display:none"></div>',
+'<button id="tmCheckoutBtn" class="w-full border border-brand-border bg-brand-bg text-slate-500 font-extrabold py-3 rounded-xl transition-all flex items-center justify-between px-4 text-sm" disabled>',
+'<span class="flex items-center space-x-2"><i class="fa-solid fa-lock text-xs"></i><span>CHECKOUT</span></span>',
+'<span id="tmCartTotal" class="text-[11px] font-mono font-bold">$0.00</span>',
+'</button>',
+'</div>',
+'</div>',
 
 '</div></main>',
 
