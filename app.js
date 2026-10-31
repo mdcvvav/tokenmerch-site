@@ -278,13 +278,15 @@ var CSS = [
    mid-word. Four across gives 63 px, which clears the longest label with room to
    spare, at the cost of one more row. !important because the grid sets its columns
    in an inline style, which a stylesheet rule cannot otherwise beat. */
-'#tokenmerch-root #tmProductGrid{grid-template-columns:repeat(4,minmax(0,1fr)) !important}',
-/* ...and the chips themselves have to give a little too. The theme renders these at
-   13.3 px rather than the 12 px `text-xs` asks for, which left SWEATSHIRT needing
-   59 px of a 49 px box. Four columns plus a smaller face and tighter side padding
-   gets the longest single word down to about 49 px in a 55 px box. The labels are
-   single words, so wrapping is not an option -- they would break mid-word. */
-'#tokenmerch-root .tm-product{font-size:11px !important;padding-left:4px !important;padding-right:4px !important;line-height:1.25}',
+/* Three across, not the desktop five. The labels are single words -- SWEATSHIRT,
+   OVERSIZED T -- so they cannot wrap, and the theme renders these chips at 13.3 px
+   rather than the 12 px `text-xs` asks for. Five columns gave each chip 49 px of
+   content against the 59 px SWEATSHIRT needs; four, even at 11 px, was still 3 px
+   short. Three gives 88 px, which fits every label at its natural size with no font
+   override at all. The cost is a fourth row and a ragged 3/3/3/1 last line, which is
+   a fair trade for not shaving type down to 10 px on the control people actually use.
+   !important because the grid sets its columns in an inline style. */
+'#tokenmerch-root #tmProductGrid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}',
 '}',
 '.glow-accent{box-shadow:0 0 25px -5px rgba(153,69,255,.35)}',
 /* The track used to carry a 1px white border, which is what showed through as a pale
