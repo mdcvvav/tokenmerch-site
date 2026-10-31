@@ -273,6 +273,12 @@ var CSS = [
    crowding the buttons. */
 '@media (max-width:639px){',
 '#tokenmerch-root .tm-wordmark{font-size:clamp(13px,4.3vw,19px)}',
+/* Five product chips across a 390 px phone leaves 49 px of content per chip, and
+   OVERSIZED T and SWEATSHIRT are single words wider than that, so they were cut off
+   mid-word. Four across gives 63 px, which clears the longest label with room to
+   spare, at the cost of one more row. !important because the grid sets its columns
+   in an inline style, which a stylesheet rule cannot otherwise beat. */
+'#tokenmerch-root #tmProductGrid{grid-template-columns:repeat(4,minmax(0,1fr)) !important}',
 '}',
 '.glow-accent{box-shadow:0 0 25px -5px rgba(153,69,255,.35)}',
 /* The track used to carry a 1px white border, which is what showed through as a pale
