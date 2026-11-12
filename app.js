@@ -155,7 +155,7 @@ var PRODUCTS = [
      no chest and no back, so the badge and two-sided styles are meaningless on it and
      only the centred graphic is offered. */
   { id: 'mug',       label: 'COFFEE MUG',      pid: 19,  vid: 1320,  price: 18,  shape: 'mug', noTpl: true, color: '#FFFFFF',
-    sizes: ['11 oz', '15 oz'], styles: ['centered'],
+    sizes: ['11 oz'], styles: ['centered'],
     print: { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' },
     /* Printful DOES publish a template for the mug, but it is a flat unwrapped artwork
        guide -- a rectangle with a "Center of mug" line and a thumbnail of a mug beside
@@ -163,20 +163,17 @@ var PRODUCTS = [
        there is nothing to composite onto, hence noTpl, and the preview is built from
        Printful's own blank catalogue photo plus the cylinder map below. Measured off
        the photo; method and numbers in claude/model-shots.md. */
-    /* Printful's print area is per variant: both capacities wrap the same 9 in, and the
-       15 oz band is taller. So the 15 oz is the same diameter as the 11 oz and simply a
-       taller mug -- which is why one photograph serves both (see stretchBySize). The
-       20 oz is a different shape (10.24 x 4.02) but the store does not sell it. */
-    printBySize: {
-      '11 oz': { w: 9, h: 3.5, dpi: 300, tech: 'Sublimation', placement: 'default' },
-      '15 oz': { w: 9, h: 3.8, dpi: 300, tech: 'Sublimation', placement: 'default' }
-    },
+    /* ONE capacity. Printful lists 11 / 15 / 20 oz; the store sold the first two until
+       12 Nov, when Michele dropped the 15 oz -- "we wont be selling that". The Shopify
+       variant was deleted with it, so the product is single-size and `print` above is the
+       whole story; `printBySize` is gone rather than left holding one entry.
+
+       If a capacity ever comes back: the 15 oz is the same diameter as the 11 oz and
+       simply taller (9 x 3.8 against 9 x 3.5), which is why one photograph served both
+       through `stretchBySize`. The 20 oz is a different shape (10.24 x 4.02) and would
+       need its own plate. */
     models: [
       { src: '/mug/mug-11oz.webp', flat: true, side: 'front', label: 'Full mug', zoom: 1.25,
-        /* Printful's own 15 oz photo is 275x500 and shot turned at an angle, so it would
-           be soft and inconsistent beside the 11 oz. The 11 oz shot is stretched about
-           its base instead: same diameter, band 3.8/3.5 taller. */
-        stretchBySize: { '15 oz': 1.0857 },
         /* the tight framing was cropping close enough to read as a different product
            from the wide one, so the mug leads with the pulled-back shot */
         wide: 0.74, wideLabel: 'Full mug', noFull: true,
@@ -199,16 +196,14 @@ var PRODUCTS = [
          columns of the band are partial, which wrecked the bottom fit until columns with
          fewer than 350 masked pixels were dropped.
 
-         The numbers are split rather than measured raw. What the fit gives is the band:
-         top centre 0.3143, bottom centre 0.7183. `yRim + mTop` and `yBase - mBot`
-         reproduce those exactly, but `yBase + bBase` is separately meaningful -- it is
-         the pivot stretchCyl uses to grow the 15 oz upward out of the same surface. Left
-         at the band's bottom edge the taller mug would have floated, so 0.0219 (the
-         catalogue shot's 0.0333 scaled by this photo's smaller radius) is carried in
-         mTop/mBot to put the pivot on the mug's base instead. The drawn band is
-         bit-identical either way; only the 15 oz moves. */
+         The numbers are split rather than measured raw, and they stay split now that the
+         15 oz is gone. What the fit gives is the band: top centre 0.3143, bottom centre
+         0.7183. `yRim + mTop` and `yBase - mBot` reproduce those exactly; the 0.0219 in
+         mTop/mBot exists so that `yBase + bBase` lands on the mug's BASE rather than the
+         band's lower edge. That point is the pivot stretchCyl grows a taller capacity
+         from, so keeping it correct is what makes a second capacity a one-line change
+         instead of a re-measure. The drawn band is identical either way. */
       { src: '/mug/mug-office.webp', label: 'On a desk', flip: true,
-        stretchBySize: { '15 oz': 1.0857 },
         cyl: { cx: 0.5025, a: 0.1940, yRim: 0.2924, bRim: 0.0308,
                yBase: 0.7402, bBase: 0.0519, mTop: 0.0219, mBot: 0.0219 } }
     ] },
