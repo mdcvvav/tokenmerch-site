@@ -181,7 +181,36 @@ var PRODUCTS = [
            from the wide one, so the mug leads with the pulled-back shot */
         wide: 0.74, wideLabel: 'Full mug', noFull: true,
         cyl: { cx: 0.6136, a: 0.2955, yRim: 0.1485, bRim: 0.0212,
-               yBase: 0.8394, bBase: 0.0348, mTop: 0.0333, mBot: 0.0333 } }
+               yBase: 0.8394, bBase: 0.0348, mTop: 0.0333, mBot: 0.0333 } },
+      /* The mug on a desk -- Printful's "Office environment" scene, mirrored (see
+         drawPlate) so the handle sits on the left like the shot above it.
+
+         Calibrated from a CHART render, not from the silhouette. The silhouette method
+         in claude/model-shots.md needs an edge to scan, and a white glossy mug on a white
+         desk beside a white keyboard has no usable one. The four-quadrant chart masks
+         cleanly instead, and its printed band gives the two ellipses directly: the band's
+         own top and bottom edges are exactly the curves cylWrap wants. Fitted RMS
+         0.35 px (top) and 0.30 px (bottom) on the 1000 px render -- sub-pixel, because to
+         this camera the mug really is a plain cylinder.
+
+         Two traps on the way, both worth knowing for the poster and sticker scenes next:
+         the pot plant behind the mug registers as chart green and dragged two columns
+         190 px off until the mask demanded a saturated green, and the first and last
+         columns of the band are partial, which wrecked the bottom fit until columns with
+         fewer than 350 masked pixels were dropped.
+
+         The numbers are split rather than measured raw. What the fit gives is the band:
+         top centre 0.3143, bottom centre 0.7183. `yRim + mTop` and `yBase - mBot`
+         reproduce those exactly, but `yBase + bBase` is separately meaningful -- it is
+         the pivot stretchCyl uses to grow the 15 oz upward out of the same surface. Left
+         at the band's bottom edge the taller mug would have floated, so 0.0219 (the
+         catalogue shot's 0.0333 scaled by this photo's smaller radius) is carried in
+         mTop/mBot to put the pivot on the mug's base instead. The drawn band is
+         bit-identical either way; only the 15 oz moves. */
+      { src: '/mug/mug-office.webp', label: 'On a desk', flip: true,
+        stretchBySize: { '15 oz': 1.0857 },
+        cyl: { cx: 0.5025, a: 0.1940, yRim: 0.2924, bRim: 0.0308,
+               yBase: 0.7402, bBase: 0.0519, mTop: 0.0219, mBot: 0.0219 } }
     ] },
   /* Unframed matte poster (product 1), 11x14. The framed one (product 2) was dropped:
      its blanks run $29.50-$107.75 against a single retail price, and all three frame
@@ -2200,6 +2229,26 @@ function loadModel(src) {
    that stays accurate across a whole colour range: screen washes the design out on a
    light garment, multiply kills it on a dark one. Worn shots on dark fabric set
    blend: 'screen' so the folds lift through the print. */
+/* Draws the base photograph for a model entry, mirrored when the entry asks for it.
+
+   `flip` exists because Printful's Environment mockup family has exactly ONE camera per
+   scene and both of them are handle-right, with no left-hand variant anywhere in the
+   family -- the only handle-left views they publish are hands-holding-a-mug studio shots.
+   Mirroring the photograph is the only way to get a desk scene whose handle matches the
+   catalogue shot above it. It is safe on this particular scene: there is no text in it,
+   and a keyboard reads the same either way.
+
+   The cylinder numbers for a flipped entry are measured in MIRRORED space, so the design
+   is drawn normally on top of the already-flipped plate -- the flip stops here. */
+function drawPlate(p, img, C, flip) {
+  if (!flip) { p.drawImage(img, 0, 0, C, C); return; }
+  p.save();
+  p.translate(C, 0);
+  p.scale(-1, 1);
+  p.drawImage(img, 0, 0, C, C);
+  p.restore();
+}
+
 function modelComposite(m, C, side) {
   var img = modelImgs[modelSrc(m)];
   var c = document.createElement('canvas');
@@ -2214,10 +2263,10 @@ function modelComposite(m, C, side) {
     var baseY = (m.cyl.yBase + m.cyl.bBase) * C;
     p.save();
     p.translate(0, baseY); p.scale(1, st); p.translate(0, -baseY);
-    p.drawImage(img, 0, 0, C, C);
+    drawPlate(p, img, C, m.flip);
     p.restore();
   } else {
-    p.drawImage(img, 0, 0, C, C);
+    drawPlate(p, img, C, m.flip);
   }
   /* The affine maps the print area's unit square onto the photo, so the design canvas
      has to carry that area's own aspect or the artwork comes out stretched. It used to
